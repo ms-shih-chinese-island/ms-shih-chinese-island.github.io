@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>我怕／我不怕 I'm afraid / I'm not afraid</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 我怕／我不怕：看图，用字卡组出句子。用法：afraid.html?unit=halloween */
+body.game { background: #EFEAF8; }
+.card { background: var(--card); border: 3px solid #2B2B2B; border-radius: 20px; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 14px; max-width: 880px; margin: 0 auto; }
+.scene { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.scene .kid, .scene .item { width: 170px; height: 170px; }
+.scene .kid svg, .scene .item svg { width: 100%; height: 100%; }
+.scene .item { background: #F1EEF8; border: 3px solid var(--night); border-radius: 50%; padding: 18px; }
+.caption { font-size: 22px; font-weight: 700; color: var(--muted); }
+.sentence { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.sentence .dropSlot { min-width: 110px; min-height: 78px; cursor: pointer; }
+.sentence .stop { font: 700 34px var(--f-zh); }
+.sentence.right .dropSlot { border-color: var(--me-ink); background: var(--me-done); }
+.sentence.wrong { animation: shake .35s; }
+.round { color: var(--muted); font-size: 16px; }
+.bank { width: 100%; }
+@media (max-width: 640px) { .scene .kid, .scene .item { width: 120px; height: 120px; } }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill" id="timer">0:00</span>
+      <button class="ctl" id="timerBtn" type="button"></button>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="card">
+        <div class="scene"><div class="kid" id="kid"></div><div class="item" id="item"></div></div>
+        <div class="caption" id="caption"></div>
+        <div class="sentence" id="sentence">
+          <span class="dropSlot" data-i="0"></span><span class="dropSlot" data-i="1"></span><span class="dropSlot" data-i="2"></span><span class="stop">。</span>
+        </div>
+        <p class="round">Put the cards in order to make the sentence.</p>
+        <div class="bank" id="bank"></div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/common.js"></script>
+<script>
+Shih.islandBar();
+Promise.all([Shih.loadUnit(), Shih.loadArt()]).then(([UNIT, ART]) => {
+  const C = UNIT.afraid;
+  const LEVELS = UNIT.levels || [{ note: '' }];
+  document.title = `${C.title.zh} ${C.title.en}`;
+  document.getElementById('titleRuby').innerHTML = Shih.rubyText(C.title.zh, C.title.py);
+  document.getElementById('titleEn').textContent = C.title.en;
+  document.getElementById('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  const kidEl = document.getElementById('kid'), itemEl = document.getElementById('item'), caption = document.getElementById('caption');
+  const sentence = document.getElementById('sentence'), bank = document.getElementById('bank');
+  const slots = [...sentence.querySelectorAll('.dropSlot')];
+  const scoreEl = document.getElementById('score'), winMsg = document.getElementById('winMsg'), winTime = document.getElementById('winTime');
+  const timerEl = document.getElementById('timer'), timer = Shih.timer(timerEl);
+  const timerOn = Shih.toggle(document.getElementById('timerBtn'), 'timer', '⏱ Timer on', '⏱ Timer off', true, on => { timerEl.hidden = !on; });
+  Shih.soundButton(document.getElementById('soundBtn'));
+
+  const pool = lv => UNIT.words.filter(w => (w.level || 1) <= lv && !(C.skip || []).includes(w.zh) && ART && ART.items[w.zh]);
+  let level = Shih.startLevel('afraidLevel', LEVELS.length);
+  const paintLevels = Shih.levelButtons(document.getElementById('levels'), LEVELS, level,
+    lv => pool(lv).length, lv => { level = lv; Shih.set('afraidLevel', lv); setup(); }, UNIT.levelIcon);
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+  let rounds = [], r = 0, done = 0, busy = false, placed = [null, null, null], dnd = null;
+  const wait = Shih.startCover(document.getElementById('playArea'), () => { if (timerOn()) timer.start(); });
+
+  function setup() {
+    paintLevels(level);
+    const P = shuffle(pool(level));
+    const n = C.rounds || 6;
+    rounds = Array.from({ length: n }, (_, i) => ({ item: P[i % P.length], scared: Math.random() < 0.5 }));
+    // make sure both 怕 and 不怕 show up
+    if (rounds.every(x => x.scared) || rounds.every(x => !x.scared)) rounds[0].scared = !rounds[0].scared;
+    r = 0; done = 0;
+    timer.reset(); winMsg.hidden = true; update();
+    showRound();
+    wait();
+  }
+  function update() { scoreEl.textContent = `${done} / ${rounds.length}`; }
+
+  const tiles = () => [...bank.querySelectorAll('.wcard')];
+  function putBack(i) {
+    const c = placed[i]; if (!c) return;
+    c.classList.remove('used'); placed[i] = null;
+    slots[i].innerHTML = ''; slots[i].classList.remove('filled');
+  }
+  function place(card, i) {
+    if (placed[i]) putBack(i);
+    placed[i] = card; card.classList.add('used');
+    slots[i].innerHTML = card.innerHTML; slots[i].classList.add('filled');
+    if (placed.every(Boolean)) check();
+  }
+  function showRound() {
+    busy = false;
+    const R = rounds[r];
+    kidEl.innerHTML = ART.kid(R.scared ? 'scared' : 'happy');
+    itemEl.innerHTML = ART.items[R.item.zh];
+    caption.textContent = R.scared ? C.pa.en : C.bupa.en;
+    sentence.classList.remove('right', 'wrong');
+    placed = [null, null, null];
+    slots.forEach(s => { s.innerHTML = ''; s.classList.remove('filled'); });
+    const others = shuffle(pool(level).filter(w => w.zh !== R.item.zh)).slice(0, (C.choices || 4) - 1);
+    const words = [C.me, C.pa, C.bupa].map(w => ({ ...w, kind: w === C.me ? 'me' : w === C.pa ? 'pa' : 'bupa' }))
+      .concat(shuffle([R.item].concat(others)).map(w => ({ ...w, kind: 'thing' })));
+    bank.innerHTML = '';
+    const cards = shuffle(words).map(w => {
+      const c = document.createElement('div');
+      c.className = 'wcard'; c.dataset.word = w.zh;
+      c.innerHTML = `<span class="ruby">${Shih.ruby(w.zh, w.py)}</span>`;
+      bank.appendChild(c);
+      return c;
+    });
+    dnd = Shih.dragCards(cards, {
+      slots: () => slots,
+      accept(card, slot) { if (busy) return true; place(card, +slot.dataset.i); return true; },
+      onTapCard(card) { if (busy) return; const i = placed.findIndex(x => !x); if (i >= 0) place(card, i); }
+    });
+  }
+  slots.forEach((s, i) => s.addEventListener('click', () => { if (!busy) putBack(i); }));
+
+  function check() {
+    const R = rounds[r];
+    const want = [C.me.zh, R.scared ? C.pa.zh : C.bupa.zh, R.item.zh];
+    const got = placed.map(c => c.dataset.word);
+    if (got.every((g, i) => g === want[i])) {
+      busy = true;
+      sentence.classList.add('right');
+      Shih.speak(want.join('') + '。');
+      done++; update();
+      setTimeout(() => {
+        r++;
+        if (r < rounds.length) showRound();
+        else { const ms = timer.stop(); winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : ''; winMsg.hidden = false; }
+      }, 1500);
+    } else {
+      sentence.classList.remove('wrong'); void sentence.offsetWidth; sentence.classList.add('wrong');
+      setTimeout(() => got.forEach((g, i) => { if (g !== want[i]) putBack(i); }), 450);
+    }
+  }
+  document.getElementById('resetBtn').addEventListener('click', setup);
+  document.getElementById('againBtn').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

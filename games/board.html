@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="../shared/gate.js"></script>
+  <title>Family Board Game - 家庭大富翁</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Fonts: Fredoka, Nunito, Noto Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@700;800;900&family=Noto+Sans+SC:wght@700;900&family=Noto+Sans+TC:wght@700;900&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            dadTop: '#f4a04d',
+            momTop: '#f086ab',
+            famTop: '#78c69f',
+            goYellow: '#f5c531',
+            boardBorder: '#1e293b'
+          },
+          fontFamily: {
+            fun: ['"Fredoka"', 'system-ui', 'sans-serif'],
+            pinyin: ['"Nunito"', '"Fredoka"', 'sans-serif'],
+            cn: ['"Noto Sans SC"', '"Noto Sans TC"', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <link rel="stylesheet" href="../shared/common.css">
+  <style>
+    .islandBarWrap { align-self: stretch; margin: -8px -8px 10px; }
+    @media (min-width: 640px) { .islandBarWrap { margin: -16px -16px 10px; } }
+    @media print { .islandBarWrap { display: none !important; } }
+    :root {
+      /* Dynamic customizable font sizes with defaults */
+      --tile-py-size: 14px;
+      --tile-zh-size: 26px;
+      --tile-en-size: 10px;
+      --card-a-zh-size: 22px;
+      --card-a-sub-size: 13px;
+      --card-b-zh-size: 20px;
+      --card-b-sub-size: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      font-family: 'Fredoka', system-ui, sans-serif;
+      background: #f1f5f9;
+      user-select: none;
+    }
+
+    /* 8 columns x 5 rows board grid */
+    .game-board {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      grid-template-rows: repeat(5, 1fr);
+      aspect-ratio: 8 / 5.5;
+      width: 100%;
+      border: 3.5px solid #1e293b;
+      background: #ffffff;
+      box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.2);
+      position: relative;
+    }
+
+    .tile-slot {
+      border: 1.5px solid #1e293b;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.15s ease-out;
+      overflow: hidden;
+    }
+    .tile-slot:hover {
+      box-shadow: inset 0 0 0 3px #ea580c;
+      z-index: 10;
+    }
+
+    /* Classic Monopoly style colored header strip */
+    .tile-color-bar {
+      height: 22%;
+      min-height: 16px;
+      width: 100%;
+      border-bottom: 2px solid #1e293b;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0 4px;
+      flex-shrink: 0;
+    }
+
+    /* Dynamic font size classes referencing CSS variables */
+    .font-size-tile-py { font-size: var(--tile-py-size); line-height: 1.1; }
+    .font-size-tile-zh { font-size: var(--tile-zh-size); line-height: 1.05; }
+    .font-size-tile-en { font-size: var(--tile-en-size); line-height: 1.1; }
+    .font-size-card-a-zh { font-size: var(--card-a-zh-size); line-height: 1.15; }
+    .font-size-card-a-sub { font-size: var(--card-a-sub-size); line-height: 1.2; }
+    .font-size-card-b-zh { font-size: var(--card-b-zh-size); line-height: 1.15; }
+    .font-size-card-b-sub { font-size: var(--card-b-sub-size); line-height: 1.2; }
+
+    .player-pawn {
+      filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4));
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* Custom range slider styling */
+    input[type=range] {
+      accent-color: #4f46e5;
+    }
+
+    /* Print Formatting for A4 Landscape */
+    @media print {
+      @page {
+        size: landscape;
+        margin: 4mm;
+      }
+      body {
+        background: #ffffff !important;
+        padding: 0 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .game-board {
+        width: 100vw !important;
+        height: 98vh !important;
+        aspect-ratio: auto !important;
+        box-shadow: none !important;
+        border: 3.5px solid #000000 !important;
+      }
+      .tile-slot {
+        border-color: #000000 !important;
+      }
+      .player-pawns-container, .claimed-badge {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-800 flex flex-col items-center justify-start p-2 sm:p-4">
+
+  <!-- TOP TOOLBAR -->
+  <header class="no-print w-full max-w-7xl bg-white rounded-2xl shadow-sm border border-slate-200 px-3 sm:px-4 py-2 sm:py-2.5 mb-2.5 flex flex-wrap items-center justify-between gap-2">
+    <!-- Game Title -->
+    <div class="flex items-center gap-2">
+      <div class="w-9 h-9 rounded-xl bg-amber-400 text-slate-900 flex items-center justify-center text-lg font-black shadow-sm">
+        <i class="fa-solid fa-house-chimney-user"></i>
+      </div>
+      <div>
+        <h1 class="text-base sm:text-lg font-black text-slate-900 flex items-center gap-1.5 leading-none">
+          <span id="boardTitleEn">Family Board Game</span> <span id="boardTitleZh" class="font-cn text-amber-600 text-sm sm:text-base">家庭大富翁</span>
+        </h1>
+        <span class="text-[11px] text-slate-400 font-medium hidden sm:inline">1P vs AI to 5 Players</span>
+      </div>
+    </div>
+
+    <!-- Control Buttons: [1P 2P 3P 4P 5P] -> [Reset] -> [Sound] -> [Script] -> [Print] -> divider -> [字體大小] -->
+    <div class="controls flex items-center gap-1 sm:gap-2 flex-wrap">
+      
+      <!-- Player Count Buttons: [ 1P | 2P | 3P | 4P | 5P ] -->
+      <div class="flex items-center bg-slate-100 p-0.5 sm:p-1 rounded-xl text-xs font-bold text-slate-600 border border-slate-200">
+        <span class="px-1 text-slate-400 text-[11px]"><i class="fa-solid fa-users"></i></span>
+        <button onclick="setPlayerCount(1)" id="pcount-1" class="px-2 py-1 rounded-lg text-slate-600 hover:bg-white flex items-center gap-0.5" title="1 Player vs Panda AI Bot">
+          <i class="fa-solid fa-robot text-[10px] text-amber-500"></i>1P
+        </button>
+        <button onclick="setPlayerCount(2)" id="pcount-2" class="px-2 py-1 rounded-lg bg-white shadow-sm text-slate-900 font-black">2P</button>
+        <button onclick="setPlayerCount(3)" id="pcount-3" class="px-2 py-1 rounded-lg text-slate-500 hover:bg-white">3P</button>
+        <button onclick="setPlayerCount(4)" id="pcount-4" class="px-2 py-1 rounded-lg text-slate-500 hover:bg-white">4P</button>
+        <button onclick="setPlayerCount(5)" id="pcount-5" class="px-2 py-1 rounded-lg text-slate-500 hover:bg-white">5P</button>
+      </div>
+
+      <!-- PROMINENT RESET BUTTON (Immediately to the RIGHT of 5P) -->
+      <button onclick="confirmResetGame()" title="Reset Board and Pawns to Start (重新開始遊戲)" class="group px-2.5 sm:px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white border-2 border-rose-300 hover:border-rose-600 text-xs font-black shadow-sm transition-all duration-150 flex items-center gap-1 active:scale-95">
+        <i class="fa-solid fa-rotate-left text-rose-500 group-hover:text-white group-hover:-rotate-90 transition-transform duration-200 text-xs sm:text-sm"></i>
+        <span>Reset</span>
+      </button>
+
+      <!-- Audio Mute / Unmute -->
+      <button onclick="toggleAudio()" id="soundBtn" class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold transition flex items-center gap-1">
+        <i class="fa-solid fa-volume-high"></i>
+        <span id="soundLabel">Sound ON</span>
+      </button>
+
+      <!-- Simplified / Traditional Script -->
+      <button onclick="toggleScript()" id="scriptBtn" class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1">
+        <i class="fa-solid fa-font text-amber-500"></i>
+        <span id="scriptLabel">简体</span>
+      </button>
+
+      <!-- Print A4 Worksheet Button -->
+      <button onclick="window.print()" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow transition flex items-center gap-1">
+        <i class="fa-solid fa-print"></i>
+        <span>Print A4</span>
+      </button>
+
+      <!-- Subtle Divider -->
+      <div class="h-5 w-[1px] bg-slate-200 mx-0.5 hidden sm:block"></div>
+
+      <!-- FONT SIZE ADJUSTER (Far Right, teacher settings drawer) -->
+      <button onclick="toggleFontPanel()" title="字體微調 (Teacher Font Settings)" class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200 text-xs font-bold transition flex items-center gap-1 active:scale-95">
+        <i class="fa-solid fa-sliders text-slate-400"></i>
+        <span>字體大小</span>
+      </button>
+
+    </div>
+  </header>
+
+  <!-- MAIN BOARD CONTAINER -->
+  <main class="w-full max-w-7xl relative flex flex-col items-center">
+    
+    <!-- 8x5 WORKSHEET GRID -->
+    <div id="board" class="game-board rounded-3xl overflow-hidden">
+
+      <!-- ==========================================
+           CENTER AREA: Clean, Spacious, Responsive
+           Spans columns 2 to 7, rows 2 to 4
+      =========================================== -->
+      <div id="centerArea" class="col-start-2 col-end-8 row-start-2 row-end-5 p-2 sm:p-2.5 bg-white overflow-hidden relative">
+      <div id="centerFit" class="flex flex-col justify-between" style="height: 100%">
+
+        <!-- Slimmed Header: Title & Turn Controller -->
+        <div class="flex items-center justify-between border-b border-slate-200 pb-1 gap-2">
+          <div>
+            <h2 id="boardTitleEn2" class="text-base sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">
+              Family Board Game
+            </h2>
+          </div>
+
+          <!-- Active Player & Roll Button -->
+          <div class="no-print flex items-center gap-1.5 sm:gap-2.5 bg-slate-50 py-0.5 px-2 rounded-xl border border-slate-200 shadow-sm">
+            <div class="flex items-center gap-1.5">
+              <span id="turnIndicatorDot" class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-600 ring-2 ring-red-100"></span>
+              <div class="text-left">
+                <div class="text-[8px] font-bold text-slate-400 uppercase tracking-wider leading-none">TURN</div>
+                <div id="turnPlayerText" class="text-[11px] sm:text-xs font-black text-red-600 leading-tight">Player 1 🚗</div>
+              </div>
+            </div>
+
+            <!-- Big Interactive Roll Dice Button -->
+            <button id="rollBtn" onclick="rollDice()" class="px-2.5 sm:px-4 py-1 sm:py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-95 text-white font-black text-[11px] sm:text-xs rounded-lg shadow-sm transition flex items-center gap-1 cursor-pointer">
+              <i class="fa-solid fa-dice text-xs sm:text-sm animate-bounce"></i>
+              <span>ROLL!</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Scoreboard: Supports up to 5 Players cleanly -->
+        <div id="liveScoreboard" class="no-print py-1 px-1 bg-slate-50/90 rounded-xl border border-slate-100 flex flex-wrap items-center justify-center gap-1 sm:gap-2 text-[10px] sm:text-[11px] font-bold my-0.5">
+          <!-- Dynamic Score Items rendered here -->
+        </div>
+
+        <!-- 4 Simple Kid-Friendly Rules with White Badges & Exact Formatting -->
+        <div class="space-y-0.5 text-[10px] sm:text-xs md:text-[13px] text-slate-800 my-0.5">
+          <div class="flex items-center gap-1.5">
+            <span class="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-slate-900 text-white flex items-center justify-center text-[9px] sm:text-[10px] font-black flex-shrink-0">1</span>
+            <span class="font-normal"><strong class="font-black text-slate-900">Take turns:</strong> roll the dice and move.</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-slate-900 text-white flex items-center justify-center text-[9px] sm:text-[10px] font-black flex-shrink-0">2</span>
+            <span class="font-normal flex items-center flex-wrap gap-1">
+              <strong class="font-black text-slate-900">Empty square:</strong> say what it means, and ask everyone question
+              <span class="inline-flex items-center justify-center w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-white border border-slate-900 text-slate-900 font-black text-[10px] sm:text-xs shadow-xs align-middle">A</span>, then it's yours!
+            </span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-slate-900 text-white flex items-center justify-center text-[9px] sm:text-[10px] font-black flex-shrink-0">3</span>
+            <span class="font-normal flex items-center flex-wrap gap-1">
+              <strong class="font-black text-slate-900">Taken square:</strong> the owner asks you question
+              <span class="inline-flex items-center justify-center w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-white border border-slate-900 text-slate-900 font-black text-[10px] sm:text-xs shadow-xs align-middle">A</span>, and you answer (examples in
+              <span class="inline-flex items-center justify-center w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-white border border-slate-900 text-slate-900 font-black text-[10px] sm:text-xs shadow-xs align-middle">B</span>).
+            </span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-slate-900 text-white flex items-center justify-center text-[9px] sm:text-[10px] font-black flex-shrink-0">4</span>
+            <span class="font-normal"><strong class="font-black text-slate-900">Time's up:</strong> the one with the most squares wins!</span>
+          </div>
+        </div>
+
+        <!-- A & B Dialogue Cards: Generous Spacing & Two-Line Answer Layout -->
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-2 mt-1 sm:mt-2 pt-1 border-t border-slate-100">
+          
+          <!-- Card A: Question (No article: Do you have _____ ?) -->
+          <div onclick="speakSentencePrompt('A')" class="md:col-span-2 group border-2 border-slate-900 rounded-xl p-2 bg-white relative cursor-pointer hover:border-amber-500 hover:shadow-sm transition flex flex-col justify-center">
+            <span class="absolute -top-2.5 -left-1.5 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white border-2 border-slate-900 text-slate-900 flex items-center justify-center text-[10px] sm:text-xs font-black shadow">A</span>
+            <div class="text-center">
+              <div class="font-pinyin text-amber-700 font-black font-size-card-a-sub">
+                Nǐ yǒu _____ ma?
+              </div>
+              <div class="font-cn font-black text-slate-900 font-size-card-a-zh my-0.5">
+                你 有 <span class="inline-block border-b-2 border-slate-900 w-10 sm:w-14 mx-0.5"></span> 吗？
+              </div>
+              <div class="text-slate-600 font-bold font-size-card-a-sub">
+                Do you have _____ ?
+              </div>
+            </div>
+            <span class="no-print absolute top-1.5 right-1.5 text-slate-300 group-hover:text-amber-500 text-xs transition">
+              <i class="fa-solid fa-volume-high"></i>
+            </span>
+          </div>
+
+          <!-- Card B: Three-Line Answers -->
+          <div id="cardB" class="md:col-span-3 group border-2 border-slate-900 rounded-xl p-1.5 sm:p-2 bg-white relative hover:border-rose-500 hover:shadow-sm transition flex flex-col justify-center">
+            <span class="absolute -top-2.5 -left-1.5 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white border-2 border-slate-900 text-slate-900 flex items-center justify-center text-[10px] sm:text-xs font-black shadow">B</span>
+            
+            <div class="space-y-0.5">
+              <!-- Line 1: Positive with counting (I have 1, 2, 3, 4 ___.) -->
+              <div onclick="speakSentencePrompt('B1')" class="cursor-pointer hover:bg-rose-50/70 px-1.5 py-0.5 rounded transition flex items-center justify-between text-left">
+                <div>
+                  <div class="font-pinyin text-rose-600 font-black font-size-card-b-sub">
+                    Wǒ yǒu yī gè, liǎng gè, sān gè, sì gè _____ .
+                  </div>
+                  <div class="font-cn font-black text-slate-900 font-size-card-b-zh whitespace-nowrap">
+                    我 有 一个、两个、三个、四个 <span class="inline-block border-b-2 border-slate-900 w-8 sm:w-10 mx-0.5"></span>。
+                  </div>
+                </div>
+                <span class="no-print text-slate-300 group-hover:text-rose-500 text-xs px-1">
+                  <i class="fa-solid fa-volume-high"></i>
+                </span>
+              </div>
+
+              <!-- Thin divider -->
+              <div class="border-t border-dashed border-slate-300"></div>
+
+              <!-- Lines 2 + 3 side by side: 我没有。 | 我不知道。 -->
+              <div class="grid grid-cols-2">
+                <div onclick="speakSentencePrompt('B2')" class="cursor-pointer hover:bg-rose-50/70 px-1.5 py-0.5 rounded transition flex items-center justify-between text-left">
+                  <div>
+                    <div class="font-pinyin text-rose-600 font-black font-size-card-b-sub whitespace-nowrap">Wǒ méi yǒu.</div>
+                    <div class="font-cn font-black text-slate-900 font-size-card-b-zh whitespace-nowrap">我 没有。</div>
+                  </div>
+                  <span class="no-print text-slate-300 group-hover:text-rose-500 text-xs px-1">
+                    <i class="fa-solid fa-volume-high"></i>
+                  </span>
+                </div>
+                <div onclick="speakSentencePrompt('B3')" class="cursor-pointer hover:bg-rose-50/70 px-1.5 py-0.5 rounded transition flex items-center justify-between text-left border-l border-dashed border-slate-300">
+                  <div>
+                    <div class="font-pinyin text-rose-600 font-black font-size-card-b-sub whitespace-nowrap">Wǒ bù zhīdào.</div>
+                    <div class="font-cn font-black text-slate-900 font-size-card-b-zh whitespace-nowrap">我 不知道。</div>
+                  </div>
+                  <span class="no-print text-slate-300 group-hover:text-rose-500 text-xs px-1">
+                    <i class="fa-solid fa-volume-high"></i>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      </div>
+      <!-- END CENTER AREA -->
+
+    </div>
+  </main>
+
+  <!-- CONFIRM RESET MODAL -->
+  <div id="resetModal" class="no-print fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+    <div class="bg-white rounded-3xl p-6 shadow-2xl border-4 border-slate-900 max-w-sm w-full mx-4 text-center">
+      <div class="w-14 h-14 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-2xl font-black mx-auto mb-3 shadow-inner">
+        <i class="fa-solid fa-rotate-left"></i>
+      </div>
+      <h3 class="text-lg font-black text-slate-900 mb-1">Reset the Game?</h3>
+      <p class="text-xs text-slate-500 mb-5">All player tokens will return to GO and all claimed squares will be cleared.</p>
+      <div class="flex gap-2">
+        <button onclick="executeResetGame()" class="flex-1 py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition active:scale-95">
+          Yes, Reset
+        </button>
+        <button onclick="closeResetModal()" class="flex-1 py-2.5 px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs sm:text-sm rounded-xl transition">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOATING FONT ADJUSTER MODAL / SLIDERS CONTROL PANEL -->
+  <div id="fontPanelModal" class="no-print fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+    <div id="fontPanelBox" class="bg-white rounded-3xl p-5 sm:p-6 shadow-2xl border-4 border-slate-900 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto transform scale-95 transition-transform duration-200">
+      
+      <div class="flex items-center justify-between border-b-2 border-slate-200 pb-3 mb-4">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-amber-500 text-white flex items-center justify-center font-black">
+            <i class="fa-solid fa-sliders"></i>
+          </div>
+          <div>
+            <h3 class="text-base sm:text-lg font-black text-slate-900 leading-none">字體大小自由調整</h3>
+            <span class="text-xs text-slate-400 font-medium">Font Size Live Controller</span>
+          </div>
+        </div>
+        <button onclick="toggleFontPanel()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center font-black">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Quick Preset Buttons -->
+      <div class="mb-4">
+        <label class="text-xs font-black text-slate-500 uppercase tracking-wider block mb-1.5">快速預設 (Quick Presets)</label>
+        <div class="grid grid-cols-3 gap-2">
+          <button onclick="applyPreset('compact')" class="py-1.5 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 font-black text-xs text-slate-700 transition">
+            緊湊 (Small)
+          </button>
+          <button onclick="applyPreset('default')" class="py-1.5 px-2 rounded-xl bg-amber-100 hover:bg-amber-200 font-black text-xs text-amber-900 transition">
+            標準 (Default)
+          </button>
+          <button onclick="applyPreset('large')" class="py-1.5 px-2 rounded-xl bg-indigo-100 hover:bg-indigo-200 font-black text-xs text-indigo-900 transition">
+            投影大字 (Large)
+          </button>
+        </div>
+      </div>
+
+      <div class="space-y-3.5 text-xs">
+        
+        <!-- SECTION 1: PERIMETER TILES -->
+        <div class="bg-amber-50/70 border border-amber-200 rounded-2xl p-3">
+          <div class="font-black text-amber-950 text-xs mb-2 flex items-center gap-1.5">
+            <i class="fa-solid fa-border-all text-amber-600"></i>
+            <span>周圍格子 (Perimeter Tiles - Pinyin & Hanzi)</span>
+          </div>
+          
+          <!-- Slider 1: Tile Pinyin -->
+          <div class="mb-2">
+            <div class="flex justify-between font-bold text-slate-700 mb-0.5">
+              <span>拼音字體大小 (Pinyin):</span>
+              <span id="val-tile-py" class="font-mono font-black text-amber-700">14px</span>
+            </div>
+            <input type="range" id="slider-tile-py" min="8" max="32" step="1" value="14" class="w-full cursor-pointer" oninput="updateFontSize('tile-py', this.value)">
+          </div>
+
+          <!-- Slider 2: Tile Chinese -->
+          <div>
+            <div class="flex justify-between font-bold text-slate-700 mb-0.5">
+              <span>中文字體大小 (Hanzi):</span>
+              <span id="val-tile-zh" class="font-mono font-black text-amber-700">26px</span>
+            </div>
+            <input type="range" id="slider-tile-zh" min="12" max="50" step="1" value="26" class="w-full cursor-pointer" oninput="updateFontSize('tile-zh', this.value)">
+          </div>
+        </div>
+
+        <!-- SECTION 2: CENTER BOX A (QUESTION) -->
+        <div class="bg-sky-50/70 border border-sky-200 rounded-2xl p-3">
+          <div class="font-black text-sky-950 text-xs mb-2 flex items-center gap-1.5">
+            <span class="w-4 h-4 rounded-full bg-sky-900 text-white flex items-center justify-center text-[10px]">A</span>
+            <span>中間 Ⓐ 提問框 (Question Box A)</span>
+          </div>
+
+          <!-- Slider 3: Card A Chinese -->
+          <div class="mb-2">
+            <div class="flex justify-between font-bold text-slate-700 mb-0.5">
+              <span>提問中文大小 (Hanzi):</span>
+              <span id="val-card-a-zh" class="font-mono font-black text-sky-700">22px</span>
+            </div>
+            <input type="range" id="slider-card-a-zh" min="12" max="44" step="1" value="22" class="w-full cursor-pointer" oninput="updateFontSize('card-a-zh', this.value)">
+          </div>
+
+          <!-- Slider 4: Card A Subtitle (Pinyin & English) -->
+          <div>
+            <div class="flex justify-between font-bold text-slate-700 mb-0.5">
+              <span>提問拼音與英文 (Pinyin & EN):</span>
+              <span id="val-card-a-sub" class="font-mono font-black text-sky-700">13px</span>
+            </div>
+            <input type="range" id="slider-card-a-sub" min="8" max="26" step="1" value="13" class="w-full cursor-pointer" oninput="updateFontSize('card-a-sub', this.value)">
+          </div>
+        </div>
+
+        <!-- SECTION 3: CENTER BOX B (ANSWERS) -->
+        <div class="bg-rose-50/70 border border-rose-200 rounded-2xl p-3">
+          <div class="font-black text-rose-950 text-xs mb-2 flex items-center gap-1.5">
+            <span class="w-4 h-4 rounded-full bg-rose-900 text-white flex items-center justify-center text-[10px]">B</span>
+            <span>中間 Ⓑ 回答框 (Answer Box B - 3 Lines)</span>
+          </div>
+
+          <!-- Slider 5: Card B Chinese -->
+          <div class="mb-2">
+            <div class="flex justify-between font-bold text-slate-700 mb-0.5">
+              <span>回答中文大小 (Hanzi):</span>
+              <span id="val-card-b-zh" class="font-mono font-black text-rose-700">20px</span>
+            </div>
+            <input type="range" id="slider-card-b-zh" min="12" max="44" step="1" value="20" class="w-full cursor-pointer" oninput="updateFontSize('card-b-zh', this.value)">
+          </div>
+
+          <!-- Slider 6: Card B Subtitle (Pinyin & English) -->
+          <div>
+            <div class="flex justify-between font-bold text-slate-700 mb-0.5">
+              <span>回答拼音與英文 (Pinyin & EN):</span>
+              <span id="val-card-b-sub" class="font-mono font-black text-rose-700">12px</span>
+            </div>
+            <input type="range" id="slider-card-b-sub" min="8" max="26" step="1" value="12" class="w-full cursor-pointer" oninput="updateFontSize('card-b-sub', this.value)">
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Action buttons inside modal -->
+      <div class="flex gap-2 justify-between items-center mt-5 pt-3 border-t border-slate-200">
+        <button onclick="resetFontDefaults()" class="py-2 px-3 text-slate-500 hover:text-red-600 font-bold text-xs flex items-center gap-1 transition">
+          <i class="fa-solid fa-arrow-rotate-left"></i>
+          <span>重設原廠設定 (Reset)</span>
+        </button>
+        <button onclick="toggleFontPanel()" class="py-2 px-5 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs rounded-xl shadow transition">
+          完成 (Done)
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 3D VIRTUAL DICE MODAL -->
+  <div id="diceModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+    <div class="bg-white p-6 rounded-3xl shadow-2xl flex flex-col items-center border-4 border-slate-900 max-w-xs w-full text-center">
+      <div id="dicePlayerLabel" class="text-sm font-black text-red-600 mb-2 uppercase tracking-wide">Player 1 Rolling</div>
+      
+      <div id="diceDisplay" class="w-24 h-24 bg-gradient-to-br from-amber-400 to-orange-500 rounded-3xl shadow-lg border-4 border-slate-900 flex items-center justify-center text-5xl font-black text-white my-3 animate-spin">
+        <i class="fa-solid fa-dice"></i>
+      </div>
+
+      <div id="diceNumResult" class="text-xl font-black text-slate-800 h-8 flex items-center justify-center">
+        Rolling...
+      </div>
+    </div>
+  </div>
+
+  <!-- INTERACTIVE ACTION / QUESTION POPUP MODAL -->
+  <div id="cardModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+    <div id="cardModalBox" class="bg-white rounded-3xl p-5 sm:p-6 shadow-2xl border-4 border-slate-900 max-w-sm w-full mx-4 text-center transform scale-95 transition-transform duration-200">
+      
+      <div id="modalCategoryPill" class="py-1 px-3 rounded-full text-white font-black text-xs inline-block mb-1 shadow-sm">
+        Dad's side
+      </div>
+
+      <div class="my-2">
+        <div id="modalPinyin" class="font-pinyin text-amber-700 font-black text-lg tracking-wide">yé ye</div>
+        <div id="modalChinese" class="text-4xl sm:text-5xl font-black text-slate-900 font-cn tracking-wide my-1">爷爷</div>
+        <div id="modalEnglish" class="text-slate-600 font-bold text-sm">Grandfather (Dad's side)</div>
+      </div>
+
+      <button onclick="speakCurrentTile()" class="my-2 px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-xl font-black text-xs sm:text-sm inline-flex items-center gap-2 transition active:scale-95 shadow-sm">
+        <i class="fa-solid fa-volume-high text-amber-600"></i>
+        <span>Pronounce Card</span>
+      </button>
+
+      <div class="bg-slate-50 border-2 border-slate-200 rounded-2xl p-3 my-2 text-center">
+        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-center gap-1">
+          <i class="fa-solid fa-comment-dots text-amber-500"></i>
+          <span>Ask everyone:</span>
+        </div>
+        <div id="modalPromptZh" class="text-xl sm:text-2xl font-black text-slate-900 font-cn">
+          “你有 <span id="modalPromptWord" class="text-amber-600 underline">爷爷</span> 吗？”
+        </div>
+        <div class="font-pinyin text-xs text-slate-500 font-bold mt-1">Nǐ yǒu _____ ma? (Do you have _____ ?)</div>
+      </div>
+
+      <div class="flex gap-2 justify-center mt-4">
+        <button id="claimTileBtn" onclick="claimActiveSquare()" class="flex-1 py-2.5 px-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition active:scale-95 flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-flag"></i>
+          <span>I asked! (Claim)</span>
+        </button>
+        <button onclick="closeCardModal()" class="py-2.5 px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs sm:text-sm rounded-xl transition">
+          Next Turn <i class="fa-solid fa-arrow-right ml-1"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../shared/common.js"></script>
+  <script>
+    /* =========================================================================
+       BOARD TILES CONFIGURATION (Worksheet layout: 8x5 grid, exactly 22 tiles)
+    ========================================================================= */
+    // The board is built from the unit's word list (units/<unit>/words.js):
+    //   UNIT.board = the order of the squares, starting at GO (bottom-right) and going left around the board.
+    let TILES = [];
+    function perimeter() {
+      const cells = [[4, 7]];
+      for (let c = 6; c >= 0; c--) cells.push([4, c]);   // bottom row, going left
+      for (let r = 3; r >= 0; r--) cells.push([r, 0]);   // left side, going up
+      for (let c = 1; c <= 7; c++) cells.push([0, c]);   // top row, going right
+      for (let r = 1; r <= 3; r++) cells.push([r, 7]);   // right side, going down
+      return cells;                                      // 22 squares
+    }
+    function buildTiles(UNIT) {
+      const WM = Shih.wordMap(UNIT);
+      const order = UNIT.board.trim().split(/\s+/);
+      const cells = perimeter();
+      if (order.length !== cells.length) console.warn(`UNIT.board has ${order.length} squares; the board needs exactly ${cells.length} (GO + ${cells.length - 1} words).`);
+      const CAT = { dad: 'dad', mom: 'mom', me: 'fam' };
+      return cells.map(([r, c], i) => {
+        const zh = order[i] || '';
+        if (zh === 'GO') return { id: 'go', py: '←', zh_s: 'GO', zh_t: 'GO', en: 'START', cat: 'go', r, c };
+        const w = WM[zh] || { zh, py: '', short: '', side: 'me' };
+        if (!WM[zh] && zh) console.warn('Not in the word list:', zh);
+        return { id: 'w' + i, py: w.py, zh_s: w.zh, zh_t: w.trad || w.zh, en: w.short || w.en || '', cat: CAT[w.side] || 'fam', r, c };
+      });
+    }
+
+    /* =========================================================================
+       5 PLAYERS CONFIGURATION (Max 5 Players)
+    ========================================================================= */
+    const PLAYERS = [
+      { id: 0, name: 'Player 1', colorName: 'Red', color: '#dc2626', bg: 'bg-red-600', icon: 'fa-car', emoji: '🚗', pos: 0, isAi: false },
+      { id: 1, name: 'Player 2', colorName: 'Blue', color: '#2563eb', bg: 'bg-blue-600', icon: 'fa-rocket', emoji: '🚀', pos: 0, isAi: false },
+      { id: 2, name: 'Player 3', colorName: 'Green', color: '#16a34a', bg: 'bg-emerald-600', icon: 'fa-helicopter', emoji: '🚁', pos: 0, isAi: false },
+      { id: 3, name: 'Player 4', colorName: 'Amber', color: '#d97706', bg: 'bg-amber-600', icon: 'fa-sailboat', emoji: '⛵', pos: 0, isAi: false },
+      { id: 4, name: 'Player 5', colorName: 'Purple', color: '#9333ea', bg: 'bg-purple-600', icon: 'fa-satellite-dish', emoji: '🛸', pos: 0, isAi: false }
+    ];
+
+    let playerCount = 2;
+    let isSinglePlayerVsAi = false;
+    let currentPlayer = 0;
+    let isSimplified = true;
+    let soundEnabled = true;
+    let squareOwnership = {};
+    let isRolling = false;
+    let activeModalIndex = 0;
+
+    /* =========================================================================
+       DYNAMIC FONT SIZE CONTROLLER (CSS Variables & LocalStorage)
+    ========================================================================= */
+    const DEFAULT_FONTS = {
+      'tile-py': 14,
+      'tile-zh': 26,
+      'tile-en': 10,
+      'card-a-zh': 22,
+      'card-a-sub': 13,
+      'card-b-zh': 20,
+      'card-b-sub': 12
+    };
+
+    const PRESETS = {
+      compact: {
+        'tile-py': 11,
+        'tile-zh': 18,
+        'tile-en': 8,
+        'card-a-zh': 16,
+        'card-a-sub': 11,
+        'card-b-zh': 15,
+        'card-b-sub': 10
+      },
+      default: { ...DEFAULT_FONTS },
+      large: {
+        'tile-py': 18,
+        'tile-zh': 32,
+        'tile-en': 12,
+        'card-a-zh': 26,
+        'card-a-sub': 15,
+        'card-b-zh': 24,
+        'card-b-sub': 14
+      }
+    };
+
+    function loadFontSettings() {
+      const saved = localStorage.getItem('family_board_font_settings');
+      let current = DEFAULT_FONTS;
+      if (saved) {
+        try {
+          current = { ...DEFAULT_FONTS, ...JSON.parse(saved) };
+        } catch(e) {}
+      }
+
+      Object.keys(current).forEach(key => {
+        applyFontSizeVal(key, current[key], false);
+      });
+    }
+
+    function updateFontSize(key, val) {
+      applyFontSizeVal(key, val, true);
+    }
+
+    function applyFontSizeVal(key, val, shouldSave = true) {
+      document.documentElement.style.setProperty(`--${key}-size`, `${val}px`);
+      
+      const slider = document.getElementById(`slider-${key}`);
+      const valLabel = document.getElementById(`val-${key}`);
+      if (slider) slider.value = val;
+      if (valLabel) valLabel.innerText = `${val}px`;
+
+      if (shouldSave) {
+        saveCurrentFontSettings();
+      }
+    }
+
+    function saveCurrentFontSettings() {
+      const current = {};
+      Object.keys(DEFAULT_FONTS).forEach(k => {
+        const slider = document.getElementById(`slider-${k}`);
+        if (slider) current[k] = parseInt(slider.value, 10);
+      });
+      localStorage.setItem('family_board_font_settings', JSON.stringify(current));
+    }
+
+    function applyPreset(presetKey) {
+      const preset = PRESETS[presetKey];
+      if (!preset) return;
+      Object.keys(preset).forEach(k => {
+        applyFontSizeVal(k, preset[k], false);
+      });
+      saveCurrentFontSettings();
+    }
+
+    function resetFontDefaults() {
+      applyPreset('default');
+    }
+
+    function toggleFontPanel() {
+      const modal = document.getElementById('fontPanelModal');
+      const box = document.getElementById('fontPanelBox');
+      if (modal.classList.contains('hidden')) {
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+          modal.classList.remove('opacity-0');
+          box.classList.remove('scale-95');
+        }, 10);
+      } else {
+        modal.classList.add('opacity-0');
+        box.classList.add('scale-95');
+        setTimeout(() => {
+          modal.classList.add('hidden');
+        }, 200);
+      }
+    }
+
+    /* =========================================================================
+       BOARD RENDERING
+    ========================================================================= */
+    function initBoard() {
+      const board = document.getElementById('board');
+      
+      const oldTiles = board.querySelectorAll('.tile-slot');
+      oldTiles.forEach(t => t.remove());
+
+      TILES.forEach((tile, index) => {
+        const cell = document.createElement('div');
+        cell.className = 'tile-slot';
+        cell.id = `tile-idx-${index}`;
+        cell.style.gridColumnStart = tile.c + 1;
+        cell.style.gridRowStart = tile.r + 1;
+        cell.onclick = () => onTileClick(index);
+
+        let headerBg = 'bg-slate-800';
+        if (tile.cat === 'dad') headerBg = 'bg-dadTop';
+        if (tile.cat === 'mom') headerBg = 'bg-momTop';
+        if (tile.cat === 'fam') headerBg = 'bg-famTop';
+        if (tile.cat === 'go') headerBg = 'bg-goYellow';
+
+        let claimedHtml = '';
+        if (squareOwnership[index] !== undefined) {
+          const owner = PLAYERS[squareOwnership[index]];
+          claimedHtml = `<div class="claimed-badge absolute top-0.5 right-0.5 ${owner.bg} text-white font-black text-[9px] px-1 rounded shadow z-20">P${owner.id + 1}</div>`;
+        }
+
+        const hanzi = isSimplified ? tile.zh_s : tile.zh_t;
+
+        if (tile.cat === 'go') {
+          cell.classList.add('bg-amber-100');
+          cell.innerHTML = `
+            <div class="h-full w-full flex flex-col items-center justify-center p-1 bg-amber-200">
+              <span class="text-base sm:text-xl font-black text-slate-900 leading-none">←</span>
+              <span class="text-xl sm:text-3xl font-black text-slate-900 leading-none">GO</span>
+            </div>
+            <div id="pawns-box-${index}" class="player-pawns-container absolute bottom-0.5 left-0 w-full flex flex-wrap items-center justify-center gap-0.5 px-0.5 z-30 pointer-events-none"></div>
+          `;
+        } else {
+          cell.innerHTML = `
+            <div class="tile-color-bar ${headerBg}">
+              ${claimedHtml}
+            </div>
+            <div class="flex-1 flex flex-col items-center justify-center px-0.5 pb-1 text-center relative overflow-hidden">
+              <div class="font-pinyin font-size-tile-py font-black text-amber-800 tracking-tight leading-snug">${tile.py}</div>
+              <div class="font-cn font-size-tile-zh font-black text-slate-900 my-0.5 leading-none">${hanzi}</div>
+            </div>
+            <div id="pawns-box-${index}" class="player-pawns-container absolute bottom-0.5 left-0 w-full flex flex-wrap items-center justify-center gap-0.5 px-0.5 z-30 pointer-events-none"></div>
+          `;
+        }
+
+        board.appendChild(cell);
+      });
+
+      renderPlayerPawns();
+      updateScoreboard();
+    }
+
+    function renderPlayerPawns() {
+      TILES.forEach((_, idx) => {
+        const box = document.getElementById(`pawns-box-${idx}`);
+        if (box) box.innerHTML = '';
+      });
+
+      const activeCount = isSinglePlayerVsAi ? 2 : playerCount;
+
+      for (let i = 0; i < activeCount; i++) {
+        const p = PLAYERS[i];
+        const box = document.getElementById(`pawns-box-${p.pos}`);
+        if (box) {
+          const pawn = document.createElement('div');
+          pawn.className = `player-pawn w-4 h-4 sm:w-4.5 sm:h-4.5 rounded-full text-white flex items-center justify-center text-[8px] sm:text-[10px] font-black border border-white shadow ${p.bg}`;
+          pawn.innerHTML = `<i class="fa-solid ${p.icon}"></i>`;
+          pawn.title = `${p.name} (${p.colorName})`;
+          box.appendChild(pawn);
+        }
+      }
+    }
+
+    function updateScoreboard() {
+      const sb = document.getElementById('liveScoreboard');
+      if (!sb) return;
+      sb.innerHTML = '';
+
+      const activeCount = isSinglePlayerVsAi ? 2 : playerCount;
+
+      for (let i = 0; i < activeCount; i++) {
+        const p = PLAYERS[i];
+        const isTurn = (i === currentPlayer);
+        
+        let count = 0;
+        Object.values(squareOwnership).forEach(oId => {
+          if (oId === i) count++;
+        });
+
+        const pill = document.createElement('div');
+        pill.className = `flex items-center gap-1.5 px-2 py-0.5 rounded-lg transition text-[10px] sm:text-xs ${isTurn ? 'bg-white shadow ring-2 ring-slate-900 font-black' : 'opacity-70 font-semibold bg-white/60'}`;
+        pill.innerHTML = `
+          <span class="w-2.5 h-2.5 rounded-full ${p.bg} flex-shrink-0"></span>
+          <span>P${i + 1} ${p.emoji}:</span>
+          <span class="text-amber-600 font-black">${count}🚩</span>
+        `;
+        sb.appendChild(pill);
+      }
+    }
+
+    /* =========================================================================
+       GAMEPLAY ACTIONS (DICE, HOPPING, TURNS & 1P AI)
+    ========================================================================= */
+    function rollDice() {
+      if (isRolling) return;
+      isRolling = true;
+
+      const rollBtn = document.getElementById('rollBtn');
+      rollBtn.disabled = true;
+      rollBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+      const modal = document.getElementById('diceModal');
+      const playerLabel = document.getElementById('dicePlayerLabel');
+      const diceDisplay = document.getElementById('diceDisplay');
+      const numResult = document.getElementById('diceNumResult');
+
+      const p = PLAYERS[currentPlayer];
+      playerLabel.innerText = `${p.name} ${p.emoji} Rolling`;
+      playerLabel.style.color = p.color;
+      numResult.innerText = 'Rolling...';
+
+      modal.classList.remove('hidden');
+      setTimeout(() => modal.classList.remove('opacity-0'), 10);
+
+      playDiceRollSound();
+
+      const rollNumber = Math.floor(Math.random() * 6) + 1;
+
+      setTimeout(() => {
+        diceDisplay.classList.remove('animate-spin');
+        diceDisplay.innerHTML = `<span class="text-5xl font-black">${rollNumber}</span>`;
+        numResult.innerText = `${rollNumber} Steps! 🎲`;
+
+        speakText(`${rollNumber}`);
+
+        setTimeout(() => {
+          modal.classList.add('opacity-0');
+          setTimeout(() => {
+            modal.classList.add('hidden');
+            diceDisplay.classList.add('animate-spin');
+            diceDisplay.innerHTML = `<i class="fa-solid fa-dice"></i>`;
+            stepPlayerForward(currentPlayer, rollNumber);
+          }, 200);
+        }, 900);
+      }, 800);
+    }
+
+    function stepPlayerForward(playerIdx, steps) {
+      let remaining = steps;
+      const p = PLAYERS[playerIdx];
+
+      const stepInterval = setInterval(() => {
+        p.pos = (p.pos + 1) % TILES.length;
+        renderPlayerPawns();
+        playStepSound();
+
+        remaining--;
+        if (remaining <= 0) {
+          clearInterval(stepInterval);
+          isRolling = false;
+
+          const rollBtn = document.getElementById('rollBtn');
+          rollBtn.disabled = false;
+          rollBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+          if (isSinglePlayerVsAi && currentPlayer === 1) {
+            handleAiTurnLanding(p.pos);
+          } else {
+            openCardModal(p.pos);
+          }
+        }
+      }, 250);
+    }
+
+    function handleAiTurnLanding(tileIndex) {
+      const tile = TILES[tileIndex];
+      const hanzi = isSimplified ? tile.zh_s : tile.zh_t;
+
+      if (tile.cat !== 'go') {
+        speakText(`我是熊猫老师。你有${hanzi}吗？`);
+        setTimeout(() => {
+          if (squareOwnership[tileIndex] === undefined) {
+            squareOwnership[tileIndex] = 1;
+            initBoard();
+          }
+          nextTurn();
+        }, 2200);
+      } else {
+        setTimeout(nextTurn, 1000);
+      }
+    }
+
+    function onTileClick(tileIndex) {
+      openCardModal(tileIndex);
+    }
+
+    function openCardModal(tileIndex) {
+      activeModalIndex = tileIndex;
+      const tile = TILES[tileIndex];
+      const modal = document.getElementById('cardModal');
+      const box = document.getElementById('cardModalBox');
+
+      const hanzi = isSimplified ? tile.zh_s : tile.zh_t;
+      document.getElementById('modalPinyin').innerText = tile.py;
+      document.getElementById('modalChinese').innerText = hanzi;
+      document.getElementById('modalEnglish').innerText = tile.en;
+      document.getElementById('modalPromptWord').innerText = hanzi;
+
+      const pill = document.getElementById('modalCategoryPill');
+      if (tile.cat === 'dad') {
+        pill.innerText = "Dad's side (Father's Family)";
+        pill.className = 'py-1 px-3 rounded-full text-white font-black text-xs inline-block mb-1 shadow-sm bg-dadTop';
+      } else if (tile.cat === 'mom') {
+        pill.innerText = "Mom's side (Mother's Family)";
+        pill.className = 'py-1 px-3 rounded-full text-white font-black text-xs inline-block mb-1 shadow-sm bg-momTop';
+      } else if (tile.cat === 'fam') {
+        pill.innerText = "Parents, brothers & sisters";
+        pill.className = 'py-1 px-3 rounded-full text-white font-black text-xs inline-block mb-1 shadow-sm bg-famTop';
+      } else {
+        pill.innerText = "START (GO)";
+        pill.className = 'py-1 px-3 rounded-full text-slate-900 font-black text-xs inline-block mb-1 shadow-sm bg-goYellow';
+      }
+
+      const claimBtn = document.getElementById('claimTileBtn');
+      const ownerId = squareOwnership[tileIndex];
+
+      if (tile.cat === 'go') {
+        claimBtn.classList.add('hidden');
+      } else if (ownerId === undefined) {
+        claimBtn.classList.remove('hidden');
+        claimBtn.innerHTML = `<i class="fa-solid fa-flag"></i><span>I asked! (Claim)</span>`;
+      } else {
+        const owner = PLAYERS[ownerId];
+        claimBtn.classList.remove('hidden');
+        claimBtn.innerHTML = `<i class="fa-solid fa-shield-halved"></i><span>Owned by ${owner.name} (${owner.emoji})</span>`;
+      }
+
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        box.classList.remove('scale-95');
+      }, 10);
+
+      if (tile.cat !== 'go') {
+        speakText(`${hanzi}。你有${hanzi}吗？`);
+      }
+    }
+
+    function closeCardModal() {
+      const modal = document.getElementById('cardModal');
+      const box = document.getElementById('cardModalBox');
+      modal.classList.add('opacity-0');
+      box.classList.add('scale-95');
+
+      setTimeout(() => {
+        modal.classList.add('hidden');
+        nextTurn();
+      }, 200);
+    }
+
+    function claimActiveSquare() {
+      if (activeModalIndex === 0) return;
+      squareOwnership[activeModalIndex] = currentPlayer;
+      playCheerSound();
+      initBoard();
+      closeCardModal();
+    }
+
+    function nextTurn() {
+      const activeCount = isSinglePlayerVsAi ? 2 : playerCount;
+      currentPlayer = (currentPlayer + 1) % activeCount;
+      const nextP = PLAYERS[currentPlayer];
+
+      document.getElementById('turnPlayerText').innerText = `${nextP.name} ${nextP.emoji}`;
+      document.getElementById('turnPlayerText').style.color = nextP.color;
+      document.getElementById('turnIndicatorDot').style.backgroundColor = nextP.color;
+
+      updateScoreboard();
+
+      if (isSinglePlayerVsAi && currentPlayer === 1) {
+        const rollBtn = document.getElementById('rollBtn');
+        rollBtn.disabled = true;
+        setTimeout(() => {
+          rollDice();
+        }, 800);
+      }
+    }
+
+    /* =========================================================================
+       RESET SYSTEM
+    ========================================================================= */
+    function confirmResetGame() {
+      const modal = document.getElementById('resetModal');
+      modal.classList.remove('hidden');
+      setTimeout(() => modal.classList.remove('opacity-0'), 10);
+    }
+
+    function closeResetModal() {
+      const modal = document.getElementById('resetModal');
+      modal.classList.add('opacity-0');
+      setTimeout(() => modal.classList.add('hidden'), 200);
+    }
+
+    function executeResetGame() {
+      squareOwnership = {};
+      PLAYERS.forEach(p => p.pos = 0);
+      currentPlayer = 0;
+      initBoard();
+
+      const p0 = PLAYERS[0];
+      document.getElementById('turnPlayerText').innerText = `${p0.name} ${p0.emoji}`;
+      document.getElementById('turnPlayerText').style.color = p0.color;
+      document.getElementById('turnIndicatorDot').style.backgroundColor = p0.color;
+
+      const rollBtn = document.getElementById('rollBtn');
+      rollBtn.disabled = false;
+      rollBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+      closeResetModal();
+      playCheerSound();
+    }
+
+    /* =========================================================================
+       AUDIO & MANDARIN TTS (Web Speech API)
+    ========================================================================= */
+    function speakText(text) {
+      if (!soundEnabled) return;
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'zh-CN';
+        utter.rate = Shih.SPEED;
+        utter.pitch = 1.05;
+
+        const voices = window.speechSynthesis.getVoices();
+        const zhVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('cmn'));
+        if (zhVoice) utter.voice = zhVoice;
+
+        window.speechSynthesis.speak(utter);
+      }
+    }
+
+    function speakCurrentTile() {
+      const tile = TILES[activeModalIndex];
+      const hanzi = isSimplified ? tile.zh_s : tile.zh_t;
+      speakText(`${hanzi}。你有${hanzi}吗？我有一个${hanzi}。我没有。我不知道。`);
+    }
+
+    function speakSentencePrompt(type) {
+      if (type === 'A') {
+        speakText('你有吗？你有哥哥吗？你有妹妹吗？');
+      } else if (type === 'B1') {
+        speakText('我有一个、两个、三个、四个。我有一个哥哥。我有两个妹妹。');
+      } else if (type === 'B2') {
+        speakText('我没有。');
+      } else if (type === 'B3') {
+        speakText('我不知道。');
+      }
+    }
+
+    function toggleAudio() {
+      soundEnabled = !soundEnabled;
+      const btn = document.getElementById('soundBtn');
+      const label = document.getElementById('soundLabel');
+      if (soundEnabled) {
+        label.innerText = 'Sound ON';
+        btn.className = 'px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold transition flex items-center gap-1';
+        speakText('声音开启');
+      } else {
+        label.innerText = 'Sound OFF';
+        btn.className = 'px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 border border-slate-200 text-xs font-bold transition flex items-center gap-1';
+      }
+    }
+
+    function toggleScript() {
+      isSimplified = !isSimplified;
+      document.getElementById('scriptLabel').innerText = isSimplified ? '简体' : '繁體';
+      initBoard();
+    }
+
+    function setPlayerCount(num) {
+      if (num === 1) {
+        isSinglePlayerVsAi = true;
+        playerCount = 1;
+        PLAYERS[1].name = 'Panda AI';
+        PLAYERS[1].emoji = '🐼';
+        PLAYERS[1].isAi = true;
+      } else {
+        isSinglePlayerVsAi = false;
+        playerCount = num;
+        PLAYERS[1].name = 'Player 2';
+        PLAYERS[1].emoji = '🚀';
+        PLAYERS[1].isAi = false;
+      }
+
+      currentPlayer = 0;
+
+      [1, 2, 3, 4, 5].forEach(n => {
+        const btn = document.getElementById(`pcount-${n}`);
+        if (btn) {
+          if (n === num) {
+            btn.className = 'px-2 py-1 rounded-lg bg-white shadow-sm text-slate-900 font-black';
+          } else {
+            btn.className = 'px-2 py-1 rounded-lg text-slate-500 hover:bg-white';
+          }
+        }
+      });
+
+      renderPlayerPawns();
+      updateScoreboard();
+
+      const p0 = PLAYERS[0];
+      document.getElementById('turnPlayerText').innerText = `${p0.name} ${p0.emoji}`;
+      document.getElementById('turnPlayerText').style.color = p0.color;
+      document.getElementById('turnIndicatorDot').style.backgroundColor = p0.color;
+    }
+
+    /* Web Audio Synthesizers */
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playDiceRollSound() {
+      try {
+        for (let i = 0; i < 6; i++) {
+          setTimeout(() => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.frequency.setValueAtTime(320 + Math.random() * 200, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.06);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.06);
+          }, i * 110);
+        }
+      } catch(e) {}
+    }
+
+    function playStepSound() {
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.setValueAtTime(560, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.07, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.08);
+      } catch(e) {}
+    }
+
+    function playCheerSound() {
+      try {
+        [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.frequency.setValueAtTime(freq, audioCtx.currentTime + idx * 0.07);
+          gain.gain.setValueAtTime(0.09, audioCtx.currentTime + idx * 0.07);
+          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + idx * 0.07 + 0.14);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(audioCtx.currentTime + idx * 0.07);
+          osc.stop(audioCtx.currentTime + idx * 0.07 + 0.14);
+        });
+      } catch(e) {}
+    }
+
+    /* Auto-fit: if the center text is taller than the space, shrink it until it fits */
+    function fitCenter() {
+      const area = document.getElementById('centerArea');
+      const fit = document.getElementById('centerFit');
+      if (!area || !fit) return;
+      const cs = getComputedStyle(area);
+      const avail = area.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      let z = 1;
+      fit.style.zoom = 1;
+      fit.style.height = avail + 'px';
+      const cardB = document.getElementById('cardB');
+      const tooBig = () => fit.scrollHeight > fit.clientHeight + 1 || (cardB && cardB.scrollWidth > cardB.clientWidth + 1);
+      while (z > 0.55 && tooBig()) {
+        z -= 0.03;
+        fit.style.zoom = z;
+        fit.style.height = (avail / z) + 'px';
+      }
+    }
+    window.addEventListener('resize', fitCenter);
+    const _applyFontSizeVal = applyFontSizeVal;
+    applyFontSizeVal = function(key, val, shouldSave) { _applyFontSizeVal(key, val, shouldSave); fitCenter(); };
+
+    window.onload = function() {
+      Shih.islandBar();
+      Shih.loadUnit().then(UNIT => {
+      TILES = buildTiles(UNIT);
+      const t = UNIT.boardTitle || { zh: '大富翁', py: 'dà fù wēng', en: 'Board Game' };
+      document.title = `${t.en} - ${t.zh}`;
+      document.getElementById('boardTitleEn').textContent = t.en;
+      document.getElementById('boardTitleZh').textContent = t.zh;
+      document.getElementById('boardTitleEn2').textContent = t.en;
+      loadFontSettings();
+      initBoard();
+      fitCenter();
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitCenter);
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.getVoices();
+      }
+      });
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>你好吗？ How Are You?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 你好吗？：看小朋友的样子，选他会怎么回答。用法：feel.html?unit=hello */
+body.game { background: #E6F4F8; }
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; max-width: 1000px; margin: 0 auto; }
+@media (max-width: 760px) { .stage { grid-template-columns: 1fr; } }
+.scene { background: var(--card); border: 3px solid var(--ink); border-radius: 22px; padding: 14px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.qnum { align-self: flex-start; font-weight: 700; color: var(--sea-ink); background: #D6EEF5; border: 2px solid #7FC4D8; border-radius: 999px; padding: 2px 12px; font-size: 16px; }
+.pic { width: min(100%, 320px); }
+.pic svg { width: 100%; height: auto; display: block; }
+.pic.two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; max-width: 440px; align-items: center; }
+.name { font: 700 22px var(--f-latin); }
+.panel { background: var(--card); border: 3px solid var(--ink); border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.bubble { position: relative; background: #D6EEF5; border: 3px solid #7FC4D8; border-radius: 18px; padding: 10px 16px; align-self: flex-start; }
+.bubble .ruby .py { font-size: 16px; } .bubble .ruby .zh { font-size: 32px; }
+.bubble .en { font-size: 16px; color: var(--muted); }
+.answers { display: flex; flex-direction: column; gap: 10px; }
+.ans {
+  font: inherit; color: var(--ink); cursor: pointer; background: #FFF6D6; border: 3px solid #E9B949; border-radius: 16px;
+  box-shadow: 0 4px 0 #C4932A; padding: 8px 14px; display: flex; justify-content: center;
+}
+.ans .ruby .py { font-size: 16px; } .ans .ruby .zh { font-size: 32px; }
+.ans.right { background: var(--me-done); border-color: var(--me-ink); box-shadow: 0 4px 0 var(--me-ink); }
+.ans.wrong { animation: shake .35s; border-color: var(--bad); }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill" id="timer">0:00</span>
+      <button class="ctl" id="timerBtn" type="button"></button>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="stage">
+        <div class="scene" id="scene"></div>
+        <div class="panel" id="panel"></div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/common.js"></script>
+<script src="../shared/kids.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const ART = window.ART;      // 小朋友的名单和图：shared/kids.js
+  const C = UNIT.feel, LEVELS = UNIT.levels;
+  document.title = `${C.title.zh} ${C.title.en}`;
+  document.getElementById('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  document.getElementById('titleEn').textContent = C.title.en;
+  document.getElementById('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  const scene = document.getElementById('scene'), panel = document.getElementById('panel');
+  const scoreEl = document.getElementById('score'), winMsg = document.getElementById('winMsg'), winTime = document.getElementById('winTime');
+  const timerEl = document.getElementById('timer'), timer = Shih.timer(timerEl);
+  const timerOn = Shih.toggle(document.getElementById('timerBtn'), 'timer', '⏱ Timer on', '⏱ Timer off', true, on => { timerEl.hidden = !on; });
+  Shih.soundButton(document.getElementById('soundBtn'));
+  const WM = Shih.wordMap(UNIT);
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+  const feels = lv => UNIT.words.filter(w => w.feel && (w.level || 1) <= lv);
+  let level = Shih.startLevel('feelLevel', LEVELS.length);
+  const paintLevels = Shih.levelButtons(document.getElementById('levels'), LEVELS, level,
+    lv => feels(lv).length, lv => { level = lv; Shih.set('feelLevel', lv); setup(); }, UNIT.levelIcon);
+
+  // 一回合的题目：每题一个小朋友。第 2 级起，有两题是早上好／下午好
+  function makeRound() {
+    const kids = shuffle(ART.people), F = feels(level);
+    const greet = level >= C.greetFrom ? 2 : 0;
+    let fs = [];
+    while (fs.length < C.count - greet) fs = fs.concat(shuffle(F));
+    const qs = fs.slice(0, C.count - greet).map((w, i) => ({ kind: 'feel', kid: kids[i % kids.length], w }));
+    for (let g = 0; g < greet; g++) qs.push({ kind: 'greet', kid: kids[(C.count - 1 - g) % kids.length], morning: Math.random() < 0.5 });
+    return shuffle(qs);
+  }
+  const say = (zh, py, en) => `<span class="ruby">${Shih.rubyText(zh, py)}</span>` + (en ? `<div class="en">${Shih.esc(en)}</div>` : '');
+
+  let qs = [], qi = 0, busy = false;
+  function show() {
+    const q = qs[qi];
+    busy = false;
+    let opts;
+    if (q.kind === 'feel') {
+      scene.innerHTML = `<span class="qnum">${qi + 1} / ${qs.length}</span><div class="pic">${ART.kid(q.kid, q.w.feel)}</div><span class="name">${Shih.esc(q.kid.first)}</span>`;
+      panel.innerHTML = `<div class="bubble">${say(q.kid.first + '，你好吗？', 'nǐ hǎo ma?', q.kid.first + ', how are you?')}</div><div class="answers" id="answers"></div>`;
+      Shih.speak('你好吗？');
+      opts = shuffle([q.w].concat(shuffle(feels(level).filter(x => x !== q.w)).slice(0, C.choices - 1)));
+      opts = opts.map(w => ({ w, right: w === q.w }));
+    } else {
+      scene.innerHTML = `<span class="qnum">${qi + 1} / ${qs.length}</span><div class="pic two">${ART.time(q.morning ? 'morning' : 'afternoon')}${ART.kid(q.kid, 'wave')}</div><span class="name">${Shih.esc(q.kid.first)}</span>`;
+      panel.innerHTML = `<div class="bubble">${say('你说什么？', 'nǐ shuō shén me?', `It's ${q.morning ? '8:00 in the morning' : '3:00 in the afternoon'}. What do you say?`)}</div><div class="answers" id="answers"></div>`;
+      opts = [WM['早上好'], WM['下午好']].map(w => ({ w, right: (w.zh === '早上好') === q.morning }));
+    }
+    const box = document.getElementById('answers');
+    opts.forEach(({ w, right }) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'ans';
+      b.innerHTML = `<span class="ruby">${Shih.rubyText(w.zh, w.py)}</span>`;
+      b.addEventListener('click', () => {
+        if (busy) return;
+        if (!right) { b.classList.remove('wrong'); void b.offsetWidth; b.classList.add('wrong'); return; }
+        busy = true;
+        b.classList.add('right');
+        Shih.speak(w.zh);
+        qi++; update();
+        if (qi === qs.length) {
+          const ms = timer.stop();
+          winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
+          setTimeout(() => { winMsg.hidden = false; }, 700);
+        } else setTimeout(show, 1300);
+      });
+      box.appendChild(b);
+    });
+  }
+  function update() { scoreEl.textContent = `${qi} / ${qs.length}`; }
+
+  const wait = Shih.startCover(document.getElementById('playArea'), () => { if (timerOn()) timer.start(); show(); });
+  function setup() {
+    paintLevels(level);
+    qs = makeRound(); qi = 0;
+    timer.reset(); winMsg.hidden = true; update();
+    show();
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+    wait();
+  }
+  document.getElementById('resetBtn').addEventListener('click', setup);
+  document.getElementById('againBtn').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

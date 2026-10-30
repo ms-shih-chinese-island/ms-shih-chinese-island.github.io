@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>化妆舞会 Costume Party</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 化妆舞会：把名字拖到装扮好的小朋友下面。用法：dressup.html?unit=halloween */
+body.game { background: #EFEAF8; }
+.banner {
+  position: relative; background: var(--card); border: 3px solid #2B2B2B; border-radius: 18px; padding: 26px 16px 12px; margin-bottom: 14px;
+  display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center;
+}
+.banner svg.flags { position: absolute; left: 0; right: 0; top: -2px; width: 100%; height: 26px; }
+.banner .ruby .py { font-size: 18px; } .banner .ruby .zh { font-size: 34px; }
+.banner .en { font-size: 17px; color: var(--muted); }
+.party { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.guest { background: var(--card); border: 3px solid var(--night); border-radius: 18px; padding: 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.guest .art { width: 120px; height: 120px; }
+.guest .art svg { width: 100%; height: 100%; }
+.guest .dropSlot { width: 100%; }
+.guest .enName { font-size: 17px; font-weight: 700; color: var(--night-ink); margin-top: -4px; }
+.guest.done { border-color: var(--me-ink); background: var(--me-soft); }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill" id="timer">0:00</span>
+      <button class="ctl" id="timerBtn" type="button"></button>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="banner" id="banner">
+        <svg class="flags" viewBox="0 0 600 26" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0 4 Q300 18 600 4" fill="none" stroke="#2B2B2B" stroke-width="2"/>
+          <g stroke="#2B2B2B" stroke-width="1.5"><path d="M30 6 L40 24 L50 8 Z" fill="#F28C3A"/><path d="M110 9 L120 26 L130 10 Z" fill="#9B6BC9"/><path d="M190 11 L200 26 L210 12 Z" fill="#F28C3A"/><path d="M270 12 L280 26 L290 12 Z" fill="#9B6BC9"/><path d="M350 12 L360 26 L370 12 Z" fill="#F28C3A"/><path d="M430 11 L440 26 L450 10 Z" fill="#9B6BC9"/><path d="M510 9 L520 25 L530 8 Z" fill="#F28C3A"/></g>
+        </svg>
+        <span class="ruby" id="bannerRuby"></span>
+        <span class="en" id="bannerEn"></span>
+      </div>
+      <div class="party" id="party"></div>
+      <div class="bank" id="bank"></div>
+    </div>
+  </div>
+
+<script src="../shared/common.js"></script>
+<script>
+Shih.islandBar();
+Promise.all([Shih.loadUnit(), Shih.loadArt()]).then(([UNIT, ART]) => {
+  const C = UNIT.dressup;
+  const LEVELS = UNIT.levels || [{ note: '' }];
+  const WM = Shih.wordMap(UNIT);
+  document.title = `${C.title.zh} ${C.title.en}`;
+  document.getElementById('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  document.getElementById('titleEn').textContent = C.title.en;
+  document.getElementById('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  const party = document.getElementById('party'), bank = document.getElementById('bank');
+  const bannerRuby = document.getElementById('bannerRuby'), bannerEn = document.getElementById('bannerEn');
+  const scoreEl = document.getElementById('score'), winMsg = document.getElementById('winMsg'), winTime = document.getElementById('winTime');
+  const timerEl = document.getElementById('timer'), timer = Shih.timer(timerEl);
+  const timerOn = Shih.toggle(document.getElementById('timerBtn'), 'timer', '⏱ Timer on', '⏱ Timer off', true, on => { timerEl.hidden = !on; });
+  Shih.soundButton(document.getElementById('soundBtn'));
+
+  const lvOf = zh => (WM[zh] ? (WM[zh].level || 1) : 1);
+  const guestsAt = lv => C.costumes.filter(zh => WM[zh] && lvOf(zh) <= lv && ART && ART.costumes[zh]).map(zh => WM[zh]);
+  const extrasAt = lv => (C.distractorLevels || []).includes(lv) ? (C.distractors || []).filter(zh => WM[zh] && lvOf(zh) <= lv).map(zh => WM[zh]) : [];
+  let level = Shih.startLevel('dressupLevel', LEVELS.length);
+  const paintLevels = Shih.levelButtons(document.getElementById('levels'), LEVELS, level,
+    lv => guestsAt(lv).length, lv => { level = lv; Shih.set('dressupLevel', lv); setup(); }, UNIT.levelIcon);
+
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  function banner(w) {
+    const t = Shih.fill(C.frame, w);
+    bannerRuby.innerHTML = Shih.rubyText(t.zh, t.py);
+    bannerEn.textContent = t.en;
+  }
+  let total = 0, done = 0;
+  const wait = Shih.startCover(document.getElementById('playArea'), () => { if (timerOn()) timer.start(); });
+
+  function setup() {
+    paintLevels(level);
+    banner(null);
+    const guests = shuffle(guestsAt(level));
+    party.innerHTML = ''; bank.innerHTML = '';
+    let dnd = null;
+    guests.forEach(w => {
+      const g = document.createElement('div');
+      g.className = 'guest';
+      g.innerHTML = `<div class="art">${ART.costumes[w.zh]}</div><span class="enName">${Shih.esc(w.en)}</span><span class="dropSlot" data-answer="${w.zh}"></span>`;
+      party.appendChild(g);
+      const slot = g.querySelector('.dropSlot');
+      slot.addEventListener('click', () => dnd && dnd.tapSlot(slot));
+    });
+    const cards = shuffle(guests.concat(extrasAt(level))).map(w => {
+      const c = document.createElement('div');
+      c.className = 'wcard'; c.dataset.word = w.zh;
+      c.innerHTML = `<span class="ruby">${Shih.ruby(w.zh, w.py)}</span>`;
+      bank.appendChild(c);
+      return c;
+    });
+    dnd = Shih.dragCards(cards, {
+      slots: () => [...party.querySelectorAll('.dropSlot:not(.filled)')],
+      accept(card, slot) {
+        if (card.dataset.word !== slot.dataset.answer) return false;
+        const w = WM[card.dataset.word];
+        card.classList.add('used');
+        slot.classList.add('filled');
+        slot.innerHTML = `<span class="ruby">${Shih.ruby(w.zh, w.py)}</span>`;
+        slot.closest('.guest').classList.add('done');
+        banner(w);
+        Shih.speak(Shih.fill(C.frame, w).zh);
+        done++; update();
+        if (done === total) {
+          const ms = timer.stop();
+          winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
+          setTimeout(() => { winMsg.hidden = false; }, 900);
+        }
+        return true;
+      }
+    });
+    total = guests.length; done = 0;
+    timer.reset(); winMsg.hidden = true; update();
+    wait();
+  }
+  function update() { scoreEl.textContent = `${done} / ${total}`; }
+  document.getElementById('resetBtn').addEventListener('click', setup);
+  document.getElementById('againBtn').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

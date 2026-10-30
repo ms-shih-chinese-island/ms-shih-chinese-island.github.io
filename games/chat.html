@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>对话框 Chat Bubbles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 对话框：两个小朋友聊天，把字卡拖进空的泡泡。用法：chat.html?unit=hello */
+body.game { background: #E6F4F8; }
+.wrap { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 14px; align-items: start; }
+.wrap .bank { position: sticky; top: 10px; flex-direction: column; align-items: stretch; }
+@media (max-width: 760px) { .wrap { grid-template-columns: 1fr; } .wrap .bank { flex-direction: row; } }
+.chatBox { background: var(--card); border: 3px solid var(--ink); border-radius: 22px; padding: 14px; display: flex; flex-direction: column; gap: 4px; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.qnum { font-weight: 700; color: var(--sea-ink); background: #D6EEF5; border: 2px solid #7FC4D8; border-radius: 999px; padding: 2px 12px; font-size: 16px; }
+.clock { width: 120px; }
+.clock svg { width: 100%; height: auto; display: block; }
+.row { display: flex; align-items: flex-end; gap: 10px; }
+.row.B { flex-direction: row-reverse; }
+.who { display: flex; flex-direction: column; align-items: center; width: 92px; flex: none; }
+.who svg { width: 92px; height: 92px; }
+.who .nm { font: 700 15px var(--f-latin); }
+.say { display: flex; flex-direction: column; gap: 2px; max-width: 70%; }
+.row.B .say { align-items: flex-end; }
+.bub { position: relative; border-radius: 18px; padding: 8px 14px; border: 3px solid; }
+.row.A .bub { background: #D6EEF5; border-color: #7FC4D8; }
+.row.B .bub { background: #FFF6D6; border-color: #E9B949; }
+.bub .ruby .py { font-size: 14px; } .bub .ruby .zh { font-size: 28px; }
+.say .en { font-size: 14px; color: var(--muted); padding: 0 6px; }
+.cake { display: inline-flex; align-items: center; gap: 4px; font: 700 18px var(--f-latin); background: #FDEEF3; border: 2px solid var(--mom); border-radius: 12px; padding: 2px 8px; }
+.bub .dropSlot { min-width: 160px; min-height: 58px; border-color: #7FC4D8; background: #fff; }
+.bub .dropSlot.filled { border-color: var(--me); background: var(--me-done); }
+.bub.slotted { padding: 4px; }
+.bank .wcard .zh { font-size: 26px; }
+.bank .wcard .py { font-size: 13px; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill" id="timer">0:00</span>
+      <button class="ctl" id="timerBtn" type="button"></button>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help">Drag the cards into the empty bubbles. You can also tap a card, then tap a bubble.</p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="wrap">
+        <div class="chatBox" id="chat"></div>
+        <div class="bank" id="bank"></div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/common.js"></script>
+<script src="../shared/kids.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const ART = window.ART;      // 小朋友的名单和图：shared/kids.js
+  const C = UNIT.chat, LEVELS = UNIT.levels, FROM = C.from || 2;
+  document.title = `${C.title.zh} ${C.title.en}`;
+  document.getElementById('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  document.getElementById('titleEn').textContent = C.title.en;
+  document.getElementById('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  const chat = document.getElementById('chat'), bank = document.getElementById('bank');
+  const scoreEl = document.getElementById('score'), winMsg = document.getElementById('winMsg'), winTime = document.getElementById('winTime');
+  const timerEl = document.getElementById('timer'), timer = Shih.timer(timerEl);
+  const timerOn = Shih.toggle(document.getElementById('timerBtn'), 'timer', '⏱ Timer on', '⏱ Timer off', true, on => { timerEl.hidden = !on; });
+  Shih.soundButton(document.getElementById('soundBtn'));
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+
+  let level = Shih.startLevel('chatLevel', LEVELS.length, FROM);
+  const paintLevels = Shih.levelButtons(document.getElementById('levels'), LEVELS, level, null,
+    lv => { level = lv; Shih.set('chatLevel', lv); setup(); }, UNIT.levelIcon, FROM);
+
+  // 一句话：{ zh, py, en }
+  const T = (zh, py, en) => ({ zh, py, en });
+  const AGE = { 7: ['七', 'qī'], 8: ['八', 'bā'], 9: ['九', 'jiǔ'], 10: ['十', 'shí'] };
+  const ageLine = n => T(`我${AGE[n][0]}岁。`, `wǒ ${AGE[n][1]} suì.`, `I'm ${n} years old.`);
+  const feelLine = w => T(w.zh + '。', w.py + '.', w.en + '.');
+  const nameLine = p => T(`我叫 ${p.first}。`, 'wǒ jiào.', `My name is ${p.first}.`);
+
+  // 一段对话：A 问、B 答。blank 是要学生填的那一句
+  function makeChat() {
+    const [A, B] = shuffle(ART.people);
+    const morning = Math.random() < 0.5;
+    const feels = ART.FEELS.filter(w => w.level <= level);
+    const feel = pick(feels), age = pick([7, 8, 9, 10]);
+    const g = ART.GREET[morning ? 'morning' : 'afternoon'];
+    const lines = [], extra = [];
+    // 第 1 级（二年级）：A 说「你好！」，B 回「你好！」；再问名字
+    if (level === 1) {
+      const hi = T('你好！', 'nǐ hǎo!', 'Hello!'), ask = T('你叫什么名字？', 'nǐ jiào shén me míng zì?', "What's your name?");
+      lines.push({ who: 'A', t: hi }, { who: 'B', t: hi, blank: true });
+      lines.push({ who: 'A', t: ask }, { who: 'B', t: nameLine(B), blank: true });
+      // 错的卡：别人的名字、把问题当回答
+      return { A, B, morning: null, lines, extra: [nameLine(A), ask] };
+    }
+    // 打招呼：A 先说（空着），B 回一样的话
+    lines.push({ who: 'A', t: T(g.zh + '！', g.py + '!', g.en + '!'), blank: true });
+    lines.push({ who: 'B', t: T(g.zh + '！', g.py + '!', g.en + '!'), echo: true });
+    const g2 = ART.GREET[morning ? 'afternoon' : 'morning'];
+    extra.push(T(g2.zh + '！', g2.py + '!', ''));
+    const qa = [
+      [T('你叫什么名字？', 'nǐ jiào shén me míng zì?', "What's your name?"), nameLine(B), nameLine(A)],
+      [T('你好吗？', 'nǐ hǎo ma?', 'How are you?'), feelLine(feel), feelLine(pick(feels.filter(w => w !== feel)))]
+    ];
+    if (level >= 3) qa.push([T('你几岁？', 'nǐ jǐ suì?', 'How old are you?'), ageLine(age), ageLine(age === 10 ? 9 : age + 1)]);
+    qa.forEach(([q, a, wrong]) => {
+      const askBlank = Math.random() < 0.3;           // 大部分空回答，有时候空问题
+      lines.push({ who: 'A', t: q, blank: askBlank });
+      lines.push({ who: 'B', t: a, blank: !askBlank, feel: q.zh === '你好吗？' ? feel.feel : null, age: q.zh === '你几岁？' ? age : null });
+      if (!askBlank) extra.push(wrong);
+    });
+    // 错的卡最多 2 张
+    return { A, B, morning, lines, extra: shuffle(extra).slice(0, 2) };
+  }
+
+  let chats = [], ci = 0, done = 0, total = 0, busy = false;
+  function show() {
+    const c = chats[ci];
+    busy = false;
+    chat.innerHTML = `<div class="top"><span class="qnum">${ci + 1} / ${chats.length}</span>${c.morning === null ? '' : `<div class="clock">${ART.time(c.morning ? 'morning' : 'afternoon')}</div>`}</div>`;   // 第 1 级没有早上／下午
+    c.lines.forEach((L, i) => {
+      const p = L.who === 'A' ? c.A : c.B;
+      const row = document.createElement('div');
+      row.className = 'row ' + L.who;
+      const face = L.feel || (L.who === 'B' && i <= 1 ? 'wave' : (L.who === 'A' && i === 0 ? 'wave' : 'good'));
+      let extra = L.age ? `<span class="cake">🎂 ${L.age}</span>` : '';
+      row.innerHTML = `<div class="who">${ART.kid(p, face)}<span class="nm">${Shih.esc(p.first)}</span></div>` +
+        `<div class="say">${extra}<div class="bub${L.blank ? ' slotted' : ''}">` +
+        (L.blank ? `<span class="dropSlot" data-i="${i}"></span>` : L.echo ? `<span class="echo" data-i="${i}">…</span>` : `<span class="ruby">${Shih.rubyText(L.t.zh, L.t.py)}</span>`) +
+        `</div><span class="en" data-en="${i}">${L.blank || L.echo ? '' : Shih.esc(L.t.en)}</span></div>`;
+      chat.appendChild(row);
+    });
+    const need = c.lines.filter(L => L.blank).map(L => L.t);
+    bank.innerHTML = '';
+    const cards = shuffle(need.concat(c.extra)).map(t => {
+      const el = document.createElement('div');
+      el.className = 'wcard'; el.dataset.zh = t.zh;
+      el.innerHTML = `<span class="ruby">${Shih.rubyText(t.zh, t.py)}</span>`;
+      bank.appendChild(el);
+      return el;
+    });
+    const dnd = Shih.dragCards(cards, {
+      slots: () => [...chat.querySelectorAll('.dropSlot:not(.filled)')],
+      accept(card, slot) {
+        const i = +slot.dataset.i, L = c.lines[i];
+        if (card.dataset.zh !== L.t.zh) return false;
+        card.classList.add('used');
+        slot.classList.add('filled');
+        slot.innerHTML = `<span class="ruby">${Shih.rubyText(L.t.zh, L.t.py)}</span>`;
+        chat.querySelector(`[data-en="${i}"]`).textContent = L.t.en;
+        // 打招呼填好了，B 才回话
+        const echo = c.lines.findIndex(x => x.echo);
+        if (i === 0 && echo >= 0) {
+          chat.querySelector(`.echo[data-i="${echo}"]`).outerHTML = `<span class="ruby">${Shih.rubyText(c.lines[echo].t.zh, c.lines[echo].t.py)}</span>`;
+          chat.querySelector(`[data-en="${echo}"]`).textContent = c.lines[echo].t.en;
+        }
+        Shih.speak(L.t.zh.replace(/ [A-Za-z]+/, ''));
+        done++; update();
+        if (!chat.querySelector('.dropSlot:not(.filled)') && !busy) {
+          busy = true;
+          ci++;
+          if (ci === chats.length) {
+            const ms = timer.stop();
+            winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
+            setTimeout(() => { winMsg.hidden = false; }, 700);
+          } else setTimeout(show, 1600);
+        }
+        return true;
+      }
+    });
+    chat.querySelectorAll('.dropSlot').forEach(s => s.addEventListener('click', () => dnd.tapSlot(s)));
+  }
+  function update() { scoreEl.textContent = `${done} / ${total}`; }
+
+  const wait = Shih.startCover(document.getElementById('playArea'), () => { if (timerOn()) timer.start(); });
+  function setup() {
+    paintLevels(level);
+    chats = Array.from({ length: C.rounds || 3 }, makeChat);
+    total = chats.reduce((s, c) => s + c.lines.filter(L => L.blank).length, 0);
+    ci = 0; done = 0;
+    timer.reset(); winMsg.hidden = true; update();
+    show();
+    wait();
+  }
+  document.getElementById('resetBtn').addEventListener('click', setup);
+  document.getElementById('againBtn').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

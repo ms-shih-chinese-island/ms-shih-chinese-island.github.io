@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>数字挑战 Number Challenge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 数字挑战：一题一题答，题型混着出。用法：numbers.html?unit=numbers */
+body.game { background: #FFF8E1; }
+.qcard { max-width: 820px; margin: 0 auto; background: var(--card); border: 3px solid var(--ink); border-radius: 22px; padding: 18px 18px 22px; display: flex; flex-direction: column; align-items: center; gap: 16px; min-height: 420px; }
+.qnum { align-self: flex-start; font-weight: 700; color: #8A5A2B; background: #FFF1C7; border: 2px solid #E9B949; border-radius: 999px; padding: 2px 12px; font-size: 16px; }
+.prompt { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; }
+.prompt .ruby .py { font-size: 15px; } .prompt .ruby .zh { font-size: 26px; }
+.prompt .en { font-size: 17px; color: var(--muted); }
+.fact { font-size: clamp(24px, 3.4vw, 34px); font-weight: 700; text-align: center; max-width: 680px; line-height: 1.25; }
+.bigzh { cursor: pointer; background: #FFF6D6; border: 3px solid #E9B949; border-radius: 18px; padding: 10px 22px; }
+.bigzh .ruby .py { font-size: 20px; } .bigzh .ruby .zh { font-size: clamp(40px, 6vw, 60px); }
+.seq { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 10px; }
+.seq .t { background: #FFF6D6; border: 3px solid #E9B949; border-radius: 14px; padding: 6px 12px; cursor: pointer; }
+.seq .t .ruby .py { font-size: 14px; } .seq .t .ruby .zh { font-size: 30px; }
+.seq .t.blank { background: #fff; border-style: dashed; color: #C4932A; font: 700 34px var(--f-latin); min-width: 90px; text-align: center; padding: 14px 12px; }
+.seq .t.blank.got { border-style: solid; border-color: var(--me-ink); background: var(--me-done); color: var(--ink); padding: 6px 12px; }
+.seq .comma { font-size: 30px; padding-bottom: 6px; }
+.eqWrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.eq { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; justify-content: center; font: 700 clamp(44px, 6vw, 64px)/1 var(--f-latin); }
+.eq .op, .eq .eqs, .eq .qm { margin-bottom: 4px; }
+.eq .op { font-size: .8em; }
+.eq .eqs { color: var(--muted); }
+.eq .qm { color: #C4932A; }
+.eq .ruby .py { font-size: 18px; } .eq .ruby .zh { font-size: clamp(36px, 5vw, 52px); }
+.eqEn { font-size: 20px; color: var(--muted); font-weight: 700; }
+.choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; width: 100%; max-width: 640px; }
+.choice {
+  font: inherit; color: var(--ink); cursor: pointer; background: #FFF6D6; border: 3px solid #E9B949; border-radius: 16px;
+  box-shadow: 0 4px 0 #C4932A; padding: 10px 12px; display: flex; justify-content: center; align-items: center; min-height: 84px;
+}
+.choice .num { font: 700 40px var(--f-latin); }
+.choice .ruby .py { font-size: 15px; } .choice .ruby .zh { font-size: 30px; }
+.choice.right { background: var(--me-done); border-color: var(--me-ink); box-shadow: 0 4px 0 var(--me-ink); }
+.choice.wrong { animation: shake .35s; border-color: var(--bad); }
+.order { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
+.slots { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; }
+.slots .arrow { font: 700 26px var(--f-latin); color: #C4932A; }
+.slots .end { display: flex; flex-direction: column; align-items: center; color: #8A5A2B; }
+.slots .end .ruby .py { font-size: 13px; } .slots .end .ruby .zh { font-size: 26px; }
+.order .dropSlot { border-color: #E9B949; background: #FFF6D6; min-width: 110px; }
+.order .dropSlot.filled { border-color: var(--me); background: var(--me-done); }
+.order .bank { width: 100%; }
+.order .wcard .zh { font-size: 26px; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill" id="timer">0:00</span>
+      <button class="ctl" id="timerBtn" type="button"></button>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner"><div class="qcard" id="qcard"></div></div>
+  </div>
+
+<script src="../shared/common.js"></script>
+<script src="../shared/numbers.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const N = ShihNum, C = UNIT.challenge, LEVELS = UNIT.levels;
+  document.title = `${C.title.zh} ${C.title.en}`;
+  document.getElementById('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  document.getElementById('titleEn').textContent = C.title.en;
+  document.getElementById('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  const qcard = document.getElementById('qcard');
+  const scoreEl = document.getElementById('score'), winMsg = document.getElementById('winMsg'), winTime = document.getElementById('winTime');
+  const timerEl = document.getElementById('timer'), timer = Shih.timer(timerEl);
+  const timerOn = Shih.toggle(document.getElementById('timerBtn'), 'timer', '⏱ Timer on', '⏱ Timer off', true, on => { timerEl.hidden = !on; });
+  Shih.soundButton(document.getElementById('soundBtn'));
+
+  let level = Shih.startLevel('numbersLevel', LEVELS.length);
+  const paintLevels = Shih.levelButtons(document.getElementById('levels'), LEVELS, level, null,
+    lv => { level = lv; Shih.set('numbersLevel', lv); setup(); }, UNIT.levelIcon);
+  // 每一题先决定用哪一级的数字：高的级也会出前面几级的题，只是比例比较少
+  // MIX[选的级] = 出第 1、2、3 级题目的比例
+  const MIX = { 1: [1], 2: [0.3, 0.7], 3: [0.15, 0.25, 0.6] };
+  let eff = level;
+  const pickEff = () => { const w = MIX[level] || [1]; let r = Math.random(); for (let i = 0; i < w.length; i++) { if ((r -= w[i]) < 0) return i + 1; } return w.length; };
+  const L = () => LEVELS[eff - 1];
+  const inRange = n => n >= L().min && n <= L().max && N.ok(n);
+  const anyNum = () => eff >= 3 ? N.big(L().min) : N.rnd(L().min, L().max);
+  const prompt = (zh, py, en) => `<div class="prompt"><span class="ruby">${Shih.rubyText(zh, py)}</span><span class="en">${Shih.esc(en)}</span></div>`;
+
+  // ---------- 出题 ----------
+  const MAKE = {
+    read() {
+      const n = anyNum();
+      return { kind: 'read', n, opts: N.options(n, N.near(n, L().min, L().max), L().min, L().max) };
+    },
+    between() {
+      const steps = eff === 1 ? [1] : eff === 2 ? [1, 1, 10] : [10, 100, 100, 1000];
+      for (;;) {
+        const step = N.pick(steps), start = anyNum();
+        const seq = [0, 1, 2, 3].map(i => start + i * step);
+        if (!seq.every(inRange)) continue;
+        const gap = N.rnd(1, 2);                     // 空格在第二或第三个
+        const ans = seq[gap];
+        const cands = N.near(ans, L().min, L().max, [step * 2, -step * 2, step * 3, -step * 3]).filter(x => !seq.includes(x));
+        return { kind: 'between', seq, gap, n: ans, opts: N.options(ans, cands, L().min, L().max) };
+      }
+    },
+    order() {
+      const first = anyNum();
+      const pool = N.near(first, L().min, L().max);
+      const nums = [first];
+      pool.forEach(x => { if (nums.length < 3 && !nums.includes(x)) nums.push(x); });
+      while (nums.length < 4) { const x = anyNum(); if (!nums.includes(x)) nums.push(x); }
+      return { kind: 'order', nums: N.shuffle(nums), up: Math.random() < 0.5 };
+    },
+    math(zhStyle) {
+      for (;;) {
+        let a, b, plus = Math.random() < 0.5;
+        if (eff === 1) { if (plus) { a = N.rnd(1, 20); b = N.rnd(1, Math.min(20, 30 - a)); } else { a = N.rnd(5, 30); b = N.rnd(1, a - 1); } }
+        else if (eff === 2) { if (plus) { a = N.rnd(10, 90); b = N.rnd(1, 100 - a); } else { a = N.rnd(20, 100); b = N.rnd(1, a - 1); } }
+        else {
+          // 四年级：三位数、四位数，要进位、借位（例如 3456 + 278、2341 − 186）
+          // 大部分是每一位都不是 0 的数（例如 3456），比较需要进位、借位
+          const full = len => { let s = ''; for (let i = 0; i < len; i++) s += N.rnd(1, 9); return +s; };
+          const big = () => Math.random() < 0.75 ? full(N.rnd(3, 4)) : N.big();
+          a = big(); b = Math.random() < 0.4 ? full(2) : big();
+          if (!plus && b >= a) [a, b] = [b, a];
+        }
+        const n = plus ? a + b : a - b;
+        if (!N.ok(a) || !N.ok(b) || !inRange(n) || a === b) continue;
+        const other = plus ? a - b : a + b;              // 加减看错时的答案
+        // 错的选项：忘了进位／借位（差 10、100、1000）、差 1、两个数字对调
+        const carry = eff === 3 ? [10, -10, 100, -100, 1000, -1000, 110, -110] : [];
+        const cands = (eff === 3 ? N.shuffle(carry.map(k => n + k)) : []).concat([other], N.near(n, L().min, L().max));
+        return { kind: 'math', zh: !!zhStyle, a, b, plus, n, opts: N.options(n, cands, L().min, L().max) };
+      }
+    },
+    mathZh() { return MAKE.math(true); },
+    facts(used) {
+      const ok = (UNIT.facts || []).filter(f => !used.includes(f));   // 常识题每一级都会出现
+      if (!ok.length) return null;
+      const f = N.pick(ok); used.push(f);
+      const cands = (f.wrong || []).concat(N.near(f.answer, 1, L().max));
+      return { kind: 'fact', f, n: f.answer, opts: N.options(f.answer, cands, 1, Math.max(L().max, f.answer * 2)) };
+    }
+  };
+  function makeRound() {
+    const qs = [], usedFacts = [];
+    Object.entries(C.mix).forEach(([k, cnt]) => {
+      for (let i = 0; i < cnt; i++) { eff = pickEff(); qs.push(k === 'facts' ? (MAKE.facts(usedFacts) || MAKE.read()) : MAKE[k]()); }
+    });
+    return N.shuffle(qs);
+  }
+
+  // ---------- 画题目 ----------
+  let qs = [], qi = 0, busy = false;
+  function show() {
+    const q = qs[qi];
+    busy = false;
+    let h = `<span class="qnum">${qi + 1} / ${qs.length}</span>`;
+    if (q.kind === 'read') {
+      h += prompt('这是哪个数字？', 'zhè shì nǎ ge shù zì?', 'Which number is this?') +
+           `<button type="button" class="bigzh" id="say">${N.ruby(q.n)}</button>`;
+    } else if (q.kind === 'between') {
+      h += prompt('哪个数字不见了？', 'nǎ ge shù zì bú jiàn le?', 'Which number is missing?') + '<div class="seq">' +
+        q.seq.map((n, i) => (i ? '<span class="comma">、</span>' : '') + (i === q.gap ? `<span class="t blank" id="blank">?</span>` : `<button type="button" class="t" data-n="${n}">${N.ruby(n)}</button>`)).join('') + '</div>';
+    } else if (q.kind === 'math') {
+      const side = n => q.zh ? N.ruby(n) : `<span>${n}</span>`;
+      h += prompt('是多少？', 'shì duō shǎo?', "What's the answer?") +
+        `<div class="eqWrap"><div class="eq">${side(q.a)}<span class="op ${q.plus ? 'plus' : 'minus'}" aria-label="${q.plus ? 'plus' : 'minus'}">${q.plus ? '+' : '−'}</span>${side(q.b)}<span class="eqs">=</span><span class="qm">?</span></div>` +
+        (q.zh ? '' : `<div class="eqEn">${q.a} ${q.plus ? 'plus' : 'minus'} ${q.b}</div>`) + '</div>';
+    } else if (q.kind === 'fact') {
+      h += `<div class="fact">${Shih.esc(q.f.en)}</div>` + prompt('用中文回答', 'yòng zhōng wén huí dá', 'Answer in Chinese');
+    } else if (q.kind === 'order') {
+      return showOrder(q, h);
+    }
+    h += '<div class="choices" id="choices"></div>';
+    qcard.innerHTML = h;
+    const say = document.getElementById('say');
+    if (say) { say.addEventListener('click', () => Shih.speak(N.zh(q.n))); Shih.speak(N.zh(q.n)); }
+    qcard.querySelectorAll('.seq .t[data-n]').forEach(t => t.addEventListener('click', () => Shih.speak(N.zh(+t.dataset.n))));
+    const box = document.getElementById('choices');
+    const digits = q.kind === 'read';
+    q.opts.forEach(n => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'choice';
+      b.innerHTML = digits ? `<span class="num">${n}</span>` : N.ruby(n);
+      b.addEventListener('click', () => {
+        if (busy) return;
+        if (n !== q.n) { b.classList.remove('wrong'); void b.offsetWidth; b.classList.add('wrong'); return; }
+        busy = true;
+        b.classList.add('right');
+        Shih.speak(N.zh(n));
+        const blank = document.getElementById('blank');
+        if (blank) { blank.classList.add('got'); blank.innerHTML = N.ruby(n); }
+        const qm = qcard.querySelector('.eq .qm');
+        if (qm) qm.outerHTML = q.zh ? N.ruby(n) : `<span style="color:var(--me-ink)">${n}</span>`;
+        next();
+      });
+      box.appendChild(b);
+    });
+  }
+  function showOrder(q, h) {
+    const sorted = q.nums.slice().sort((a, b) => q.up ? a - b : b - a);
+    const ends = q.up ? [['小', 'xiǎo'], ['大', 'dà']] : [['大', 'dà'], ['小', 'xiǎo']];
+    h += (q.up ? prompt('从小排到大', 'cóng xiǎo pái dào dà', 'Put them in order: smallest → biggest')
+               : prompt('从大排到小', 'cóng dà pái dào xiǎo', 'Put them in order: biggest → smallest')) +
+      `<div class="order"><div class="slots"><span class="end"><span class="ruby">${Shih.ruby(...ends[0])}</span></span>` +
+      sorted.map((n, i) => (i ? '<span class="arrow">→</span>' : '') + `<span class="dropSlot" data-n="${n}"></span>`).join('') +
+      `<span class="end"><span class="ruby">${Shih.ruby(...ends[1])}</span></span></div><div class="bank" id="bank"></div></div>`;
+    qcard.innerHTML = h;
+    const bank = document.getElementById('bank');
+    const cards = q.nums.map(n => {
+      const c = document.createElement('div');
+      c.className = 'wcard'; c.dataset.n = n;
+      c.innerHTML = N.ruby(n);
+      bank.appendChild(c);
+      return c;
+    });
+    let placed = 0;
+    const dnd = Shih.dragCards(cards, {
+      slots: () => [...qcard.querySelectorAll('.dropSlot:not(.filled)')],
+      accept(card, slot) {
+        if (card.dataset.n !== slot.dataset.n) return false;
+        card.classList.add('used');
+        slot.classList.add('filled');
+        slot.innerHTML = N.ruby(+slot.dataset.n);
+        Shih.speak(N.zh(+slot.dataset.n));
+        if (++placed === 4 && !busy) { busy = true; next(); }
+        return true;
+      }
+    });
+    qcard.querySelectorAll('.dropSlot').forEach(s => s.addEventListener('click', () => dnd.tapSlot(s)));
+  }
+  function next() {
+    qi++; update();
+    if (qi === qs.length) {
+      const ms = timer.stop();
+      winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
+      setTimeout(() => { winMsg.hidden = false; }, 700);
+      return;
+    }
+    setTimeout(show, 1200);
+  }
+  function update() { scoreEl.textContent = `${qi} / ${qs.length}`; }
+
+  const wait = Shih.startCover(document.getElementById('playArea'), () => { if (timerOn()) timer.start(); show(); });
+  function setup() {
+    paintLevels(level);
+    qs = makeRound(); qi = 0;
+    timer.reset(); winMsg.hidden = true; update();
+    qcard.innerHTML = '';
+    show();
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+    wait();
+  }
+  document.getElementById('resetBtn').addEventListener('click', setup);
+  document.getElementById('againBtn').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>看算盘 Read the Abacus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 看算盘：看算盘上的数字，选一选或判断对不对。用法：abacus-read.html?unit=numbers */
+body.game { background: #FFF8E1; }
+.stage { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 18px; align-items: start; max-width: 1100px; margin: 0 auto; }
+@media (max-width: 820px) { .stage { grid-template-columns: 1fr; } }
+.abBox { max-width: 620px; width: 100%; margin: 0 auto; }
+.panel { background: var(--card); border: 3px solid var(--ink); border-radius: 20px; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 16px; min-height: 380px; }
+.qnum { align-self: flex-start; font-weight: 700; color: #8A5A2B; background: #FFF1C7; border: 2px solid #E9B949; border-radius: 999px; padding: 2px 12px; font-size: 16px; }
+.prompt { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; }
+.prompt .ruby .py { font-size: 15px; } .prompt .ruby .zh { font-size: 28px; }
+.prompt .en { font-size: 17px; color: var(--muted); }
+.claim { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; justify-content: center; background: #FFF6D6; border: 3px solid #E9B949; border-radius: 18px; padding: 10px 18px; }
+.claim .abIcon { font: 700 18px var(--f-latin); color: #8A5A2B; padding-bottom: 8px; }
+.claim .eqs { font: 700 44px/1 var(--f-latin); color: var(--muted); padding-bottom: 4px; }
+.claim .num { font: 700 52px/1 var(--f-latin); padding-bottom: 2px; }
+.claim .ruby .py { font-size: 17px; } .claim .ruby .zh { font-size: 40px; }
+.choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; width: 100%; }
+.choice {
+  font: inherit; color: var(--ink); cursor: pointer; background: #FFF6D6; border: 3px solid #E9B949; border-radius: 16px;
+  box-shadow: 0 4px 0 #C4932A; padding: 8px 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 80px;
+}
+.choice .num { font: 700 38px var(--f-latin); }
+.choice .ruby .py { font-size: 13px; } .choice .ruby .zh { font-size: 26px; }
+.choice .yn { font: 700 34px/1 var(--f-latin); }
+.choice .en { font-size: 15px; color: var(--muted); }
+.choice.right { background: var(--me-done); border-color: var(--me-ink); box-shadow: 0 4px 0 var(--me-ink); }
+.choice.wrong { animation: shake .35s; border-color: var(--bad); }
+.choice.wide .ruby .zh { font-size: 22px; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill" id="timer">0:00</span>
+      <button class="ctl" id="timerBtn" type="button"></button>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="stage">
+        <div class="abBox" id="abBox"></div>
+        <div class="panel" id="panel"></div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/common.js"></script>
+<script src="../shared/numbers.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const N = ShihNum, C = UNIT.abacusRead;
+  document.title = `${C.title.zh} ${C.title.en}`;
+  document.getElementById('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  document.getElementById('titleEn').textContent = C.title.en;
+  document.getElementById('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  const panel = document.getElementById('panel');
+  const ab = N.abacus(document.getElementById('abBox'), { cols: 7 });
+  const scoreEl = document.getElementById('score'), winMsg = document.getElementById('winMsg'), winTime = document.getElementById('winTime');
+  const timerEl = document.getElementById('timer'), timer = Shih.timer(timerEl);
+  const timerOn = Shih.toggle(document.getElementById('timerBtn'), 'timer', '⏱ Timer on', '⏱ Timer off', true, on => { timerEl.hidden = !on; });
+  Shih.soundButton(document.getElementById('soundBtn'));
+
+  // 两位数、三位数、四位数，偶尔一万
+  const num = () => Math.random() < 0.2 ? N.rnd(11, 99) : N.big();
+  // 珠子看错时会得到的数字：某一档多一颗或少一颗、上珠看错、两档对调
+  const lookAlike = n => N.near(n, 1, 10000).filter(x => String(x).length === String(n).length);
+  const KINDS = ['pickNum', 'pickZh', 'yesNum', 'yesZh'];
+  const prompt = (zh, py, en) => `<div class="prompt"><span class="ruby">${Shih.rubyText(zh, py)}</span><span class="en">${Shih.esc(en)}</span></div>`;
+
+  function makeRound() {
+    const kinds = [];
+    while (kinds.length < C.count) kinds.push(...N.shuffle(KINDS));
+    return kinds.slice(0, C.count).map(kind => {
+      const n = num();
+      if (kind.startsWith('pick')) return { kind, n, opts: N.options(n, lookAlike(n)) };
+      const truth = Math.random() < 0.5;
+      const shown = truth ? n : (lookAlike(n)[0] || n + 1);
+      return { kind, n, shown, truth: shown === n };
+    });
+  }
+
+  let qs = [], qi = 0, busy = false;
+  function show() {
+    const q = qs[qi];
+    busy = false;
+    ab.set(q.n);
+    let h = `<span class="qnum">${qi + 1} / ${qs.length}</span>`;
+    if (q.kind.startsWith('pick')) {
+      h += prompt('算盘上是多少？', 'suàn pán shàng shì duō shǎo?', 'What number is on the abacus?');
+    } else {
+      h += prompt('对不对？', 'duì bu duì?', 'Is it right?') +
+        `<div class="claim"><span class="abIcon">🧮 abacus</span><span class="eqs">=</span>` +
+        (q.kind === 'yesNum' ? `<span class="num">${q.shown}</span>` : N.ruby(q.shown)) + '</div>';
+    }
+    h += '<div class="choices" id="choices"></div>';
+    panel.innerHTML = h;
+    const box = document.getElementById('choices');
+    const add = (html, correct, cls) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'choice' + (cls ? ' ' + cls : '');
+      b.innerHTML = html;
+      b.addEventListener('click', () => {
+        if (busy) return;
+        if (!correct) { b.classList.remove('wrong'); void b.offsetWidth; b.classList.add('wrong'); return; }
+        busy = true;
+        b.classList.add('right');
+        Shih.speak(N.zh(q.n));
+        next();
+      });
+      box.appendChild(b);
+    };
+    if (q.kind === 'pickNum') q.opts.forEach(n => add(`<span class="num">${n}</span>`, n === q.n));
+    else if (q.kind === 'pickZh') q.opts.forEach(n => add(N.ruby(n), n === q.n, 'wide'));
+    else {
+      add(`<span class="yn" style="color:var(--me-ink)">✓</span><span class="ruby">${Shih.ruby('是', 'shì')}</span><span class="en">Yes</span>`, q.truth);
+      add(`<span class="yn" style="color:var(--bad)">✗</span><span class="ruby">${Shih.ruby('不是', 'bú shì')}</span><span class="en">No</span>`, !q.truth);
+    }
+  }
+  function next() {
+    qi++; update();
+    if (qi === qs.length) {
+      const ms = timer.stop();
+      winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
+      setTimeout(() => { winMsg.hidden = false; }, 700);
+      return;
+    }
+    setTimeout(show, 1200);
+  }
+  function update() { scoreEl.textContent = `${qi} / ${qs.length}`; }
+
+  const wait = Shih.startCover(document.getElementById('playArea'), () => { if (timerOn()) timer.start(); });
+  function setup() {
+    qs = makeRound(); qi = 0;
+    timer.reset(); winMsg.hidden = true; update();
+    show();
+    wait();
+  }
+  document.getElementById('resetBtn').addEventListener('click', setup);
+  document.getElementById('againBtn').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

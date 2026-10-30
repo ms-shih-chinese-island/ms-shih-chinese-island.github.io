@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>家族树 Family Tree</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 拖拉玩法：把卡片拖到树上对的格子。树的形状写在 units/<单元>/words.js 的 UNIT.tree。用法：tree.html?unit=family */
+:root { --branch: #8A8F88; }
+.treebox { position: relative; width: 100%; --s: 1; }
+.treebox svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.treebox svg path { fill: none; stroke: var(--branch); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.treebox svg path.couple { stroke-width: 4; }
+.side-label { position: absolute; top: 0; display: flex; align-items: flex-end; gap: 8px; font-size: 17px; font-weight: 700; }
+.side-label .py { font-size: 13px; } .side-label .zh { font-size: 22px; }
+.side-label.left { left: 0; } .side-label.right { right: 0; }
+.c-dad { color: var(--dad-ink); } .c-mom { color: var(--mom-ink); } .c-me { color: var(--me-ink); }
+
+.slot {
+  position: absolute; border-radius: calc(14px * var(--s));
+  border: 3px dashed var(--line); background: var(--card);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px;
+  transition: background .15s;
+}
+.slot.g-dad { border-color: var(--dad); background: var(--dad-soft); }
+.slot.g-mom { border-color: var(--mom); background: var(--mom-soft); }
+.slot.g-me { border-color: var(--me); background: var(--me-soft); }
+.slot .hint { font-size: calc(15px * var(--s)); line-height: 1.12; color: var(--muted); text-align: center; }
+.slot.hover { background: var(--card); border-style: solid; }
+.slot.done, .slot.given { border-style: solid; background: var(--card); }
+.hints-off .slot:not(.done):not(.given) .hint { visibility: hidden; }
+.slot .py { font-size: calc(17px * var(--s)); } .slot .zh { font-size: calc(32px * var(--s)); }
+
+.tray {
+  background: var(--card); border: 2px solid var(--line); border-radius: 18px; padding: 12px; margin-top: 12px;
+  display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; min-height: 92px;
+}
+.card {
+  width: 104px; min-height: 80px; border-radius: 12px; background: var(--card);
+  border: 3px solid var(--ink); box-shadow: 0 3px 0 var(--ink);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px;
+  cursor: grab; touch-action: none;
+}
+.card .py { font-size: 16px; } .card .zh { font-size: 30px; }
+.card.dragging { position: fixed; z-index: 50; cursor: grabbing; box-shadow: 0 10px 24px rgba(43,43,43,.25); transform: scale(1.06); pointer-events: none; }
+.card.placed { box-shadow: none; cursor: default; background: transparent; width: auto; min-height: 0; padding: 0; border: 0; }
+.card.placed .py { font-size: calc(17px * var(--s)); } .card.placed .zh { font-size: calc(32px * var(--s)); }
+.card.shake { animation: shake .35s; border-color: var(--bad); }
+@media (max-width: 760px) { .card { width: 88px; } .card .zh { font-size: 24px; } .card .py { font-size: 13px; } }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill" id="timer">0:00</span>
+      <button class="ctl" id="timerBtn" type="button"></button>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="hintBtn" type="button" aria-pressed="true">English hints</button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <div class="win" id="win" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner" id="app">
+      <div class="treebox" id="treebox"><svg id="branches" aria-hidden="true"></svg></div>
+      <div class="tray" id="tray" aria-label="Word cards"></div>
+    </div>
+  </div>
+
+<script src="../shared/common.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const WM = Shih.wordMap(UNIT);
+  const LEVELS = UNIT.levels || [{ note: '' }];
+  const GIVEN = UNIT.treeGiven || ['我'];          // people already on the tree (not cards)
+  const title = UNIT.treeTitle || { zh: '家族树', py: 'jiā zú shù', en: 'Family Tree' };
+  document.title = `${title.zh} ${title.en}`;
+  document.getElementById('titleRuby').innerHTML = Shih.ruby(title.zh, title.py);
+  document.getElementById('titleEn').textContent = title.en;
+  document.getElementById('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+
+  const treebox = document.getElementById('treebox'), svg = document.getElementById('branches');
+  const tray = document.getElementById('tray'), scoreEl = document.getElementById('score');
+  const winEl = document.getElementById('win'), winTime = document.getElementById('winTime');
+  const timerEl = document.getElementById('timer'), timer = Shih.timer(timerEl);
+  const timerOn = Shih.toggle(document.getElementById('timerBtn'), 'timer', '⏱ Timer on', '⏱ Timer off', true, on => { timerEl.hidden = !on; });
+  Shih.soundButton(document.getElementById('soundBtn'));
+
+  // optional side labels, e.g. 爸爸这边 on the left, 妈妈这边 on the right
+  (UNIT.treeSides || []).forEach((L, i) => {
+    const d = document.createElement('div');
+    d.className = 'side-label ' + (i === 0 ? 'left' : 'right') + ' c-' + (L.side || 'me');
+    d.innerHTML = `<span class="ruby">${Shih.ruby(L.zh, L.py)}</span><span>${Shih.esc(L.en)}</span>`;
+    treebox.appendChild(d);
+  });
+
+  const lvOf = n => (WM[n] ? (WM[n].level || 1) : 1);
+  const families = UNIT.tree.map(([p, k]) => ({ parents: p.trim().split(/\s+/), kids: k.trim().split(/\s+/) }));
+  const allPeople = [...new Set(families.flatMap(f => f.parents.concat(f.kids)))];
+  allPeople.filter(n => !WM[n]).forEach(n => console.warn('Not in the word list:', n));
+
+  let level = Shih.startLevel('treeLevel', LEVELS.length);
+  const visibleAt = lv => n => GIVEN.includes(n) || lvOf(n) <= lv;
+  const cardsAt = lv => allPeople.filter(visibleAt(lv)).filter(n => !GIVEN.includes(n));
+  const paintLevels = Shih.levelButtons(document.getElementById('levels'), LEVELS, level,
+    lv => cardsAt(lv).length, lv => { level = lv; Shih.set('treeLevel', lv); setup(); });
+
+  // ===== layout: generations from "who are whose parents", then place each row =====
+  let L = null;   // current layout
+  function buildLayout() {
+    const vis = visibleAt(level);
+    const fams = families.map(f => ({ parents: f.parents.filter(vis), kids: f.kids.filter(vis) }))
+                         .filter(f => f.parents.length && f.kids.length);
+    const gen = {};
+    if (fams.length) gen[fams[0].parents[0]] = 0;
+    for (let guard = 0, changed = true; changed && guard < 200; guard++) {
+      changed = false;
+      fams.forEach(f => {
+        let g;
+        f.parents.forEach(p => { if (gen[p] !== undefined) g = gen[p]; });
+        if (g === undefined) f.kids.forEach(k => { if (gen[k] !== undefined) g = gen[k] - 1; });
+        if (g === undefined) return;
+        f.parents.forEach(p => { if (gen[p] === undefined) { gen[p] = g; changed = true; } });
+        f.kids.forEach(k => { if (gen[k] === undefined) { gen[k] = g + 1; changed = true; } });
+      });
+    }
+    const people = Object.keys(gen);
+    if (!people.length) GIVEN.forEach(n => gen[n] = 0);
+    const minG = Math.min(...Object.values(gen));
+    Object.keys(gen).forEach(n => gen[n] -= minG);
+    const maxG = Math.max(...Object.values(gen));
+
+    const partnerOf = {};
+    fams.forEach(f => { if (f.parents.length === 2) { partnerOf[f.parents[0]] = f.parents[1]; partnerOf[f.parents[1]] = f.parents[0]; } });
+    const isKid = new Set(fams.flatMap(f => f.kids));
+
+    // order of each row
+    const rows = [], group = {};
+    let gid = 0;
+    for (let g = 0; g <= maxG; g++) {
+      const row = [];
+      if (g === 0) {
+        fams.forEach(f => { if (gen[f.parents[0]] === 0) { gid++; f.parents.forEach(p => { if (!row.includes(p)) { row.push(p); group[p] = gid; } }); } });
+      } else {
+        const above = rows[g - 1];
+        const idx = n => above.indexOf(n);
+        fams.filter(f => gen[f.parents[0]] === g - 1)
+            .map((f, i) => ({ f, i, at: f.parents.reduce((s, p) => s + idx(p), 0) / f.parents.length }))
+            .sort((a, b) => a.at - b.at || a.i - b.i)
+            .forEach(({ f }) => { gid++; f.kids.forEach(k => { if (!row.includes(k)) { row.push(k); group[k] = gid; } }); });
+      }
+      // people who only marry in: stand next to their partner
+      Object.keys(gen).filter(n => gen[n] === g && !row.includes(n)).forEach(n => {
+        const pt = partnerOf[n], at = pt ? row.indexOf(pt) : -1;
+        if (at >= 0) { row.splice(at + 1, 0, n); group[n] = group[pt]; } else { row.push(n); group[n] = ++gid; }
+      });
+      rows.push(row);
+    }
+
+    // x positions in slot units: 1 = one slot wide
+    const GAP = 0.2, GROUPGAP = 0.55;
+    const x = {};
+    const spacing = (a, b) => 1 + (group[a] === group[b] || partnerOf[a] === b ? GAP : GROUPGAP);
+    rows.forEach(row => { let cx = 0; row.forEach((n, i) => { if (i) cx += spacing(row[i - 1], n); x[n] = cx; }); });
+
+    // keep the row order, stay as close as possible to the wanted spots (pool-adjacent-violators)
+    function settle(row, want) {
+      const off = [0];
+      for (let i = 1; i < row.length; i++) off[i] = off[i - 1] + spacing(row[i - 1], row[i]);
+      const blocks = [];
+      row.forEach((n, i) => {
+        blocks.push({ sum: want[n] - off[i], cnt: 1, start: i });
+        while (blocks.length > 1 && blocks[blocks.length - 2].sum / blocks[blocks.length - 2].cnt > blocks[blocks.length - 1].sum / blocks[blocks.length - 1].cnt) {
+          const b = blocks.pop(); const a = blocks[blocks.length - 1]; a.sum += b.sum; a.cnt += b.cnt;
+        }
+      });
+      blocks.forEach((b, bi) => {
+        const end = bi + 1 < blocks.length ? blocks[bi + 1].start : row.length;
+        for (let i = b.start; i < end; i++) x[row[i]] = b.sum / b.cnt + off[i];
+      });
+    }
+    const center = ns => ns.reduce((s, n) => s + x[n], 0) / ns.length;
+    const hasOwnFamily = new Set(fams.flatMap(f => f.parents));
+    function bottomUp() {
+      for (let g = maxG - 1; g >= 0; g--) {          // parents above the middle of their children
+        const want = {}; rows[g].forEach(n => want[n] = x[n]);
+        fams.filter(f => gen[f.parents[0]] === g).forEach(f => {
+          const c = center(f.kids);
+          if (f.parents.length === 2) { const h = (1 + GAP) / 2; want[f.parents[0]] = c - h; want[f.parents[1]] = c + h; }
+          else want[f.parents[0]] = c;
+        });
+        settle(rows[g], want);
+      }
+    }
+    function topDown() {
+      for (let g = 1; g <= maxG; g++) {              // children under their parents, siblings close together
+        const want = {}; rows[g].forEach(n => want[n] = x[n]);
+        fams.filter(f => gen[f.kids[0]] === g).forEach(f => {
+          const ks = f.kids, off = [0];
+          for (let i = 1; i < ks.length; i++) off[i] = off[i - 1] + spacing(ks[i - 1], ks[i]);
+          const anchors = ks.map((k, i) => i).filter(i => hasOwnFamily.has(ks[i]));
+          if (!anchors.length) {                      // nobody here has a family yet: center the group
+            const c = center(f.parents) - off[off.length - 1] / 2;
+            ks.forEach((k, i) => want[k] = c + off[i]);
+          } else {                                    // others huddle next to the nearest sibling who has a family
+            ks.forEach((k, i) => {
+              if (anchors.includes(i)) return;
+              const a = anchors.reduce((b, j) => Math.abs(j - i) < Math.abs(b - i) ? j : b, anchors[0]);
+              want[k] = x[ks[a]] + off[i] - off[a];
+            });
+          }
+        });
+        rows[g].filter(n => !isKid.has(n) && partnerOf[n]).forEach(n => { want[n] = want[partnerOf[n]] + 1 + GAP; });
+        settle(rows[g], want);
+      }
+    }
+    for (let it = 0; it < 12; it++) { bottomUp(); topDown(); }
+    bottomUp();
+    const minX = Math.min(...Object.values(x)), maxX = Math.max(...Object.values(x)) + 1;
+    Object.keys(x).forEach(n => x[n] -= minX);
+    return { rows, gen, x, fams, width: maxX - minX, maxG, partnerOf };
+  }
+
+  // ===== draw slots + branches =====
+  const slots = {};
+  function draw() {
+    const W = treebox.clientWidth;
+    const unit = Math.min(140, W / L.width);
+    const w = unit, h = Math.max(64, Math.min(104, unit * 0.8));
+    const vgap = Math.max(40, Math.min(58, h * 0.6)), top = (UNIT.treeSides || []).length ? 44 : 6;
+    const offsetX = (W - L.width * unit) / 2;
+    treebox.style.setProperty('--s', Math.max(0.62, Math.min(1, unit / 132)).toFixed(3));
+    const pos = {};
+    Object.keys(L.x).forEach(n => {
+      pos[n] = { x: offsetX + L.x[n] * unit + 2, y: top + L.gen[n] * (h + vgap) };
+      Object.assign(slots[n].style, { left: pos[n].x + 'px', top: pos[n].y + 'px', width: (w - 4) + 'px', height: h + 'px' });
+    });
+    treebox.style.height = (top + (L.maxG + 1) * (h + vgap) - vgap + 4) + 'px';
+    let d = '', dc = '';
+    L.fams.forEach(f => {
+      const kidTop = pos[f.kids[0]].y, busY = kidTop - vgap / 2;
+      let mx, fromY;
+      if (f.parents.length === 2) {
+        const [a, b] = f.parents.map(p => pos[p]).sort((p, q) => p.x - q.x);
+        const ya = a.y + h / 2;
+        dc += `M${a.x + w - 4} ${ya} L${b.x} ${ya} `;
+        mx = (a.x + w - 4 + b.x) / 2; fromY = ya;
+      } else { const p = pos[f.parents[0]]; mx = p.x + (w - 4) / 2; fromY = p.y + h; }
+      const tops = f.kids.map(k => pos[k].x + (w - 4) / 2);
+      d += `M${mx} ${fromY} L${mx} ${busY} M${Math.min(mx, ...tops)} ${busY} L${Math.max(mx, ...tops)} ${busY} `;
+      tops.forEach(tx => d += `M${tx} ${busY} L${tx} ${kidTop} `);
+    });
+    svg.innerHTML = `<path d="${d}"></path><path class="couple" d="${dc}"></path>`;
+  }
+
+  function enHTML(en) {
+    let t = Shih.esc(en || '');
+    if (/cousin/.test(t)) t = t.replace(/^(older|younger)\s+/, '$1<br>');
+    return t.replace(/\s*\(/, '<br>(');
+  }
+  const hintEl = n => { const e = document.createElement('span'); e.className = 'hint'; e.innerHTML = enHTML(WM[n] ? WM[n].en : ''); return e; };
+  const pyOf = n => (WM[n] ? WM[n].py : '');
+
+  let placed = 0, total = 0;
+  const wait = Shih.startCover(document.getElementById('playArea'), () => { if (timerOn()) timer.start(); });
+  function setup() {
+    paintLevels(level);
+    L = buildLayout();
+    Object.values(slots).forEach(s => s.remove());
+    Object.keys(slots).forEach(k => delete slots[k]);
+    Object.keys(L.x).forEach(n => {
+      const s = document.createElement('div');
+      s.className = 'slot g-' + ((WM[n] && WM[n].side) || 'me');
+      s.dataset.answer = n;
+      if (GIVEN.includes(n)) { s.classList.add('given'); s.insertAdjacentHTML('beforeend', `<span class="ruby">${Shih.ruby(n, pyOf(n))}</span>`); }
+      s.appendChild(hintEl(n));
+      treebox.appendChild(s);
+      slots[n] = s;
+    });
+    const cards = Object.keys(L.x).filter(n => !GIVEN.includes(n));
+    for (let i = cards.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [cards[i], cards[j]] = [cards[j], cards[i]]; }
+    tray.innerHTML = '';
+    cards.forEach(n => tray.appendChild(makeCard(n)));
+    placed = 0; total = cards.length;
+    timer.reset(); winEl.hidden = true; updateScore();
+    draw();
+    wait();
+  }
+  function updateScore() {
+    scoreEl.textContent = `${placed} / ${total}`;
+    if (total && placed === total) {
+      const ms = timer.stop();
+      winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
+      winEl.hidden = false;
+    }
+  }
+  function makeCard(n) {
+    const c = document.createElement('div');
+    c.className = 'card'; c.dataset.word = n;
+    c.innerHTML = `<span class="ruby">${Shih.ruby(n, pyOf(n))}</span>`;
+    c.addEventListener('pointerdown', startDrag);
+    return c;
+  }
+
+  // ===== drag and drop =====
+  let drag = null;
+  function startDrag(e) {
+    const card = e.currentTarget;
+    if (card.classList.contains('placed') || drag) return;
+    e.preventDefault();
+    Shih.speak(card.dataset.word);
+    const r = card.getBoundingClientRect();
+    const ph = document.createElement('div');
+    ph.style.width = r.width + 'px'; ph.style.height = r.height + 'px';
+    card.after(ph);
+    drag = { card, ph, dx: e.clientX - r.left, dy: e.clientY - r.top, id: e.pointerId, over: null };
+    card.classList.add('dragging'); card.style.width = r.width + 'px';
+    moveTo(e.clientX, e.clientY);
+    addEventListener('pointermove', onMove); addEventListener('pointerup', onUp); addEventListener('pointercancel', onUp);
+  }
+  function moveTo(x, y) { drag.card.style.left = (x - drag.dx) + 'px'; drag.card.style.top = (y - drag.dy) + 'px'; }
+  function slotAt(x, y) {
+    const el = document.elementFromPoint(x, y);
+    const s = el && el.closest('.slot');
+    return s && !s.classList.contains('done') && !s.classList.contains('given') ? s : null;
+  }
+  function onMove(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    moveTo(e.clientX, e.clientY);
+    const s = slotAt(e.clientX, e.clientY);
+    if (s !== drag.over) { if (drag.over) drag.over.classList.remove('hover'); if (s) s.classList.add('hover'); drag.over = s; }
+  }
+  function onUp(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    removeEventListener('pointermove', onMove); removeEventListener('pointerup', onUp); removeEventListener('pointercancel', onUp);
+    const { card, ph } = drag;
+    const s = slotAt(e.clientX, e.clientY);
+    if (drag.over) drag.over.classList.remove('hover');
+    card.classList.remove('dragging'); card.style.left = card.style.top = card.style.width = '';
+    ph.remove();
+    if (s && s.dataset.answer === card.dataset.word) {
+      card.classList.add('placed'); s.classList.add('done');
+      s.innerHTML = ''; s.appendChild(card); s.appendChild(hintEl(card.dataset.word));
+      placed++; updateScore();
+    } else if (s) {
+      card.classList.add('shake'); setTimeout(() => card.classList.remove('shake'), 400);
+    }
+    drag = null;
+  }
+
+  const hintBtn = document.getElementById('hintBtn');
+  hintBtn.addEventListener('click', () => {
+    const on = hintBtn.getAttribute('aria-pressed') !== 'true';
+    hintBtn.setAttribute('aria-pressed', String(on));
+    document.getElementById('app').classList.toggle('hints-off', !on);
+  });
+  document.getElementById('resetBtn').addEventListener('click', setup);
+  document.getElementById('againBtn').addEventListener('click', setup);
+  addEventListener('resize', () => L && draw());
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => L && draw());
+  setup();
+});
+</script>
+</body>
+</html>

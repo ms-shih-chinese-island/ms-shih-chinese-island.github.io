@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>我看到 I See</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 我看到：点圆圈，看到什么就把字拖进「我看到＿＿。」用法：spy.html?unit=halloween */
+body.game { background: #EFEAF8; }
+.stage { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 820px) { .stage { grid-template-columns: 1fr; } }
+.scene { position: relative; width: 100%; aspect-ratio: 600 / 520; border: 4px solid #2B2B2B; border-radius: 20px; overflow: hidden; background: #2E2A4F; }
+.scene svg.bg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.thing { position: absolute; transform: translate(-50%, -50%); width: 20%; aspect-ratio: 1 / 1; background: #F1EEF8; border: 3px solid #2B2B2B; border-radius: 50%; padding: 12px; }
+.thing svg { width: 100%; height: 100%; }
+.thing.done { filter: drop-shadow(0 0 0 #8CC7A0); }
+.thing.done::after { content: "✓"; position: absolute; right: -4px; top: -4px; width: 28px; height: 28px; border-radius: 50%; background: var(--me); border: 3px solid #2B2B2B; font: 700 16px/22px var(--f-latin); text-align: center; color: #2B2B2B; }
+.dot {
+  position: absolute; transform: translate(-50%, -50%); width: 21%; aspect-ratio: 1 / 1; border-radius: 50%;
+  background: #F28C3A; border: 4px solid #2B2B2B; cursor: pointer; padding: 0;
+  font: 700 clamp(22px, 3.4vw, 40px) var(--f-latin); color: #2B2B2B; transition: transform .25s, opacity .25s;
+}
+.dot:hover:not(:disabled) { transform: translate(-50%, -50%) scale(1.06); }
+.dot.gone { transform: translate(-50%, -50%) scale(.2); opacity: 0; pointer-events: none; }
+.dot:disabled { cursor: default; }
+.thing.active { outline: 5px solid #F5C531; outline-offset: 4px; }
+.panel { background: var(--card); border: 3px solid #2B2B2B; border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.bubble { background: var(--night-soft); border: 3px solid var(--night); border-radius: 16px; padding: 10px 14px; }
+.bubble .ruby .py { font-size: 16px; } .bubble .ruby .zh { font-size: 30px; } .bubble .en { font-size: 16px; color: var(--muted); }
+.frame { display: flex; align-items: flex-end; justify-content: center; gap: 6px; flex-wrap: wrap; padding: 6px 0; }
+.frame .ruby .py { font-size: 16px; } .frame .ruby .zh { font-size: 34px; }
+.frame .en { width: 100%; text-align: center; color: var(--muted); font-size: 16px; }
+.idle { text-align: center; color: var(--muted); font-size: 18px; }
+.bank .wcard { min-width: 96px; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill" id="timer">0:00</span>
+      <button class="ctl" id="timerBtn" type="button"></button>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="stage">
+        <div class="scene" id="scene">
+          <svg class="bg" viewBox="0 0 600 520" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <rect width="600" height="520" fill="#2E2A4F"/>
+            <g fill="#F5E7A8"><circle cx="60" cy="50" r="2.5"/><circle cx="180" cy="30" r="2"/><circle cx="300" cy="60" r="2.5"/><circle cx="420" cy="26" r="2"/><circle cx="250" cy="120" r="2"/><circle cx="540" cy="140" r="2"/><circle cx="110" cy="150" r="2"/></g>
+            <circle cx="510" cy="70" r="42" fill="#F5E7A8"/><circle cx="530" cy="58" r="40" fill="#2E2A4F"/>
+            <path d="M0 360 C120 320 220 340 300 360 C400 330 500 320 600 350 L600 520 L0 520 Z" fill="#3E3A66"/>
+            <path d="M0 430 C150 400 300 420 600 410 L600 520 L0 520 Z" fill="#4A4578"/>
+            <g stroke="#2B2B2B" stroke-width="4" stroke-linejoin="round">
+              <path d="M60 360 L60 330 Q75 312 90 330 L90 360 Z" fill="#8B8FA0"/><path d="M500 380 L500 344 Q518 324 536 344 L536 380 Z" fill="#8B8FA0"/>
+              <path d="M300 300 L300 250 M300 270 L330 240 M300 262 L276 232" fill="none" stroke="#6B4A2E" stroke-width="7"/>
+            </g>
+            <g stroke="#6B6890" stroke-width="5"><path d="M20 470 L20 440 M50 470 L50 440 M80 470 L80 440 M110 470 L110 440 M10 452 L120 452"/></g>
+          </svg>
+        </div>
+        <div class="panel">
+          <div class="bubble" id="bubble"></div>
+          <div class="frame" id="frame"></div>
+          <div class="bank" id="bank"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/common.js"></script>
+<script>
+Shih.islandBar();
+Promise.all([Shih.loadUnit(), Shih.loadArt()]).then(([UNIT, ART]) => {
+  const C = UNIT.spy;
+  const LEVELS = UNIT.levels || [{ note: '' }];
+  document.title = `${C.title.zh} ${C.title.en}`;
+  document.getElementById('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  document.getElementById('titleEn').textContent = C.title.en;
+  document.getElementById('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  const scene = document.getElementById('scene'), bubble = document.getElementById('bubble');
+  const frame = document.getElementById('frame'), bank = document.getElementById('bank');
+  const scoreEl = document.getElementById('score'), winMsg = document.getElementById('winMsg'), winTime = document.getElementById('winTime');
+  const timerEl = document.getElementById('timer'), timer = Shih.timer(timerEl);
+  const timerOn = Shih.toggle(document.getElementById('timerBtn'), 'timer', '⏱ Timer on', '⏱ Timer off', true, on => { timerEl.hidden = !on; });
+  Shih.soundButton(document.getElementById('soundBtn'));
+
+  const pool = lv => UNIT.words.filter(w => (w.level || 1) <= lv && !(C.skip || []).includes(w.zh) && ART && ART.items[w.zh]);
+  let level = Shih.startLevel('spyLevel', LEVELS.length);
+  const paintLevels = Shih.levelButtons(document.getElementById('levels'), LEVELS, level,
+    lv => pool(lv).length, lv => { level = lv; Shih.set('spyLevel', lv); setup(); }, UNIT.levelIcon);
+
+  const SPOTS = [[20, 22], [52, 18], [82, 34], [26, 58], [62, 56], [40, 84], [80, 80]].slice(0, C.count);
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  let spots = [], done = 0, active = null, dnd = null;
+  const wait = Shih.startCover(document.getElementById('playArea'), () => { if (timerOn()) timer.start(); });
+
+  function showFrame(word) {
+    const [before, after] = C.frame.zh.split('{x}');
+    const pyParts = C.frame.py.split('{x}');
+    frame.innerHTML = `<span class="ruby">${Shih.rubyText(before, pyParts[0])}</span>` +
+      `<span class="dropSlot${word ? ' filled' : ''}" id="slot">${word ? `<span class="ruby">${Shih.ruby(word.zh, word.py)}</span>` : ''}</span>` +
+      `<span class="ruby">${Shih.rubyText(after, pyParts[1] || '')}</span>` +
+      `<div class="en">${Shih.esc(Shih.fill(C.frame, word).en)}</div>`;
+    const slot = document.getElementById('slot');
+    slot.addEventListener('click', () => dnd && dnd.tapSlot(slot));
+  }
+  function idle() {
+    active = null;
+    bubble.innerHTML = `<span class="ruby">${Shih.rubyText(C.question.zh, C.question.py)}</span><div class="en">${C.question.en}</div>`;
+    showFrame(null);
+    bank.innerHTML = '<p class="idle">Tap a circle to see what is there.</p>';
+    spots.forEach(s => { s.dot.disabled = s.done; s.thing.classList.remove('active'); });
+  }
+  function setup() {
+    paintLevels(level);
+    scene.querySelectorAll('.thing, .dot').forEach(e => e.remove());
+    const P = pool(level);
+    let picks = shuffle(P);
+    while (picks.length < SPOTS.length) picks = picks.concat(shuffle(P));
+    spots = SPOTS.map(([x, y], i) => {
+      const thing = document.createElement('div');
+      thing.className = 'thing'; thing.style.left = x + '%'; thing.style.top = y + '%';
+      thing.innerHTML = ART.items[picks[i].zh];
+      const dot = document.createElement('button');
+      dot.type = 'button'; dot.className = 'dot'; dot.style.left = x + '%'; dot.style.top = y + '%';
+      dot.textContent = i + 1; dot.setAttribute('aria-label', 'Circle ' + (i + 1));
+      scene.appendChild(thing); scene.appendChild(dot);
+      const s = { thing, dot, item: picks[i], done: false };
+      dot.addEventListener('click', () => reveal(s));
+      return s;
+    });
+    done = 0; timer.reset(); winMsg.hidden = true; update();
+    idle(); wait();
+  }
+  function update() { scoreEl.textContent = `${done} / ${spots.length}`; }
+
+  function reveal(s) {
+    if (s.done || active) return;
+    active = s;
+    s.dot.classList.add('gone'); s.thing.classList.add('active');
+    spots.forEach(o => { if (o !== s) o.dot.disabled = true; });
+    Shih.speak(C.question.zh);
+    const P = pool(level);
+    const choices = shuffle([s.item].concat(shuffle(P.filter(x => x.zh !== s.item.zh)).slice(0, (C.cards || 6) - 1)));
+    bank.innerHTML = '';
+    const cards = choices.map(w => {
+      const c = document.createElement('div');
+      c.className = 'wcard'; c.dataset.word = w.zh;
+      c.innerHTML = `<span class="ruby">${Shih.ruby(w.zh, w.py)}</span>`;
+      bank.appendChild(c);
+      return c;
+    });
+    dnd = Shih.dragCards(cards, {
+      slots: () => [document.getElementById('slot')].filter(Boolean),
+      accept(card) {
+        if (!active || card.dataset.word !== active.item.zh) return false;
+        const w = active.item;
+        card.classList.add('used');
+        showFrame(w);
+        Shih.speak(Shih.fill(C.frame, w).zh);
+        active.done = true; active.thing.classList.add('done'); active.thing.classList.remove('active');
+        done++; update(); active = null;
+        bank.querySelectorAll('.wcard').forEach(x => x.classList.add('used'));
+        if (done === spots.length) {
+          const ms = timer.stop();
+          winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
+          setTimeout(() => { winMsg.hidden = false; idle(); }, 1200);
+        } else setTimeout(idle, 1500);
+        return true;
+      }
+    });
+  }
+  document.getElementById('resetBtn').addEventListener('click', setup);
+  document.getElementById('againBtn').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

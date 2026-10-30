@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>自我介绍 About Me</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 自我介绍：看资料卡，把字卡拖进句子里。四年级。用法：intro.html?unit=hello */
+body.game { background: #E6F4F8; }
+.stage { display: grid; grid-template-columns: minmax(240px, 0.8fr) minmax(0, 1.6fr); gap: 18px; align-items: start; max-width: 1100px; margin: 0 auto; }
+@media (max-width: 820px) { .stage { grid-template-columns: 1fr; } }
+.card { background: var(--card); border: 3px solid var(--ink); border-radius: 22px; padding: 14px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.card .pic { width: 170px; } .card .pic svg { width: 100%; height: auto; display: block; }
+.card .full { font: 700 24px var(--f-latin); }
+.facts { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+.fact { display: flex; align-items: center; gap: 10px; background: #F3FAFC; border: 2px solid #BFE3EE; border-radius: 12px; padding: 6px 10px; font: 700 18px var(--f-latin); }
+.fact .ppl { font-size: 15px; letter-spacing: -2px; white-space: nowrap; }
+.fact .ic { font-size: 22px; width: 28px; text-align: center; }
+.fact .lab { color: var(--muted); font-weight: 400; font-size: 15px; margin-left: auto; }
+.fact .mini { width: 38px; height: 38px; } .fact .mini svg { width: 100%; height: 100%; }
+.lines { background: var(--card); border: 3px solid var(--ink); border-radius: 22px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.line { display: flex; flex-direction: column; gap: 0; }
+.line .s { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 4px; }
+.line .s .ruby .py { font-size: 14px; } .line .s .ruby .zh { font-size: 28px; }
+.line .en { font-size: 14px; color: var(--muted); }
+.line .dropSlot { min-width: 96px; min-height: 58px; border-color: #7FC4D8; background: #F3FAFC; }
+.line .dropSlot.filled { border-color: var(--me); background: var(--me-done); }
+.nameTxt { font: 700 26px var(--f-latin); padding: 0 4px; }
+.bank .wcard .zh { font-size: 26px; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill" id="timer">0:00</span>
+      <button class="ctl" id="timerBtn" type="button"></button>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <p class="help">Read the card. Drag the words into the sentences. You can also tap a card, then tap a blank.</p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Next kid</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="stage">
+        <div class="card" id="card"></div>
+        <div>
+          <div class="lines" id="lines"></div>
+          <div class="bank" id="bank" style="margin-top:12px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/common.js"></script>
+<script src="../shared/kids.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const ART = window.ART;      // 小朋友的名单和图：shared/kids.js
+  const C = UNIT.intro;
+  document.title = `${C.title.zh} ${C.title.en}`;
+  document.getElementById('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  document.getElementById('titleEn').textContent = C.title.en;
+  document.getElementById('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  const cardEl = document.getElementById('card'), linesEl = document.getElementById('lines'), bank = document.getElementById('bank');
+  const scoreEl = document.getElementById('score'), winMsg = document.getElementById('winMsg'), winTime = document.getElementById('winTime');
+  const timerEl = document.getElementById('timer'), timer = Shih.timer(timerEl);
+  const timerOn = Shih.toggle(document.getElementById('timerBtn'), 'timer', '⏱ Timer on', '⏱ Timer off', true, on => { timerEl.hidden = !on; });
+  Shih.soundButton(document.getElementById('soundBtn'));
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  const NUM = { 3: ['三', 'sān'], 4: ['四', 'sì'], 5: ['五', 'wǔ'], 6: ['六', 'liù'], 7: ['七', 'qī'], 8: ['八', 'bā'], 9: ['九', 'jiǔ'], 10: ['十', 'shí'] };
+
+  // 字卡：{ id, zh, py } 或英文名字 { id, name }
+  const numCard = n => ({ id: 'n' + n, zh: NUM[n][0], py: NUM[n][1] });
+  const nameCard = s => ({ id: 'w' + s, name: s });
+  const HAIR = { true: { id: 'long', zh: '长', py: 'cháng' }, false: { id: 'short', zh: '短', py: 'duǎn' } };
+
+  let order = shuffle(ART.people), oi = 0, total = 0, done = 0;
+  function makeKid() {
+    const p = order[oi++ % order.length];
+    // 年龄 7 到 10 岁；7、8 岁上三年级，10 岁上四年级，9 岁两种都有
+    const age = pick([7, 8, 9, 10]);
+    const grade = age <= 8 ? 3 : age === 10 ? 4 : pick([3, 4]);
+    const fam = pick([3, 4, 5, 6]);   // 家里 3 到 6 个人（年龄是 7 到 10，数字才不会重复）
+    const friend = pick(ART.people.filter(x => x !== p));
+    const other = pick(ART.people.filter(x => x !== p && x !== friend));
+    // 个性：从单元的形容词里挑一个（「漂亮」只给女生），再挑一个当错的卡
+    const adjs = UNIT.words.filter(w => w.adj && (!w.girl || !p.boy));
+    const adj = pick(adjs), adjWrong = pick(adjs.filter(w => w !== adj));
+    const adjCard = w => ({ id: 'a' + w.zh, zh: w.zh, py: w.py });
+    // 每一句：前面的字、空格的答案、后面的字、英文（{x} 先是 ___，填对了才换成答案）
+    const L = [
+      { pre: ['我叫', 'wǒ jiào'], ans: nameCard(p.first), post: ['。', ''], en: 'My name is {x}.', x: p.first },
+      { pre: ['我姓', 'wǒ xìng'], ans: nameCard(p.last), post: ['。', ''], en: 'My last name is {x}.', x: p.last },
+      { pre: ['我', 'wǒ'], ans: numCard(age), post: ['岁。', 'suì'], en: "I'm {x} years old.", x: age },
+      { pre: ['我上', 'wǒ shàng'], ans: numCard(grade), post: ['年级。', 'nián jí'], en: "I'm in grade {x}.", x: grade },
+      { pre: ['我的家有', 'wǒ de jiā yǒu'], ans: numCard(fam), post: ['个人。', 'gè rén'], en: 'There are {x} people in my family.', x: fam },
+      { pre: ['我有', 'wǒ yǒu'], ans: HAIR[p.long], post: ['发。', 'fà'], en: 'I have {x} hair.', x: p.long ? 'long' : 'short' },
+      { pre: ['我很', 'wǒ hěn'], ans: adjCard(adj), post: ['。', ''], en: "I'm {x}.", x: adj.en },
+      { pre: ['我的好朋友叫', 'wǒ de hǎo péng yǒu jiào'], ans: nameCard(friend.first), post: ['。', ''], en: 'My best friend is {x}.', x: friend.first }
+    ];
+    // 容易搞混的卡：别人的姓、别人的名字、差一的数字、相反的头发
+    const extra = [adjCard(adjWrong), nameCard(other.last), nameCard(other.first), HAIR[!p.long],
+      numCard(age === 10 ? 9 : age + 1), numCard(grade === 3 ? 4 : 3), numCard(fam === 6 ? 5 : fam + 1)];
+    const seen = new Set(L.map(x => x.ans.id));
+    const extras = extra.filter(x => !seen.has(x.id) && !seen.has(x.id) && seen.add(x.id));
+    return { p, grade, age, fam, friend, adj, L, extras };
+  }
+
+  function show(k) {
+    const { p, grade, age, fam, friend, adj, L, extras } = k;
+    cardEl.innerHTML = `<div class="pic">${ART.kid(p, 'good')}</div><span class="full">${Shih.esc(p.first)} ${Shih.esc(p.last)}</span>` +
+      `<div class="facts">` +
+      `<div class="fact"><span class="ic">🎂</span>${age}<span class="lab">years old</span></div>` +
+      `<div class="fact"><span class="ic">🏫</span>Grade ${grade}<span class="lab">grade</span></div>` +
+      `<div class="fact"><span class="ic">🏠</span><span class="ppl">${'👤'.repeat(fam)}</span>${fam}<span class="lab">family</span></div>` +
+      `<div class="fact"><span class="ic">💇</span>${p.long ? 'long hair' : 'short hair'}<span class="lab">hair</span></div>` +
+      `<div class="fact"><span class="ic">${adj.icon || '⭐'}</span>${Shih.esc(adj.en)}<span class="lab">I am…</span></div>` +
+      `<div class="fact"><span class="ic">❤️</span><span class="mini">${ART.kid(friend, 'good')}</span>${Shih.esc(friend.first)}<span class="lab">best friend</span></div>` +
+      `</div>`;
+    linesEl.innerHTML = L.map((x, i) =>
+      `<div class="line"><div class="s"><span class="ruby">${Shih.rubyText(x.pre[0], x.pre[1])}</span>` +
+      `<span class="dropSlot" data-i="${i}"></span>` +
+      `<span class="ruby">${Shih.rubyText(x.post[0], x.post[1])}</span></div><span class="en" data-en="${i}">${Shih.esc(x.en.replace('{x}', '___'))}</span></div>`).join('');
+    bank.innerHTML = '';
+    const cards = shuffle(L.map(x => x.ans).concat(extras)).map(c => {
+      const el = document.createElement('div');
+      el.className = 'wcard'; el.dataset.id = c.id;
+      el.innerHTML = c.name ? `<span class="nameTxt">${Shih.esc(c.name)}</span>` : `<span class="ruby">${Shih.ruby(c.zh, c.py)}</span>`;
+      bank.appendChild(el);
+      return el;
+    });
+    const dnd = Shih.dragCards(cards, {
+      slots: () => [...linesEl.querySelectorAll('.dropSlot:not(.filled)')],
+      accept(card, slot) {
+        const x = L[+slot.dataset.i];
+        if (card.dataset.id !== x.ans.id) return false;
+        card.classList.add('used');
+        slot.classList.add('filled');
+        slot.innerHTML = card.innerHTML;
+        linesEl.querySelector(`[data-en="${slot.dataset.i}"]`).textContent = x.en.replace('{x}', x.x);   // 填对了才出现完整的英文
+        if (x.ans.zh) Shih.speak(x.pre[0] + x.ans.zh + x.post[0]);   // 英文名字不念
+        done++; update();
+        if (done === total) {
+          const ms = timer.stop();
+          winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
+          setTimeout(() => { winMsg.hidden = false; }, 700);
+        }
+        return true;
+      }
+    });
+    linesEl.querySelectorAll('.dropSlot').forEach(s => s.addEventListener('click', () => dnd.tapSlot(s)));
+    total = L.length; done = 0; update();
+  }
+  function update() { scoreEl.textContent = `${done} / ${total}`; }
+
+  const wait = Shih.startCover(document.getElementById('playArea'), () => { if (timerOn()) timer.start(); });
+  function setup() {
+    timer.reset(); winMsg.hidden = true;
+    show(makeKid());
+    wait();
+  }
+  document.getElementById('resetBtn').addEventListener('click', setup);
+  document.getElementById('againBtn').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

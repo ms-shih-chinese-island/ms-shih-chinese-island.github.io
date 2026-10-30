@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>拨一拨 Make the Number</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 拨一拨：题目给一个数，学生在算盘上拨出来，按「好了」检查。用法：abacus-set.html?unit=numbers */
+body.game { background: #FFF8E1; }
+.stage { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.target { display: flex; flex-direction: column; align-items: center; gap: 6px; background: var(--card); border: 3px solid var(--ink); border-radius: 20px; padding: 12px 22px; width: 100%; }
+.qnum { align-self: flex-start; font-weight: 700; color: #8A5A2B; background: #FFF1C7; border: 2px solid #E9B949; border-radius: 999px; padding: 2px 12px; font-size: 16px; }
+.prompt { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; }
+.prompt .ruby .py { font-size: 15px; } .prompt .ruby .zh { font-size: 26px; }
+.prompt .en { font-size: 17px; color: var(--muted); }
+.goal { cursor: pointer; background: #FFF6D6; border: 3px solid #E9B949; border-radius: 16px; padding: 6px 22px; }
+.goal .num { font: 700 60px/1.1 var(--f-latin); }
+.goal .ruby .py { font-size: 19px; } .goal .ruby .zh { font-size: 46px; }
+.goal.ok { background: var(--me-done); border-color: var(--me-ink); }
+.abBox { width: 100%; max-width: 620px; }
+.btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.big { display: flex; flex-direction: column; align-items: center; cursor: pointer; font: 700 17px var(--f-latin); color: var(--ink);
+  border: 3px solid var(--ink); border-radius: 16px; padding: 6px 26px 8px; background: var(--card); box-shadow: 0 4px 0 var(--ink); }
+.big .ruby .py { font-size: 14px; } .big .ruby .zh { font-size: 28px; }
+.big.check { background: var(--me); }
+.big:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--ink); }
+.big.shake { animation: shake .35s; border-color: var(--bad); }
+/* 对不对：大大的牌子盖在算盘上面，一眼就看得到 */
+.abWrap { position: relative; width: 100%; max-width: 760px; }
+.abWrap .abBox { max-width: none; }
+.abWrap.good svg.abacus rect:first-child, .abWrap.good svg.abacus rect:nth-child(2) { stroke: var(--me-ink); stroke-width: 4; }
+.abWrap.try svg.abacus rect:first-child, .abWrap.try svg.abacus rect:nth-child(2) { stroke: var(--bad); stroke-width: 4; }
+.msg { position: absolute; left: 50%; top: 34%; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 14px;
+  padding: 12px 26px 14px; border-radius: 22px; border: 4px solid var(--ink); font-weight: 700; color: #fff; white-space: nowrap;
+  box-shadow: 0 6px 0 var(--ink); pointer-events: none; animation: pop .25s ease-out; }
+.msg[hidden] { display: none; }
+.msg .mark { font: 700 54px/1 var(--f-latin); }
+.msg .words { display: flex; flex-direction: column; align-items: flex-start; }
+.msg .ruby .py { font-size: 15px; color: #fff; } .msg .ruby .zh { font-size: 34px; color: #fff; }
+.msg .en { font-size: 18px; }
+.msg .made { font-size: 16px; font-weight: 400; margin-top: 2px; }
+.msg.good { background: var(--me-ink); } .msg.try { background: var(--bad); }
+@keyframes pop { from { transform: translate(-50%, -50%) scale(.6); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill" id="timer">0:00</span>
+      <button class="ctl" id="timerBtn" type="button"></button>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="stage">
+        <div class="target" id="target"></div>
+        <div class="abWrap" id="abWrap"><div class="abBox" id="abBox"></div><div class="msg" id="msg" hidden aria-live="polite"></div></div>
+        <div class="btns">
+          <button type="button" class="big" id="clearBtn"><span class="ruby" id="clearRuby"></span><span>Clear</span></button>
+          <button type="button" class="big check" id="checkBtn"><span class="ruby" id="checkRuby"></span><span>Check</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/common.js"></script>
+<script src="../shared/numbers.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const N = ShihNum, C = UNIT.abacusSet;
+  document.title = `${C.title.zh} ${C.title.en}`;
+  document.getElementById('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  document.getElementById('titleEn').textContent = C.title.en;
+  document.getElementById('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  document.getElementById('clearRuby').innerHTML = Shih.ruby('清除', 'qīng chú');
+  document.getElementById('checkRuby').innerHTML = Shih.ruby('好了', 'hǎo le');
+  const target = document.getElementById('target'), msg = document.getElementById('msg'), checkBtn = document.getElementById('checkBtn');
+  const ab = N.abacus(document.getElementById('abBox'), { cols: 7, interactive: true, onChange: clearMsg });
+  const scoreEl = document.getElementById('score'), winMsg = document.getElementById('winMsg'), winTime = document.getElementById('winTime');
+  const timerEl = document.getElementById('timer'), timer = Shih.timer(timerEl);
+  const timerOn = Shih.toggle(document.getElementById('timerBtn'), 'timer', '⏱ Timer on', '⏱ Timer off', true, on => { timerEl.hidden = !on; });
+  Shih.soundButton(document.getElementById('soundBtn'));
+
+  const num = () => Math.random() < 0.2 ? N.rnd(11, 99) : N.big();
+  let qs = [], qi = 0, busy = false;
+  function makeRound() {
+    const half = Math.ceil(C.count / 2);
+    // 一半给阿拉伯数字，一半给中文数字，顺序打乱
+    return N.shuffle(Array.from({ length: C.count }, (_, i) => ({ n: num(), zh: i >= half })));
+  }
+  function show() {
+    const q = qs[qi];
+    busy = false;
+    ab.clear();
+    clearMsg();
+    target.innerHTML = `<span class="qnum">${qi + 1} / ${qs.length}</span>` +
+      `<div class="prompt"><span class="ruby">${Shih.rubyText('在算盘上拨出这个数字。', 'zài suàn pán shàng bō chū zhè ge shù zì.')}</span><span class="en">Show this number on the abacus.</span></div>` +
+      `<button type="button" class="goal" id="goal">${q.zh ? N.ruby(q.n) : `<span class="num">${q.n}</span>`}</button>`;
+    document.getElementById('goal').addEventListener('click', () => Shih.speak(N.zh(q.n)));
+  }
+  const abWrap = document.getElementById('abWrap');
+  function clearMsg() { msg.hidden = true; msg.className = 'msg'; abWrap.className = 'abWrap'; }
+  function say(kind, mark, zh, en, made) {
+    msg.className = 'msg ' + kind; abWrap.className = 'abWrap ' + kind;
+    msg.innerHTML = `<span class="mark">${mark}</span><span class="words"><span class="ruby">${zh}</span><span class="en">${en}</span>${made ? `<span class="made">${made}</span>` : ''}</span>`;
+    msg.hidden = false; void msg.offsetWidth;
+  }
+  checkBtn.addEventListener('click', () => {
+    if (busy || qi >= qs.length) return;
+    const q = qs[qi];
+    // 算总数：两颗上珠一起拨下来（一档 10 以上）也可以，只要整个算盘的数对就算对
+    if (ab.get() === q.n) {
+      busy = true;
+      document.getElementById('goal').classList.add('ok');
+      say('good', '✓', Shih.ruby('对了', 'duì le'), 'Correct!', '');
+      Shih.speak(N.zh(q.n));
+      qi++; update();
+      if (qi === qs.length) {
+        const ms = timer.stop();
+        winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
+        setTimeout(() => { winMsg.hidden = false; }, 700);
+      } else setTimeout(show, 1500);
+    } else {
+      checkBtn.classList.remove('shake'); void checkBtn.offsetWidth; checkBtn.classList.add('shake');
+      say('try', '✗', Shih.rubyText('再试一次', 'zài shì yí cì'), 'Try again', `You made ${ab.get()}`);
+      clearTimeout(say.t); say.t = setTimeout(clearMsg, 1800);   // 错的牌子过一下就收起来，让学生继续拨
+    }
+  });
+  document.getElementById('clearBtn').addEventListener('click', () => { if (!busy) ab.clear(); });
+  function update() { scoreEl.textContent = `${qi} / ${qs.length}`; }
+
+  const wait = Shih.startCover(document.getElementById('playArea'), () => { if (timerOn()) timer.start(); });
+  function setup() {
+    qs = makeRound(); qi = 0;
+    timer.reset(); winMsg.hidden = true; update();
+    show();
+    wait();
+  }
+  document.getElementById('resetBtn').addEventListener('click', setup);
+  document.getElementById('againBtn').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

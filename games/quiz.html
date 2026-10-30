@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>中秋小知识 Moon Festival Quiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 小知识：英文问题，答案是图 + 中文，点对的答案。用法：quiz.html?unit=moon */
+body.game { background: #FFF6D6; }
+.quiz { max-width: 900px; margin: 0 auto; background: var(--card); border: 3px solid var(--ink); border-radius: 22px; padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+.top { display: flex; align-items: center; gap: 12px; }
+.qnum { font-weight: 700; color: #8A5A2B; background: #FFF1C4; border: 2px solid #E9B949; border-radius: 999px; padding: 2px 12px; font-size: 16px; flex: none; }
+.q { font: 700 clamp(20px, 3vw, 28px) var(--f-latin); }
+.answers { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 640px) { .answers { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.ans { font: inherit; color: inherit; cursor: pointer; background: #fff; border: 3px solid var(--ink); border-radius: 18px; box-shadow: 0 4px 0 var(--ink); padding: 10px 8px 12px;
+       display: flex; flex-direction: column; align-items: center; gap: 6px; transition: transform .1s; }
+.ans:hover { transform: translateY(-2px); }
+.ans .pic { width: min(150px, 100%); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; }
+.ans .pic svg { width: 100%; height: 100%; display: block; }
+.ans .ruby .zh { font-size: clamp(22px, 3vw, 30px); } .ans .ruby .py { font-size: 15px; }
+.ans .en { font: 700 22px var(--f-latin); }
+.ans.right { background: var(--me-done); border-color: var(--me); box-shadow: 0 4px 0 var(--me); }
+.ans.wrong { opacity: .35; animation: shake .35s; cursor: default; }
+.ans:disabled { cursor: default; }
+.ans:disabled:hover { transform: none; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill" id="timer">0:00</span>
+      <button class="ctl" id="timerBtn" type="button"></button>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <p class="help">Read the question. Tap the right answer.</p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winScore"></span> <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="quiz" id="quiz"></div>
+    </div>
+  </div>
+
+<script src="../shared/common.js"></script>
+<script src="../shared/shih.js"></script>
+<script>
+Shih.islandBar();
+Promise.all([Shih.loadUnit(), Shih.loadArt()]).then(([UNIT, ART]) => {
+  const Q = UNIT.quiz;
+  document.title = `${Q.title.zh} ${Q.title.en}`;
+  document.getElementById('titleRuby').innerHTML = Shih.ruby(Q.title.zh, Q.title.py);
+  document.getElementById('titleEn').textContent = Q.title.en;
+  document.getElementById('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  const quiz = document.getElementById('quiz'), scoreEl = document.getElementById('score');
+  const winMsg = document.getElementById('winMsg'), winTime = document.getElementById('winTime'), winScore = document.getElementById('winScore');
+  const timerEl = document.getElementById('timer'), timer = Shih.timer(timerEl);
+  const timerOn = Shih.toggle(document.getElementById('timerBtn'), 'timer', '⏱ Timer on', '⏱ Timer off', true, on => { timerEl.hidden = !on; });
+  Shih.soundButton(document.getElementById('soundBtn'));
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+
+  // 答案的图：故事里的人物、老师，或 art.js 里的小图
+  const PEOPLE = { change: 1, houyi: 1, king: 1, oldman: 1, villager: 1 };
+  const pic = name => name === 'teacher' ? window.SHIH_AVATAR({}) : PEOPLE[name] ? ART.who(name) : ART.icon(name);
+
+  let qi = 0, firstTry = 0, missed = false, busy = false;
+  const update = () => { scoreEl.textContent = `${firstTry} / ${Q.questions.length}`; };
+
+  function show() {
+    const q = Q.questions[qi];
+    const right = q.a || pick(q.one);
+    const opts = shuffle([right].concat(q.no));
+    missed = false; busy = false;
+    quiz.innerHTML = `<div class="top"><span class="qnum">${qi + 1} / ${Q.questions.length}</span><span class="q">${Shih.esc(q.q)}</span></div>` +
+      `<div class="answers" style="--n:${opts.length}">` + opts.map((o, k) => `<button type="button" class="ans" data-k="${k}">` +
+        `<span class="pic">${pic(o.pic)}</span>` +
+        (o.zh ? `<span class="ruby">${Shih.rubyText(o.zh, o.py)}</span>` : `<span class="en">${Shih.esc(o.en)}</span>`) + `</button>`).join('') + `</div>`;
+    quiz.querySelectorAll('.ans').forEach(b => b.addEventListener('click', () => {
+      if (busy || b.disabled) return;
+      const o = opts[+b.dataset.k];
+      if (o !== right) { b.classList.add('wrong'); b.disabled = true; missed = true; return; }
+      busy = true;
+      b.classList.add('right');
+      quiz.querySelectorAll('.ans').forEach(x => { x.disabled = true; });
+      if (o.zh) Shih.speak(o.zh);
+      if (!missed) firstTry++;
+      update();
+      qi++;
+      if (qi === Q.questions.length) {
+        const ms = timer.stop();
+        winScore.textContent = `${firstTry} / ${Q.questions.length} on the first try.`;
+        winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
+        setTimeout(() => { winMsg.hidden = false; }, 900);
+      } else setTimeout(show, 1500);
+    }));
+  }
+
+  const wait = Shih.startCover(document.getElementById('playArea'), () => { if (timerOn()) timer.start(); });
+  function setup() {
+    qi = 0; firstTry = 0;
+    timer.reset(); winMsg.hidden = true; update();
+    show();
+    wait();
+  }
+  document.getElementById('resetBtn').addEventListener('click', setup);
+  document.getElementById('againBtn').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

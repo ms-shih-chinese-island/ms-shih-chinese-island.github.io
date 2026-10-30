@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>配对 Matching</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 配对玩法：中文在左、英文在右，点一个再点它的配对。用法：match.html?unit=family
+   单元里写 UNIT.matchMode = 'pinyin' 的话，就变成「认字配对」：右边是拼音 + 英文，左边的中文没有拼音 */
+:root { --en: #5B9BD5; --en-deep: #3B78B5; --en-soft: #E3F0FB; --zh: #E9B949; --zh-deep: #C4932A; --zh-soft: #FFF6D6; }
+.board { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.grid { display: grid; grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr)); gap: 8px; }
+.board.c2 .tile { font-size: 20px; } .board.c2 .tile .zh { font-size: 28px; }
+.board.c3 .tile { font-size: 17px; line-height: 1.15; padding: 4px 8px; height: 68px; min-height: 0; } .board.c3 .tile .zh { font-size: 25px; } .board.c3 .tile .py { font-size: 15px; }
+.board.c3 .tile.done::after { width: 22px; height: 22px; font-size: 13px; line-height: 22px; right: 5px; top: 5px; transform: none; }
+.col h2 { margin: 0 auto; height: 34px; line-height: 30px; padding: 0 18px; border-radius: 999px; font-size: 17px; letter-spacing: .06em; text-align: center; border: 2px solid; }
+.col.en h2 { background: var(--en-soft); border-color: var(--en); color: var(--en-deep); text-transform: uppercase; }
+.col.zh h2 { background: var(--zh-soft); border-color: var(--zh); color: var(--zh-deep); font-family: var(--f-zh); }
+.tile {
+  position: relative; width: 100%; min-height: 66px; height: 74px; border-radius: 14px; border: 3px solid var(--ink); background: var(--card);
+  box-shadow: 0 3px 0 var(--ink); cursor: pointer; padding: 6px 12px;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  font: 700 24px var(--f-latin); color: var(--ink); touch-action: manipulation;
+  transition: transform .08s, background .15s;
+}
+.tile:active { transform: translateY(2px); }
+.tile[data-side="L"] { background: var(--en-soft); border-color: var(--en); box-shadow: 0 4px 0 var(--en-deep); }
+.tile[data-side="R"] { background: var(--zh-soft); border-color: var(--zh); box-shadow: 0 4px 0 var(--zh-deep); }
+.tile .py { font-size: 17px; font-weight: 400; } .tile .zh { font-size: 30px; }
+.tile.picked { border-color: var(--pick); background: var(--pick-soft); box-shadow: 0 4px 0 var(--pick); outline: 3px solid var(--pick); outline-offset: 2px; }
+.tile.done { cursor: default; box-shadow: none; transform: none; color: var(--ink); }
+.tile.done.g-dad { border-color: var(--dad); background: var(--dad-done); }
+.tile.done.g-mom { border-color: var(--mom); background: var(--mom-done); }
+.tile.done.g-me { border-color: var(--me); background: var(--me-done); }
+.tile.done.g-night { border-color: var(--night); background: var(--night-done); }
+.tile.done.g-sea { border-color: #7FC4D8; background: #D6EEF5; }
+.tile .key { font: 700 26px var(--f-latin); color: var(--sea-ink); }
+.tile .enLine { font-size: 15px; font-weight: 400; color: var(--muted); }
+.pinyinMode .tile[data-side="L"] { flex-direction: column; gap: 0; line-height: 1.15; }
+.pinyinMode .tile { height: auto; min-height: 74px; }
+.pinyinMode .tile.done .ruby { gap: 1px; } .pinyinMode .tile.done .ruby .zh { font-size: 22px; } .pinyinMode .tile.done .ruby .py { font-size: 11px; }
+.pinyinMode .tile.done::after { width: 20px; height: 20px; font-size: 12px; line-height: 20px; right: 4px; top: 4px; transform: none; }
+.board.c3 .tile .key { font-size: 21px; } .board.c3 .tile .enLine { font-size: 13px; }
+.tile.done::after { content: "✓"; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; border-radius: 50%; background: #FFFFFF; color: var(--ink); font: 700 18px/30px var(--f-latin); }
+.tile.wrong { animation: shake .35s; border-color: var(--bad); }
+/* 配对成功：先变色，过一下就淡出，留下空格，其他格子不动 */
+.tile.gone { opacity: 0; visibility: hidden; transition: opacity .1s, visibility 0s .1s; }
+@media (max-width: 640px) { .board { gap: 10px; } .tile { font-size: 18px; } .tile .zh { font-size: 26px; } .tile .py { font-size: 14px; } }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill" id="timer">0:00</span>
+      <button class="ctl" id="timerBtn" type="button"></button>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="enBtn" type="button" hidden></button>
+      <button class="ctl" id="resetBtn" type="button">Mix up again</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help">Tap a Chinese word, then its English match.</p>
+  <div class="win" id="win" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="board" id="board">
+        <div class="col zh"><h2>中文</h2><div class="grid" id="right"></div></div>
+        <div class="col en"><h2 id="leftHead">English</h2><div class="grid" id="left"></div></div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/common.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const WORDS = UNIT.words.filter(w => w.match !== false);
+  const LEVELS = UNIT.levels || [{ note: '' }];
+  const title = UNIT.matchTitle || { zh: '配对', py: 'pèi duì', en: 'Matching' };
+  document.title = `${title.zh} ${title.en}`;
+  document.getElementById('titleRuby').innerHTML = Shih.ruby(title.zh, title.py);
+  document.getElementById('titleEn').textContent = title.en;
+  document.getElementById('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+
+  const left = document.getElementById('left'), right = document.getElementById('right'), boardEl = document.getElementById('board');
+  const scoreEl = document.getElementById('score'), timerEl = document.getElementById('timer');
+  const winEl = document.getElementById('win'), winTime = document.getElementById('winTime');
+  const timer = Shih.timer(timerEl);
+  const PINYIN = UNIT.matchMode === 'pinyin';
+  let showEn = () => true;
+  if (PINYIN) {
+    boardEl.classList.add('pinyinMode');
+    document.getElementById('leftHead').textContent = 'Pinyin';
+    document.getElementById('help').textContent = 'Tap the Chinese, then its pinyin.';
+    const enBtn = document.getElementById('enBtn'); enBtn.hidden = false;
+    showEn = Shih.toggle(enBtn, 'matchEnglish', 'English on', 'English off', true, on => boardEl.querySelectorAll('.enLine').forEach(e => { e.hidden = !on; }));
+  }
+  const timerOn = Shih.toggle(document.getElementById('timerBtn'), 'timer', '⏱ Timer on', '⏱ Timer off', true, on => { timerEl.hidden = !on; });
+  Shih.soundButton(document.getElementById('soundBtn'));
+
+  let level = Shih.startLevel('matchLevel', LEVELS.length);
+  let PAIRS = [], picked = { L: null, R: null }, matched = 0;
+
+  const paintLevels = Shih.levelButtons(document.getElementById('levels'), LEVELS, level,
+    lv => WORDS.filter(w => (w.level || 1) <= lv).length,
+    lv => { level = lv; Shih.set('matchLevel', lv); setup(); }, UNIT.levelIcon);
+
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  // English layout: "older/younger" on line 1 for cousins, "(...)" always on its own line
+  function enHTML(en) {
+    let t = Shih.esc(en);
+    if (/cousin/.test(t)) t = t.replace(/^(older|younger)\s+/, '$1<br>');
+    return t.replace(/\s*\(/, '<br>(');
+  }
+  function tile(side, i) {
+    const w = PAIRS[i];
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tile g-' + (w.side || 'me');
+    b.dataset.side = side; b.dataset.i = i;
+    if (PINYIN) {
+      // 认字配对：有 key 的只配会变的那个字（拼音 w.key ↔ 中文 w.keyZh），中文那边不放拼音
+      if (side === 'L') b.innerHTML = `<span class="key">${Shih.esc(w.key || w.py)}</span><span class="enLine"${showEn() ? '' : ' hidden'}>${Shih.esc(w.keyEn || w.en)}</span>`;
+      else b.innerHTML = `<span class="zh" style="font-family:var(--f-zh)">${Shih.esc(w.keyZh || w.zh)}</span>`;
+    } else if (side === 'L') b.innerHTML = enHTML(w.en); else b.innerHTML = `<span class="ruby">${Shih.ruby(w.zh, w.py)}</span>`;
+    // 认字配对时，配对成功才念（不然听声音就能配）
+    b.addEventListener('click', () => { if (side === 'R' && !PINYIN) Shih.speak(w.zh); pick(b); });
+    return b;
+  }
+
+  const wait = Shih.startCover(document.getElementById('playArea'), () => { if (timerOn()) timer.start(); });
+
+  function setup() {
+    PAIRS = WORDS.filter(w => (w.level || 1) <= level);
+    // 单元可以设 UNIT.matchMax：字太多时，每次随机挑这么多组来配
+    if (UNIT.matchMax && PAIRS.length > UNIT.matchMax) PAIRS = shuffle(PAIRS).slice(0, UNIT.matchMax);
+    const cols = PAIRS.length <= 6 ? 1 : PAIRS.length <= 12 ? 2 : 3;
+    boardEl.classList.remove('c1', 'c2', 'c3'); boardEl.classList.add('c' + cols);
+    boardEl.style.setProperty('--cols', cols);
+    paintLevels(level);
+    left.innerHTML = ''; right.innerHTML = '';
+    shuffle(PAIRS.map((_, i) => i)).forEach(i => left.appendChild(tile('L', i)));
+    shuffle(PAIRS.map((_, i) => i)).forEach(i => right.appendChild(tile('R', i)));
+    picked = { L: null, R: null }; matched = 0;
+    timer.reset(); winEl.hidden = true; update();
+    wait();
+  }
+  function update() { scoreEl.textContent = `${matched} / ${PAIRS.length}`; }
+
+  function pick(b) {
+    if (b.classList.contains('done')) return;
+    const side = b.dataset.side;
+    if (picked[side]) picked[side].classList.remove('picked');
+    if (picked[side] === b) { picked[side] = null; return; }
+    picked[side] = b; b.classList.add('picked');
+    if (picked.L && picked.R) {
+      const a = picked.L, c = picked.R;
+      picked = { L: null, R: null };
+      if (a.dataset.i === c.dataset.i) {
+        [a, c].forEach(t => { t.classList.remove('picked'); t.classList.add('done'); t.disabled = true; });
+        setTimeout(() => [a, c].forEach(t => t.classList.add('gone')), 200);
+        if (PINYIN) { const w = PAIRS[+c.dataset.i]; Shih.speak(w.keyZh || w.zh); }   // 配对成功就念，不另外显示拼音
+        matched++; update();
+        if (matched === PAIRS.length) {
+          const ms = timer.stop();
+          winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
+          winEl.hidden = false;
+        }
+      } else {
+        [a, c].forEach(t => { t.classList.remove('picked'); t.classList.add('wrong'); setTimeout(() => t.classList.remove('wrong'), 400); });
+      }
+    }
+  }
+  document.getElementById('resetBtn').addEventListener('click', setup);
+  document.getElementById('againBtn').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="shared/gate.js"></script>
+<title>Ms. Shih's Island of Chinese Games</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
+<style>
+/* Layout: one big island map. Each place has a sign; tap a sign to open that place's game menu. */
+:root {
+  --sea: #BFE3EE;
+  --sea-deep: #8CCBDD;
+  --sand: #F3DDA6;
+  --grass: #B5DB98;
+  --grass-deep: #86BD72;
+  --ink: #2B2B2B;
+  --muted: #5E625E;
+  --card: #FFFFFF;
+  --line: #CFD2CC;
+  --dad: #F2A65A; --dad-ink: #B4471C; --dad-soft: #FFF6E5;
+  --mom: #EC8FB3; --mom-ink: #B23D6E; --mom-soft: #FDEEF3;
+  --me: #8CC7A0;  --me-ink: #2F7A4D;  --me-soft: #EEF7F1;
+  --soon: #B9BDB8;
+  --f-zh: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --f-latin: 'Andika', 'Trebuchet MS', system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  background: var(--sea); color: var(--ink); font-family: var(--f-latin);
+  padding: 16px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px));
+}
+.wrap { max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+.ruby { display: inline-flex; gap: 3px; align-items: flex-end; }
+.ruby > span { display: flex; flex-direction: column; align-items: center; }
+.ruby .py { line-height: 1.1; white-space: nowrap; }
+.ruby .zh { font-family: var(--f-zh); font-weight: 700; line-height: 1.1; }
+
+header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand { display: flex; flex-direction: column; gap: 2px; }
+.brand .en { font-size: clamp(22px, 3vw, 34px); font-weight: 700; color: #1F5E73; line-height: 1.1; }
+.brand .ruby .py { font-size: 15px; color: #1F5E73; } .brand .ruby .zh { font-size: 26px; color: #1F5E73; }
+.listBtn {
+  font: 700 18px var(--f-latin); color: var(--ink); background: var(--card);
+  border: 2px solid var(--ink); border-radius: 12px; padding: 10px 16px; cursor: pointer;
+}
+button:focus-visible, a:focus-visible { outline: 3px solid #1F5E73; outline-offset: 2px; }
+
+.map { position: relative; width: 100%; aspect-ratio: var(--ar, 1000 / 620); }
+.goHoliday {
+  position: absolute; transform: translate(-50%, -50%); cursor: pointer; font: inherit; color: var(--ink);
+  background: #FFFFFF; border: 3px solid var(--ink); border-radius: 12px; padding: 4px 12px 6px; box-shadow: 0 4px 0 var(--ink);
+  display: flex; flex-direction: column; align-items: center; line-height: 1.1;
+}
+.goHoliday .py { font-size: clamp(9px, 1vw, 13px); } .goHoliday .zh { font-size: clamp(14px, 1.7vw, 22px); }
+.goHoliday .en { font-size: clamp(10px, 1.1vw, 14px); font-weight: 700; color: #8A4FB8; white-space: nowrap; }
+.goHoliday:hover { transform: translate(-50%, calc(-50% - 2px)); }
+.back {
+  font: 700 18px var(--f-latin); color: var(--ink); background: var(--card);
+  border: 2px solid var(--ink); border-radius: 12px; padding: 10px 16px; cursor: pointer;
+}
+.scene { display: flex; flex-direction: column; gap: 12px; }
+.scene.enter { animation: zoomIn .45s ease-out; }
+@keyframes zoomIn { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
+body.holiday { background: #CBC3E8; }
+.list h3 { margin: 6px 0 -26px; font-size: 24px; color: #1F5E73; }
+.list h3 + section { margin-top: 0; }
+.list h3:not(:first-child) { margin-top: 18px; padding-top: 22px; border-top: 3px dashed var(--line); }
+.map svg.island { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* a place sign on the map: tap it to see that place's games */
+.spot {
+  position: absolute; transform: translate(-50%, -50%); cursor: pointer; font: inherit; color: var(--ink);
+  display: flex; flex-direction: column; align-items: center; gap: 1px; text-align: center;
+  background: var(--card); border: 3px solid var(--ink); border-radius: 12px; padding: 4px 12px 6px;
+  box-shadow: 0 4px 0 var(--c, var(--ink));
+}
+.spot::before {
+  content: ""; position: absolute; top: -9px; right: -9px; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--c, var(--me)); border: 2.5px solid var(--ink); animation: bob 2.6s ease-in-out infinite;
+}
+.spot .py { font-size: clamp(10px, 1.1vw, 14px); } .spot .zh { font-size: clamp(15px, 1.9vw, 24px); }
+.spot .en { font-size: clamp(10px, 1.1vw, 14px); font-weight: 700; color: var(--muted); }
+.spot:hover { transform: translate(-50%, calc(-50% - 2px)); }
+.spot.soon { cursor: default; border-style: dashed; border-color: #8B908A; box-shadow: none; background: rgba(255,255,255,.9); }
+.spot.soon::before { display: none; }
+.spot.soon:hover { transform: translate(-50%, -50%); }
+.spot.soon .zh { color: #4A4E4A; }
+.spot.label { cursor: default; box-shadow: none; border-width: 2px; padding: 3px 10px 5px; background: rgba(255,255,255,.92); }
+.spot.label::before { display: none; }
+.spot.label:hover { transform: translate(-50%, -50%); }
+.spot .soonTag { font-size: clamp(9px, 1vw, 12px); color: var(--muted); }
+@keyframes bob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-3px) } }
+
+.overlay { position: fixed; inset: 0; background: rgba(31,94,115,.35); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 20; }
+.panel {
+  width: min(560px, 100%); max-height: 90vh; overflow: auto; background: var(--card); border: 3px solid var(--ink);
+  border-radius: 20px; box-shadow: 0 6px 0 var(--ink); padding: 18px; display: flex; flex-direction: column; gap: 14px;
+}
+.panel-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.panel-head .py { font-size: 16px; } .panel-head .zh { font-size: 34px; }
+.panel-head .en { font-size: 18px; font-weight: 700; color: var(--muted); margin-left: 8px; }
+.close { font: 700 22px var(--f-latin); width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--ink); background: var(--card); cursor: pointer; flex: none; }
+.games { display: flex; flex-direction: column; gap: 10px; }
+.game {
+  display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 14px;
+  border: 3px solid var(--c, var(--me)); background: var(--cs, var(--me-soft)); color: var(--ink); text-decoration: none;
+}
+.game .ruby .py { font-size: 14px; } .game .ruby .zh { font-size: 26px; }
+.game .en { font-weight: 700; font-size: 17px; }
+.game small { display: block; color: var(--muted); font-size: 14px; }
+.game .go { margin-left: auto; font-size: 26px; font-weight: 700; }
+
+.list { background: var(--card); border: 3px solid var(--ink); border-radius: 20px; padding: 20px 22px 30px; display: flex; flex-direction: column; gap: 48px; }
+.list section { display: flex; flex-direction: column; gap: 12px; }
+.list h2 { margin: 0; display: flex; align-items: flex-end; gap: 10px; font-size: 17px; color: var(--muted); padding-bottom: 6px; border-bottom: 2px solid var(--line); }
+.list h2 .ruby .zh { font-size: 26px; color: var(--ink); } .list h2 .ruby .py { font-size: 14px; }
+.list .games { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+/* in the list, each card puts the Chinese on top and the English under it, so nothing gets squeezed */
+.list .game { display: grid; grid-template-columns: 1fr auto; column-gap: 10px; row-gap: 4px; align-items: start; }
+.list .game > .ruby { grid-column: 1; }
+.list .game > span:nth-child(2) { grid-column: 1; }
+.list .game > .go { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+.list .soonline { color: var(--muted); font-size: 15px; margin: 0; }
+/* the little walker on the map */
+.walker { position: absolute; width: 5.4%; transform: translate(-50%, -96%); pointer-events: none; z-index: 1; }
+.walker.left .flip { transform: scaleX(-1); }
+.walker .flip > svg { width: 100%; height: auto; display: block; overflow: visible; }
+.walker .legL, .walker .legR, .walker .armL, .walker .armR { transform-box: fill-box; transform-origin: 50% 0; }
+.walker .armL { transform: rotate(10deg); } .walker .armR { transform: rotate(-10deg); }
+/* walking rhythm: quick little steps. Each step (--step) the body hops up and lands with a small squash,
+   and it rocks side to side once per stride (two steps). Legs and arms swing the other way from each other. */
+.walker { --step: .22s; }
+.walker .bodyAll { transform-box: fill-box; transform-origin: 50% 100%; }
+.walker.walking .bodyAll { animation: waddle calc(var(--step) * 2) ease-in-out infinite; }
+.walker.walking .flip > svg { animation: hop var(--step) infinite; transform-origin: 50% 100%; }
+.walker.walking .legL { animation: legCycle calc(var(--step) * 2) ease-in-out infinite; }
+.walker.walking .legR { animation: legCycle calc(var(--step) * 2) ease-in-out infinite; animation-delay: calc(var(--step) * -1); }
+.walker.walking .armL { animation: armCycle calc(var(--step) * 2) ease-in-out infinite; animation-delay: calc(var(--step) * -1); }
+.walker.walking .armR { animation: armCycle calc(var(--step) * 2) ease-in-out infinite; }
+@keyframes hop {
+  0%   { transform: translateY(0) scale(1.06, .92); animation-timing-function: ease-out; }
+  45%  { transform: translateY(-9%) scale(.97, 1.04); animation-timing-function: ease-in; }
+  100% { transform: translateY(0) scale(1.06, .92); }
+}
+.walker .boat { display: none; } .walker.inBoat .boat { display: inline; } .walker.inBoat .legs { display: none; }
+.walker.inBoat .armL, .walker.inBoat .armR { animation: none; }
+.walker.inBoat .flip > svg { animation: rock .5s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+@keyframes rock { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
+@keyframes waddle { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+@keyframes legCycle { 0%, 100% { transform: rotate(28deg); } 50% { transform: rotate(-28deg); } }
+@keyframes armCycle { 0%, 100% { transform: rotate(-35deg); } 50% { transform: rotate(35deg); } }
+@keyframes rock { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
+.spot.label { cursor: pointer; }
+.whoPanel { width: min(760px, 100%); }
+.whoGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+.whoGrid button { font: 700 15px var(--f-latin); color: var(--ink); background: var(--card); border: 3px solid var(--line); border-radius: 14px; padding: 6px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.whoGrid button svg { width: 84px; height: 84px; }
+.whoGrid button[aria-pressed="true"] { border-color: #1F5E73; background: #E6F4F8; }
+.whoGrid .ruby .py { font-size: 11px; } .whoGrid .ruby .zh { font-size: 17px; }
+#whoBtn { display: flex; align-items: center; gap: 8px; padding: 4px 14px 6px; }
+#whoBtn svg { width: 36px; height: 36px; }
+#whoBtn .ruby .py { font-size: 11px; } #whoBtn .ruby .zh { font-size: 18px; }
+/* Ms. Shih in front of the school, saying hello */
+.npc { position: absolute; width: 5.4%; transform: translate(-50%, -100%); z-index: 1; cursor: pointer; background: none; border: 0; padding: 0; }
+.npc svg { width: 100%; height: auto; display: block; }
+.npc .say { position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, -6px); background: #fff; border: 2.5px solid var(--ink); border-radius: 12px;
+  padding: 2px 8px 4px; white-space: nowrap; display: flex; flex-direction: column; align-items: center; line-height: 1.1; box-shadow: 0 3px 0 var(--ink); }
+.npc .say::after { content: ""; position: absolute; left: 50%; top: 100%; transform: translateX(-50%); border: 7px solid transparent; border-top-color: var(--ink); }
+.npc .say .py { font-size: clamp(8px, .9vw, 12px); color: #1F5E73; } .npc .say .zh { font-size: clamp(12px, 1.5vw, 19px); }
+.npc .say .en { font-size: clamp(8px, .85vw, 11px); font-weight: 700; color: var(--muted); }
+.npc .say .ruby { gap: 4px; }
+.npc.talk .say { animation: pop .3s ease-out; }
+.walker .say { position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, -4px); background: #fff; border: 2.5px solid var(--ink); border-radius: 12px;
+  padding: 2px 8px 4px; white-space: nowrap; display: flex; flex-direction: column; align-items: center; line-height: 1.1; box-shadow: 0 3px 0 var(--ink); animation: pop .3s ease-out; }
+.walker .say::after { content: ""; position: absolute; left: 50%; top: 100%; transform: translateX(-50%); border: 7px solid transparent; border-top-color: var(--ink); }
+.walker .say .py { font-size: clamp(8px, .9vw, 12px); color: #1F5E73; } .walker .say .zh { font-size: clamp(12px, 1.5vw, 19px); }
+.walker .say .en { font-size: clamp(8px, .85vw, 11px); font-weight: 700; color: var(--muted); }
+.walker .say .ruby { gap: 4px; }
+.walker.talking { z-index: 6; }
+.npc.quiet .say { visibility: hidden; }
+.npc.talk svg { animation: npcHop .3s ease-out; }
+@keyframes pop { 0% { transform: translate(-50%, -6px) scale(.6); } 100% { transform: translate(-50%, -6px) scale(1); } }
+@keyframes npcHop { 50% { transform: translateY(-8%); } }
+@media (prefers-reduced-motion: reduce) { .spot::before { animation: none; } .scene.enter { animation: none; } .walker * { animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <span class="ruby" id="brandRuby"></span>
+      <span class="en" id="brandEn">Ms. Shih's Island of Chinese Games</span>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="listBtn" id="whoBtn" type="button"></button>
+      <button class="listBtn" id="listBtn" type="button" aria-pressed="false">☰ All games</button>
+    </div>
+  </header>
+
+  <div class="scene" id="scene-main">
+  <div class="map" id="map-main" style="--ar: 1240 / 620">
+    <svg class="island" viewBox="0 0 1240 620" aria-hidden="true">
+      <!-- sea waves -->
+      <g fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity=".7">
+        <path d="M20 40 q15 -10 30 0 t30 0"/><path d="M1060 60 q15 -10 30 0 t30 0"/><path d="M1150 200 q15 -10 30 0 t30 0"/>
+        <path d="M20 590 q15 -10 30 0 t30 0"/><path d="M1040 600 q15 -10 30 0 t30 0"/><path d="M1150 560 q15 -10 30 0 t30 0"/>
+      </g>
+      <!-- big main island: sand ring + grass -->
+      <path d="M55 320 C40 170 170 60 360 45 C520 32 700 28 840 60 C990 95 1035 200 1020 320 C1005 450 930 560 760 590 C600 615 400 612 240 575 C110 545 65 450 55 320 Z" fill="#F3DDA6" stroke="#D9BE7E" stroke-width="4"/>
+      <path d="M92 320 C80 185 195 92 365 78 C520 66 695 62 828 92 C960 122 995 212 982 320 C968 435 900 530 750 556 C600 580 410 578 255 543 C140 517 102 435 92 320 Z" fill="#B5DB98"/>
+      <g id="roads-main"></g>
+
+      <!-- school (top-left): red roof, clock tower, flag -->
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round">
+        <rect x="170" y="160" width="190" height="90" fill="#FFF6E5"/>
+        <path d="M160 162 L265 118 L370 162 Z" fill="#D9603B"/>
+        <rect x="238" y="96" width="54" height="66" fill="#FFF6E5"/>
+        <path d="M232 98 L265 70 L298 98 Z" fill="#D9603B"/>
+        <circle cx="265" cy="128" r="14" fill="#FFFFFF"/><path d="M265 128 L265 119 M265 128 L272 132" stroke-width="2"/>
+        <path d="M265 70 L265 44" /><path d="M265 46 L290 52 L265 58 Z" fill="#EC8FB3"/>
+        <rect x="186" y="180" width="26" height="22" fill="#BFE3EE"/><rect x="222" y="180" width="26" height="22" fill="#BFE3EE"/>
+        <rect x="282" y="180" width="26" height="22" fill="#BFE3EE"/><rect x="318" y="180" width="26" height="22" fill="#BFE3EE"/>
+        <rect x="250" y="208" width="30" height="42" fill="#3B78B5"/>
+      </g>
+      <!-- restroom (next to the school) -->
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round">
+        <rect x="395" y="196" width="70" height="54" fill="#E6F4F8"/>
+        <path d="M389 198 L471 198 L465 184 L395 184 Z" fill="#7FC4D8"/>
+        <rect x="405" y="204" width="50" height="24" rx="4" fill="#FFFFFF" stroke-width="2"/>
+        <circle cx="420" cy="210" r="3" fill="#3B78B5" stroke="none"/><path d="M416 214 h8 v10 h-8 Z" fill="#3B78B5" stroke="none"/>
+        <circle cx="440" cy="210" r="3" fill="#D9603B" stroke="none"/><path d="M440 213 l6 11 h-12 Z" fill="#D9603B" stroke="none"/>
+        <path d="M430 206 L430 226" stroke-width="1.5"/>
+        <rect x="422" y="232" width="16" height="18" fill="#3B78B5"/>
+      </g>
+      <!-- water fountain (in front of the school) -->
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M402 330 L398 296 L430 296 L426 330 Z" fill="#CFD2CC"/>
+        <rect x="390" y="288" width="48" height="10" rx="5" fill="#E6E8E4"/>
+        <path d="M424 288 C424 270 440 266 446 282" fill="none" stroke="#3B9BD5" stroke-width="3"/>
+        <circle cx="448" cy="288" r="3" fill="#3B9BD5" stroke="none"/>
+        <rect x="392" y="330" width="44" height="8" rx="3" fill="#A8ACA6"/>
+      </g>
+
+      <!-- homes (top-right) -->
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round">
+        <rect x="690" y="160" width="66" height="52" fill="#FFF6E5"/><path d="M682 162 L723 124 L764 162 Z" fill="#F2A65A"/><rect x="714" y="180" width="18" height="32" fill="#B4471C"/>
+        <rect x="778" y="184" width="58" height="46" fill="#FDEEF3"/><path d="M771 186 L807 154 L843 186 Z" fill="#EC8FB3"/><rect x="792" y="198" width="14" height="14" fill="#FFFFFF"/>
+        <rect x="738" y="240" width="56" height="42" fill="#EEF7F1"/><path d="M731 242 L766 211 L801 242 Z" fill="#8CC7A0"/><rect x="758" y="257" width="16" height="25" fill="#2F7A4D"/>
+      </g>
+
+      <!-- visitor center (bottom-left, by the shore): big i -->
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round">
+        <rect x="150" y="440" width="86" height="56" fill="#E6F4F8"/>
+        <path d="M141 442 L193 412 L245 442 Z" fill="#7FC4D8"/>
+        <circle cx="193" cy="469" r="21" fill="#3B78B5"/>
+        <path d="M193 467 L193 479" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/><circle cx="193" cy="459" r="3.4" fill="#FFFFFF" stroke="none"/>
+      </g>
+
+      <!-- plaza (middle): round square with flags -->
+      <g stroke="#2B2B2B" stroke-width="3">
+        <ellipse cx="560" cy="440" rx="96" ry="40" fill="#F6E7BE"/>
+        <path d="M484 438 L484 386 M636 438 L636 386"/>
+        <path d="M484 386 Q560 368 636 386" fill="none" stroke-width="2"/>
+        <path d="M500 381 l6 14 l6 -16 M526 376 l6 14 l6 -16 M552 374 l6 14 l6 -16 M578 376 l6 14 l6 -16 M604 380 l6 14 l6 -16" fill="#EC8FB3" stroke-width="2"/>
+      </g>
+
+      <!-- bank (bottom-right): columns, 123 on the roof -->
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round">
+        <rect x="820" y="400" width="104" height="66" fill="#FFFFFF"/>
+        <path d="M811 402 L872 366 L933 402 Z" fill="#F5C531"/>
+        <path d="M838 410 L838 458 M858 410 L858 458 M886 410 L886 458 M906 410 L906 458" stroke-width="4"/>
+        <rect x="813" y="464" width="118" height="8" fill="#E9B949"/>
+      </g>
+      <text x="872" y="396" text-anchor="middle" font-family="Andika, sans-serif" font-weight="700" font-size="18" fill="#2B2B2B">123</text>
+
+      <!-- trees -->
+      <g stroke="#2B2B2B" stroke-width="3">
+        <path d="M120 270 L120 294"/><circle cx="120" cy="258" r="18" fill="#86BD72"/>
+        <path d="M560 120 L560 144"/><circle cx="560" cy="108" r="18" fill="#86BD72"/>
+        <path d="M630 200 L630 224"/><circle cx="630" cy="188" r="16" fill="#86BD72"/>
+        <path d="M920 250 L920 274"/><circle cx="920" cy="238" r="18" fill="#86BD72"/>
+        <path d="M400 500 L400 524"/><circle cx="400" cy="488" r="16" fill="#86BD72"/>
+        <path d="M720 500 L720 524"/><circle cx="720" cy="488" r="16" fill="#86BD72"/>
+      </g>
+
+      <!-- boat route to the holiday island -->
+      <path d="M1010 360 C1040 400 1060 410 1085 400" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-dasharray="4 12" stroke-linecap="round"/>
+      <g id="boat-main" stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round">
+        <path d="M1022 420 L1074 420 L1064 436 L1032 436 Z" fill="#FFFFFF"/>
+        <path d="M1048 420 L1048 388 L1068 416 Z" fill="#B48BD9"/>
+      </g>
+      <!-- holiday island (small, far right) -->
+      <path d="M1080 340 C1076 290 1110 262 1155 262 C1205 262 1232 295 1228 340 C1224 390 1188 418 1150 416 C1108 414 1084 385 1080 340 Z" fill="#E9D3A0" stroke="#C9AE72" stroke-width="4"/>
+      <path d="M1097 340 C1096 300 1124 279 1155 279 C1194 279 1212 305 1209 340 C1206 378 1178 399 1150 398 C1117 397 1099 374 1097 340 Z" fill="#D9C27E"/>
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round">
+        <path d="M1112 360 L1112 318 L1132 298 L1152 318 L1152 360 Z" fill="#9B8BC4"/>
+        <path d="M1106 320 L1132 290 L1158 320 Z" fill="#5E4B8B"/>
+        <rect x="1120" y="326" width="9" height="11" fill="#F5C531"/><rect x="1135" y="326" width="9" height="11" fill="#F5C531"/>
+        <ellipse cx="1182" cy="360" rx="16" ry="12" fill="#F28C3A"/><path d="M1182 348 L1184 341"/>
+      </g>
+    </svg>
+    <button class="goHoliday" id="goHoliday" type="button" style="left: 92.8%; top: 76%"><span class="ruby" id="goHolidayRuby"></span><span class="en">Holiday Island →</span></button>
+  </div>
+</div>
+
+<div class="scene" id="scene-holiday" hidden>
+  <div class="map" id="map-holiday" style="--ar: 1240 / 620">
+    <svg class="island" viewBox="0 0 1240 620" aria-hidden="true">
+      <!-- small main island (left), boat route back -->
+      <path d="M20 420 C15 360 60 325 115 325 C175 325 205 365 200 420 C195 480 150 515 105 512 C55 510 25 475 20 420 Z" fill="#F3DDA6" stroke="#D9BE7E" stroke-width="4"/>
+      <path d="M40 420 C38 372 72 345 115 345 C162 345 183 377 179 420 C175 466 140 492 105 490 C67 488 42 462 40 420 Z" fill="#B5DB98"/>
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round">
+        <rect x="70" y="392" width="34" height="28" fill="#FFF6E5"/><path d="M64 394 L87 372 L110 394 Z" fill="#F2A65A"/>
+        <rect x="118" y="404" width="30" height="24" fill="#FDEEF3"/><path d="M113 406 L133 388 L153 406 Z" fill="#EC8FB3"/>
+        <path d="M100 455 L100 470"/><circle cx="100" cy="448" r="10" fill="#86BD72"/>
+      </g>
+      <path d="M205 440 C260 480 310 480 375 430" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-dasharray="4 12" stroke-linecap="round"/>
+      <g id="boat-holiday" stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round">
+        <path d="M262 470 L322 470 L310 488 L274 488 Z" fill="#FFFFFF"/>
+        <path d="M292 470 L292 432 L316 466 Z" fill="#F2A65A"/>
+      </g>
+      <g transform="translate(240 0)">
+      <g fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity=".7">
+        <path d="M40 80 q15 -10 30 0 t30 0"/><path d="M880 70 q15 -10 30 0 t30 0"/><path d="M70 540 q15 -10 30 0 t30 0"/><path d="M880 550 q15 -10 30 0 t30 0"/>
+      </g>
+      <path d="M140 310 C130 200 240 120 380 105 C520 90 640 85 750 125 C870 170 905 260 885 360 C865 465 760 535 610 550 C465 565 320 555 225 495 C165 455 148 385 140 310 Z" fill="#E9D3A0" stroke="#C9AE72" stroke-width="4"/>
+      <path d="M178 310 C172 215 265 150 385 138 C515 125 632 120 735 155 C840 192 865 268 848 352 C830 445 740 502 605 514 C472 527 340 518 255 466 C205 434 184 372 178 310 Z" fill="#D9C27E"/>
+      <g id="roads-holiday" transform="translate(-240 0)"></g>
+      <!-- haunted house (left) -->
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round">
+        <path d="M250 330 L252 230 L300 186 L350 232 L348 330 Z" fill="#9B8BC4"/>
+        <path d="M240 236 L300 170 L362 238 Z" fill="#5E4B8B"/>
+        <path d="M318 196 L320 150 L346 150 L344 214" fill="#5E4B8B"/>
+        <rect x="266" y="248" width="20" height="22" fill="#F5C531"/><rect x="314" y="248" width="20" height="22" fill="#F5C531"/>
+        <path d="M288 330 L288 292 Q300 280 312 292 L312 330" fill="#3E3260"/>
+        <path d="M276 250 L276 270 M266 259 L286 259 M324 250 L324 270 M314 259 L334 259" stroke-width="2"/>
+        <path d="M380 180 q8 -8 16 0 q8 -8 16 0" fill="none" stroke-width="2.5"/><path d="M200 210 q7 -7 14 0 q7 -7 14 0" fill="none" stroke-width="2.5"/>
+        <ellipse cx="380" cy="320" rx="22" ry="17" fill="#F28C3A"/><path d="M380 303 L383 294" />
+        <path d="M372 318 l4 -5 l4 5 M384 318 l4 -5 l4 5 M372 326 q8 6 16 0" fill="none" stroke-width="2"/>
+      </g>
+      <!-- Thanksgiving market (right): stalls with pumpkins, corn and pies -->
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round">
+        <rect x="610" y="262" width="96" height="58" fill="#FFFFFF"/>
+        <path d="M600 262 L716 262 L706 236 L610 236 Z" fill="#D9603B"/>
+        <path d="M626 236 L622 262 M646 236 L644 262 M666 236 L666 262 M686 236 L688 262" stroke="#FFFFFF" stroke-width="5"/>
+        <path d="M600 262 L716 262 L706 236 L610 236 Z" fill="none"/>
+        <rect x="604" y="296" width="108" height="10" fill="#C98A4A"/>
+        <ellipse cx="628" cy="290" rx="13" ry="10" fill="#F28C3A"/><path d="M628 280 L630 274" stroke-width="2.5"/>
+        <ellipse cx="652" cy="290" rx="11" ry="9" fill="#F5A04A"/>
+        <ellipse cx="684" cy="291" rx="6" ry="12" transform="rotate(20 684 291)" fill="#F5C531"/>
+        <rect x="724" y="276" width="86" height="48" fill="#FFFFFF"/>
+        <path d="M714 276 L820 276 L810 252 L724 252 Z" fill="#F5C531"/>
+        <path d="M740 252 L736 276 M758 252 L756 276 M776 252 L776 276 M794 252 L796 276" stroke="#FFFFFF" stroke-width="5"/>
+        <path d="M714 276 L820 276 L810 252 L724 252 Z" fill="none"/>
+        <rect x="718" y="304" width="98" height="10" fill="#C98A4A"/>
+        <path d="M736 302 a14 9 0 0 1 28 0 Z" fill="#E9A15A"/><path d="M740 298 l20 0" stroke-width="1.5"/>
+        <path d="M772 302 a14 9 0 0 1 28 0 Z" fill="#B4471C"/>
+        <ellipse cx="840" cy="318" rx="16" ry="12" fill="#F28C3A"/><ellipse cx="590" cy="322" rx="13" ry="10" fill="#F5A04A"/>
+      </g>
+      <!-- Moon Festival (bottom): a little pavilion with lanterns and mooncakes, and a patch of night sky with the full moon -->
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round">
+        <circle cx="672" cy="388" r="40" fill="#2E3A66"/>
+        <circle cx="680" cy="384" r="22" fill="#FFE27A"/>
+        <path d="M646 362 l0 6 M643 365 l6 0 M700 412 l0 5 M697.5 414.5 l5 0" stroke="#FFF6D6" stroke-width="2"/>
+        <rect x="496" y="482" width="128" height="14" rx="3" fill="#C98A4A"/>
+        <path d="M514 440 L514 482 M606 440 L606 482" stroke-width="6" stroke="#B4471C"/>
+        <path d="M514 440 L514 482 M606 440 L606 482" fill="none"/>
+        <rect x="538" y="462" width="44" height="8" fill="#8A5A2B"/><path d="M546 470 L546 482 M574 470 L574 482"/>
+        <ellipse cx="552" cy="459" rx="9" ry="5" fill="#E9A15A"/><ellipse cx="569" cy="459" rx="9" ry="5" fill="#E9A15A"/>
+        <path d="M486 436 Q500 442 512 432 L560 400 L608 432 Q620 442 634 436 Q624 448 606 446 L514 446 Q496 448 486 436 Z" fill="#D9603B"/>
+        <path d="M560 400 L560 392" stroke-width="3"/><circle cx="560" cy="390" r="4" fill="#F5C531"/>
+        <path d="M492 440 L492 450 M628 440 L628 450" stroke-width="2"/>
+        <ellipse cx="492" cy="459" rx="8" ry="9" fill="#E63946"/><ellipse cx="628" cy="459" rx="8" ry="9" fill="#E63946"/>
+        <path d="M486 453 h12 M486 465 h12 M622 453 h12 M622 465 h12" stroke-width="2"/>
+        <path d="M492 468 L492 474 M628 468 L628 474" stroke="#F5C531" stroke-width="2.5"/>
+      </g>
+      <!-- autumn trees -->
+      <g stroke="#2B2B2B" stroke-width="3">
+        <path d="M470 190 L470 214"/><circle cx="470" cy="178" r="17" fill="#F2A65A"/>
+        <path d="M380 470 L380 494"/><circle cx="380" cy="458" r="17" fill="#D9603B"/>
+        <path d="M230 420 L230 444"/><circle cx="230" cy="408" r="17" fill="#E9B949"/>
+      </g>
+      </g>
+    </svg>
+    <button class="goHoliday" id="goMain" type="button" style="left: 8.6%; top: 88%"><span class="ruby" id="goMainRuby"></span><span class="en" style="color:#2F7A4D">← Back to Main Island</span></button>
+  </div>
+</div>
+
+  <div class="list" id="list" hidden></div>
+</div>
+
+<div class="overlay" id="whoOverlay" hidden>
+  <div class="panel whoPanel" role="dialog" aria-modal="true" aria-labelledby="whoTitle">
+    <div class="panel-head">
+      <div id="whoTitle"></div>
+      <button class="close" id="whoClose" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="whoGrid" id="whoGrid"></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="panelTitle">
+    <div class="panel-head">
+      <div id="panelTitle"></div>
+      <button class="close" id="closeBtn" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="games" id="panelGames"></div>
+  </div>
+</div>
+
+<script src="island.js"></script>
+<script src="shared/kids.js"></script>
+<script src="shared/shih.js"></script>
+<script>
+const ISLANDS = window.ISLANDS;
+const COLORS = {
+  me: ['#8CC7A0', '#EEF7F1'], dad: ['#F2A65A', '#FFF6E5'], mom: ['#EC8FB3', '#FDEEF3'],
+  sea: ['#7FC4D8', '#E6F4F8'], sun: ['#F5C531', '#FFF6D6'], night: ['#9B8BC4', '#EFEAF8']
+};
+
+function rubyHTML(zh, py) {
+  const syl = String(py || '').replace(/[.,?!;:，。？！、\/／]/g, ' ').trim().split(/\s+/).filter(Boolean);
+  let k = 0;
+  return Array.from(zh).map(c => {
+    const p = /[\u3400-\u9fff]/.test(c) ? (syl[k++] || '') : '';
+    return `<span><span class="py">${p || '&nbsp;'}</span><span class="zh">${c}</span></span>`;
+  }).join('');
+}
+
+const overlay = document.getElementById('overlay');
+const panelTitle = document.getElementById('panelTitle');
+const panelGames = document.getElementById('panelGames');
+let lastFocus = null;
+
+function gameCards(t) {
+  const [c, cs] = COLORS[t.color] || COLORS.me;
+  return t.games.map(g => `<a class="game" href="${g.href}" style="--c:${c};--cs:${cs}">
+      <span class="ruby">${rubyHTML(g.zh, g.py)}</span>
+      <span><span class="en">${g.en}</span><small>${g.note || ''}</small></span>
+      <span class="go" aria-hidden="true">→</span></a>`).join('');
+}
+
+Object.entries(ISLANDS).forEach(([id, I]) => {
+  const map = document.getElementById('map-' + id);
+  const X = v => (v / I.width * 100) + '%', Y = v => (v / 620 * 100) + '%';
+  I.places.forEach(P => {
+    if (P.labelOnly) {   // just a name sign on the map (a vocabulary word), no games
+      const d = document.createElement('div');
+      d.className = 'spot label';
+      d.style.left = X(P.x); d.style.top = Y(P.y);
+      d.innerHTML = `<span class="ruby">${rubyHTML(P.zh, P.py)}</span><span class="en">${P.en}</span>`;
+      d.addEventListener('click', () => goTo(id, P, null));   // the walker just walks there
+      map.appendChild(d);
+      return;
+    }
+    const b = document.createElement('button');
+    b.type = 'button';
+    const soon = !P.games.length;
+    b.className = 'spot' + (soon ? ' soon' : '');
+    b.style.left = X(P.x); b.style.top = Y(P.y);
+    b.style.setProperty('--c', (COLORS[P.color] || COLORS.me)[0]);
+    b.innerHTML = `<span class="ruby">${rubyHTML(P.zh, P.py)}</span><span class="en">${P.en}</span>` + (soon ? '<span class="soonTag">Coming soon</span>' : '');
+    b.setAttribute('aria-label', `${P.zh} ${P.en}${soon ? ' (coming soon)' : ''}`);
+    if (soon) b.setAttribute('aria-disabled', 'true');
+    b.addEventListener('click', () => goTo(id, P, soon ? null : b));
+    map.appendChild(b);
+  });
+});
+
+function openTopic(T, from) {
+  lastFocus = from;
+  panelTitle.innerHTML = `<span class="ruby">${rubyHTML(T.zh, T.py)}</span><span class="en">${T.en}</span>`;
+  panelGames.innerHTML = gameCards(T);
+  overlay.hidden = false;
+  document.getElementById('closeBtn').focus();
+}
+function closePanel() { overlay.hidden = true; if (lastFocus) lastFocus.focus(); }
+document.getElementById('closeBtn').addEventListener('click', closePanel);
+overlay.addEventListener('click', e => { if (e.target === overlay) closePanel(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !overlay.hidden) closePanel(); });
+
+// switching islands (#holiday opens the holiday island directly)
+const brandRuby = document.getElementById('brandRuby'), brandEn = document.getElementById('brandEn');
+document.getElementById('goHolidayRuby').innerHTML = rubyHTML('节日岛', 'jié rì dǎo');
+let current = 'main';
+function showIsland(id, animate) {
+  current = id;
+  const I = ISLANDS[id];
+  brandRuby.innerHTML = rubyHTML(I.zh, I.py);
+  brandEn.textContent = I.en;
+  Object.keys(ISLANDS).forEach(k => {
+    const sc = document.getElementById('scene-' + k);
+    sc.hidden = (k !== id) || !list.hidden;
+    sc.classList.remove('enter');
+    if (k === id && animate) { void sc.offsetWidth; sc.classList.add('enter'); }
+  });
+  document.body.classList.toggle('holiday', id === 'holiday');
+  try { history.replaceState(null, '', id === 'main' ? location.pathname : '#holiday'); } catch (e) {}
+}
+document.getElementById('goHoliday').addEventListener('click', () => sail('holiday'));
+document.getElementById('goMainRuby').innerHTML = rubyHTML('回主岛', 'huí zhǔ dǎo');
+document.getElementById('goMain').addEventListener('click', () => sail('main'));
+
+// list view: every topic and its games, for a quick pick in class
+const list = document.getElementById('list');
+const listBtn = document.getElementById('listBtn');
+list.innerHTML = Object.values(ISLANDS).map(I => `<h3>${I.en}</h3>` + I.places.filter(T => !T.labelOnly).map(T => `<section>
+    <h2><span class="ruby">${rubyHTML(T.zh, T.py)}</span> ${T.en}</h2>
+    ${T.games.length ? `<div class="games">${gameCards(T)}</div>` : '<p class="soonline">Coming soon</p>'}
+  </section>`).join('')).join('');
+listBtn.addEventListener('click', () => {
+  const showList = list.hidden;
+  list.hidden = !showList;
+  listBtn.setAttribute('aria-pressed', String(showList));
+  listBtn.textContent = showList ? '🏝 Island map' : '☰ All games';
+  showIsland(current, false);
+});
+
+
+// ===================================================================
+// 小人：在岛上沿着小路走到每个地点；去节日岛会坐船
+// 路线图：nodes 是地图上的点（地图宽 1240、高 620），edges 是小路
+// places：牌子的中文 → 小人要站的点
+// ===================================================================
+const WALK = {
+  main: {
+    nodes: {
+      A: [300, 300], B: [440, 322], C: [560, 332], D: [690, 336], E: [820, 345], G: [955, 355], Bk: [795, 420], F: [290, 420],
+      school: [216, 350], restroom: [430, 268], fountain: [470, 338], plaza: [560, 452], home: [735, 300],
+      visitor: [262, 505], bank: [790, 478], dock: [1002, 372]
+    },
+    edges: [['school', 'A'], ['A', 'B'], ['B', 'restroom'], ['B', 'fountain'], ['B', 'C'], ['C', 'plaza'], ['C', 'D'], ['D', 'home'],
+            ['D', 'E'], ['E', 'Bk'], ['Bk', 'bank'], ['E', 'G'], ['G', 'dock'], ['A', 'F'], ['F', 'visitor']],
+    places: { '家': 'home', '学校': 'school', '卫生间': 'restroom', '饮水机': 'fountain', '你好': 'visitor', '数字': 'bank' },
+    start: 'plaza', dock: 'dock',
+    boatOut: [[1002, 372], [1040, 406], [1084, 402]], boatIn: [[1084, 402], [1040, 406], [1002, 372]]
+  },
+  holiday: {
+    nodes: { dock: [410, 440], h1: [480, 398], haunted: [560, 352], h2: [720, 350], market: [880, 346], m1: [700, 430], moon: [702, 512] },
+    edges: [['dock', 'h1'], ['h1', 'haunted'], ['haunted', 'h2'], ['h2', 'market'], ['h2', 'm1'], ['m1', 'moon']],
+    places: { '鬼屋': 'haunted', '感恩节市场': 'market', '中秋节': 'moon' },
+    start: 'dock', dock: 'dock',
+    boatOut: [[410, 440], [330, 470], [246, 462]], boatIn: [[246, 462], [330, 470], [410, 440]]
+  }
+};
+const REDUCE = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const store = { get: (k, d) => { try { const v = localStorage.getItem('shih:' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+                set: (k, v) => { try { localStorage.setItem('shih:' + k, JSON.stringify(v)); } catch (e) {} } };
+
+// draw the little roads from the route map
+Object.entries(WALK).forEach(([id, W]) => {
+  const g = document.getElementById('roads-' + id);
+  if (!g) return;
+  const d = W.edges.map(([a, b]) => `M${W.nodes[a][0]} ${W.nodes[a][1]} L${W.nodes[b][0]} ${W.nodes[b][1]}`).join(' ');
+  g.innerHTML = `<path d="${d}" fill="none" stroke="${id === 'main' ? '#E8D29A' : '#C9AE72'}" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>` +
+    `<path d="${d}" fill="none" stroke="${id === 'main' ? '#F7ECCB' : '#E9D3A0'}" stroke-width="7" stroke-dasharray="1 14" stroke-linecap="round"/>`;
+});
+
+// who is walking: the island kid (default) or one of the 16 kids
+const MASCOT = { id: 'mascot', first: 'Island Kid', zh: '小岛主', py: 'xiǎo dǎo zhǔ', skin: 'light', hair: 'short', hairColor: 'brown', shirt: '#F5C531', hat: true };
+const PEOPLE = [MASCOT].concat((window.ART && ART.people) || []);
+const who = () => PEOPLE.find(p => (p.id || p.first) === store.get('avatar', 'mascot')) || MASCOT;
+const hat = '<g stroke="#2B2B2B" stroke-width="2.5" stroke-linejoin="round"><ellipse cx="70" cy="40" rx="46" ry="10" fill="#F2D27A"/>' +
+  '<path d="M44 40 Q46 12 70 12 Q94 12 96 40 Z" fill="#F2D27A"/><path d="M45 34 Q70 42 95 34 L96 40 Q70 46 44 40 Z" fill="#D9603B"/></g>';
+function face(p, state) {
+  if (!window.ART) return '';
+  const inner = ART.kid(p, state).replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
+  return inner + (p.hat ? hat : '');
+}
+function portrait(p) { return `<svg viewBox="0 0 140 140" aria-hidden="true">${face(p, 'good')}</svg>`; }
+// a little chibi person: a big head (from the kid pictures), a small round body, tiny arms and stubby legs
+function walkerSVG(p, state) {
+  const skin = { light: '#FBDCC8', asian: '#F6D9B5', tan: '#C98E62' }[p.skin] || '#FBDCC8';
+  const sw = 'stroke="#2B2B2B" stroke-width="3.5" stroke-linejoin="round"';
+  const arm = cls => `<g class="${cls}"><rect x="-6" y="0" width="12" height="20" rx="6" fill="${p.shirt}" ${sw}/><circle cx="0" cy="22" r="6.5" fill="${skin}" ${sw}/></g>`;
+  const leg = (cls, x) => `<g class="${cls}"><rect x="${x}" y="122" width="14" height="22" rx="7" fill="#5B6E9A" ${sw}/><ellipse cx="${x + 7}" cy="146" rx="10" ry="6" fill="#2B2B2B"/></g>`;
+  return `<svg viewBox="0 0 140 156" aria-hidden="true"><g class="bodyAll">` +
+    `<defs><clipPath id="headClip"><rect x="0" y="0" width="140" height="99"/></clipPath></defs>` +
+    `<g class="legs">${leg('legL', 54)}${leg('legR', 72)}</g>` +
+    `<g transform="translate(51 100)">${arm('armL')}</g>` +
+    `<rect x="50" y="92" width="40" height="36" rx="14" fill="${p.shirt}" ${sw}/>` +
+    `<g clip-path="url(#headClip)"><svg x="0" y="0" width="140" height="140" viewBox="0 0 140 140" overflow="visible">${face(p, 'good')}</svg></g>` +
+    `<g transform="translate(89 100)">${arm('armR' + (state === 'wave' ? ' up' : ''))}</g>` +
+    `<g class="boat" stroke="#2B2B2B" stroke-width="3.5" stroke-linejoin="round"><path d="M8 118 L132 118 L116 152 L24 152 Z" fill="#FFFFFF"/><path d="M18 130 L122 130" stroke="#7FC4D8" stroke-width="4"/></g>` +
+    `</g></svg>`;
+}
+
+const walker = document.createElement('div');
+walker.className = 'walker';
+walker.innerHTML = '<div class="flip"></div>';
+const flip = walker.firstChild;
+function paintWalker(state) { flip.innerHTML = walkerSVG(who(), state || 'good'); }
+paintWalker();
+let pos = store.get('walker', null);          // { island, node }
+function put(island, xy) {
+  const map = document.getElementById('map-' + island);
+  if (walker.parentNode !== map) map.insertBefore(walker, map.querySelector('svg.island').nextSibling);
+  walker.style.left = (xy[0] / 1240 * 100) + '%';
+  walker.style.top = (xy[1] / 620 * 100) + '%';
+}
+function placeAt(island, node) {
+  const W = WALK[island];
+  if (!W.nodes[node]) node = W.start;
+  pos = { island, node };
+  store.set('walker', pos);
+  put(island, W.nodes[node]);
+}
+// shortest way along the roads
+function route(W, from, to) {
+  const prev = { [from]: null }, q = [from];
+  while (q.length) {
+    const n = q.shift();
+    if (n === to) break;
+    W.edges.forEach(([a, b]) => {
+      const m = a === n ? b : b === n ? a : null;
+      if (m && !(m in prev)) { prev[m] = n; q.push(m); }
+    });
+  }
+  if (!(to in prev)) return [W.nodes[to]];
+  const out = [];
+  for (let n = to; n !== null; n = prev[n]) out.unshift(W.nodes[n]);
+  return out;
+}
+// move along a list of points; when it's done, call done()
+let anim = null;
+function move(island, pts, done, opts) {
+  opts = opts || {};
+  stop();
+  if (REDUCE || pts.length < 2) { put(island, pts[pts.length - 1]); done && done(); return; }
+  const segs = [];
+  let total = 0;
+  for (let i = 1; i < pts.length; i++) { const l = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); segs.push(l); total += l; }
+  const ms = Math.min(opts.max || 2600, Math.max(opts.min || 600, total / (opts.speed || 0.22)));
+  // little quick steps: each step covers about 26 map units (faster walk = quicker steps)
+  const v = total / ms * 1000;
+  walker.style.setProperty('--step', Math.max(0.15, Math.min(0.26, 26 / v)).toFixed(3) + 's');
+  // start gently and slow down at the end
+  const ramp = Math.min(0.18, 160 / ms);
+  const ease = t => t < ramp ? t * t / (2 * ramp * (1 - ramp)) : t > 1 - ramp ? 1 - (1 - t) * (1 - t) / (2 * ramp * (1 - ramp)) : (t - ramp / 2) / (1 - ramp);
+  walker.classList.add(opts.boat ? 'inBoat' : 'walking');
+  const t0 = performance.now();
+  anim = { done, island, end: pts[pts.length - 1], raf: 0 };
+  const step = now => {
+    let d = ease(Math.min(1, (now - t0) / ms)) * total, i = 0;
+    while (i < segs.length - 1 && d > segs[i]) { d -= segs[i]; i++; }
+    const k = segs[i] ? Math.min(1, d / segs[i]) : 1, a = pts[i], b = pts[i + 1];
+    walker.classList.toggle('left', b[0] < a[0] - 1 || (walker.classList.contains('left') && Math.abs(b[0] - a[0]) <= 1));
+    put(island, [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k]);
+    if (now - t0 < ms) anim.raf = requestAnimationFrame(step);
+    else { const cb = anim.done; anim = null; walker.classList.remove('walking'); if (!opts.keepBoat) walker.classList.remove('inBoat'); cb && cb(); }
+  };
+  anim.raf = requestAnimationFrame(step);
+}
+function stop() { if (anim) { cancelAnimationFrame(anim.raf); anim = null; } walker.classList.remove('walking', 'inBoat'); }
+function wave() {
+  if (REDUCE) return;
+  paintWalker('wave');
+  clearTimeout(wave.t); wave.t = setTimeout(() => paintWalker(), 900);
+}
+// tap a sign: walk there, then open the menu. Tap again while walking: jump there right away.
+let trip = 0;
+function goTo(island, P, btn) {
+  const W = WALK[island], node = W.places[P.zh];
+  const open = () => { if (btn) openTopic(P, btn); };
+  if (!node) { open(); return; }
+  const busy = !!anim;
+  const my = ++trip;
+  if (busy || !pos || pos.island !== island) { stop(); placeAt(island, node); open(); return; }
+  if (pos.node === node) { wave(); open(); return; }
+  move(island, route(W, pos.node, node), () => {
+    if (my !== trip) return;
+    placeAt(island, node);
+    if (island === 'main' && node === 'school' && npcHello) { greetTeacher(my, open); return; }
+    const line = SAY_AT[island + ':' + node];
+    if (line) { kidSays(line, my); }
+    wave(); setTimeout(() => { if (my === trip) open(); }, REDUCE ? 0 : 350);
+  });
+}
+// things the kid says when arriving somewhere (island:place → [Chinese, pinyin, English])
+const SAY_AT = {
+  'main:fountain': ['我很渴！', 'wǒ hěn kě!', "I'm thirsty!"]
+};
+function kidSays(line, my) {
+  walker.querySelectorAll('.say').forEach(x => x.remove());
+  const bub = document.createElement('span');
+  bub.className = 'say';
+  bub.innerHTML = `<span class="ruby">${rubyHTML(line[0], line[1])}</span><span class="en">${line[2]}</span>`;
+  walker.appendChild(bub);
+  walker.classList.add('talking');
+  sayZh(line[0]);
+  setTimeout(() => { bub.remove(); walker.classList.remove('talking'); }, 2200);
+}
+// at the school: the kid says 老师好！ and Ms. Shih answers 小朋友好！
+function greetTeacher(my, open) {
+  walker.classList.add('left');                    // face Ms. Shih
+  paintWalker('wave');
+  const bub = document.createElement('span');
+  bub.className = 'say';
+  bub.innerHTML = `<span class="ruby">${rubyHTML('老师好！', 'lǎo shī hǎo!')}</span><span class="en">Hello, teacher!</span>`;
+  walker.appendChild(bub);
+  walker.classList.add('talking');
+  npcHello.quiet(true);                            // one speech bubble at a time
+  const end = () => { bub.remove(); walker.classList.remove('talking'); npcHello.quiet(false); paintWalker(); };
+  sayZh('老师好！', () => {
+    if (my !== trip) { end(); return; }
+    bub.remove(); walker.classList.remove('talking'); paintWalker();
+    npcHello(() => { end(); if (my === trip) open(); });
+  });
+}
+// the boat: walk to the dock, sail over, and step off on the other island
+function sail(to) {
+  const from = to === 'holiday' ? 'main' : 'holiday';
+  const my = ++trip;
+  const boats = { main: document.getElementById('boat-main'), holiday: document.getElementById('boat-holiday') };
+  const arrive = () => { Object.values(boats).forEach(b => b && (b.style.visibility = '')); placeAt(to, WALK[to].dock); wave(); };
+  if (anim || REDUCE || !pos || pos.island !== from) { stop(); showIsland(to, true); arrive(); return; }
+  const W = WALK[from], T = WALK[to];
+  move(from, route(W, pos.node, W.dock), () => {
+    if (my !== trip) return;
+    boats[from] && (boats[from].style.visibility = 'hidden');
+    move(from, W.boatOut, () => {
+      if (my !== trip) return;
+      showIsland(to, true);
+      boats[from] && (boats[from].style.visibility = '');
+      boats[to] && (boats[to].style.visibility = 'hidden');
+      walker.classList.add('inBoat');
+      move(to, T.boatIn, () => { if (my !== trip) return; arrive(); }, { boat: true, min: 900 });
+    }, { boat: true, min: 700, keepBoat: true });
+  });
+}
+
+// pick who you are
+const whoBtn = document.getElementById('whoBtn'), whoOverlay = document.getElementById('whoOverlay'), whoGrid = document.getElementById('whoGrid');
+document.getElementById('whoTitle').innerHTML = `<span class="ruby">${rubyHTML('我是谁？', 'wǒ shì shéi?')}</span><span class="en">Pick your character</span>`;
+function paintWhoBtn() { whoBtn.innerHTML = portrait(who()) + `<span class="ruby">${rubyHTML('换人物', 'huàn rén wù')}</span>`; whoBtn.setAttribute('aria-label', 'Pick your character'); }
+paintWhoBtn();
+whoBtn.addEventListener('click', () => {
+  const cur = who();
+  whoGrid.innerHTML = PEOPLE.map((p, i) => `<button type="button" data-i="${i}" aria-pressed="${p === cur}">${portrait(p)}` +
+    (p.zh ? `<span class="ruby">${rubyHTML(p.zh, p.py)}</span>` : `<span>${p.first}</span>`) + `</button>`).join('');
+  whoGrid.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    const p = PEOPLE[+b.dataset.i];
+    store.set('avatar', p.id || p.first);
+    paintWalker(); paintWhoBtn(); wave();
+    whoOverlay.hidden = true; whoBtn.focus();
+  }));
+  whoOverlay.hidden = false;
+  document.getElementById('whoClose').focus();
+});
+document.getElementById('whoClose').addEventListener('click', () => { whoOverlay.hidden = true; whoBtn.focus(); });
+whoOverlay.addEventListener('click', e => { if (e.target === whoOverlay) { whoOverlay.hidden = true; whoBtn.focus(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !whoOverlay.hidden) { whoOverlay.hidden = true; whoBtn.focus(); } });
+
+
+// read Chinese out loud (follows the same sound on/off setting as the games)
+function sayZh(text, done) {
+  let soundOn = true; try { soundOn = JSON.parse(localStorage.getItem('shih:sound') || 'true'); } catch (e) {}
+  if (!soundOn || !('speechSynthesis' in window)) { setTimeout(() => done && done(), 900); return; }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text); u.lang = 'zh-CN'; u.rate = 0.55;
+  const v = speechSynthesis.getVoices().find(v => /zh[-_]CN/i.test(v.lang)); if (v) u.voice = v;
+  let called = false; const fin = () => { if (!called) { called = true; done && done(); } };
+  u.onend = fin; setTimeout(fin, 2200);
+  speechSynthesis.speak(u);
+}
+// Ms. Shih stands in front of the school and says 小朋友好！ Tap her to hear it.
+let npcHello = null;
+(function () {
+  if (!window.SHIH_AVATAR) return;
+  const map = document.getElementById('map-main');
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'npc';
+  b.style.left = (168 / 1240 * 100) + '%'; b.style.top = (348 / 620 * 100) + '%';
+  const hi = ['小朋友好！', 'xiǎo péng yǒu hǎo!', 'Hello, kids!'];
+  b.innerHTML = `<span class="say"><span class="ruby">${rubyHTML(hi[0], hi[1])}</span><span class="en">${hi[2]}</span></span>` + SHIH_AVATAR();
+  b.setAttribute('aria-label', 'Ms. Shih says ' + hi[2]);
+  npcHello = done => { b.classList.remove('quiet', 'talk'); void b.offsetWidth; b.classList.add('talk'); sayZh(hi[0], done); };
+  npcHello.quiet = on => b.classList.toggle('quiet', on);
+  b.addEventListener('click', () => npcHello());
+  map.insertBefore(b, map.querySelector('svg.island').nextSibling);
+})();
+
+// #holiday opens the holiday island; #<place id> (e.g. #haunted-house) opens that place's game menu
+(function () {
+  const h = decodeURIComponent((location.hash || '').slice(1));
+  let start = h === 'holiday' ? 'holiday' : 'main', place = null;
+  Object.entries(ISLANDS).forEach(([k, I]) => I.places.forEach(P => { if (P.id && P.id === h) { start = k; place = P; } }));
+  showIsland(start, false);
+  // where the walker starts: the place in the link, or where it stopped last time, or the plaza / the dock
+  if (place && WALK[start].places[place.zh]) placeAt(start, WALK[start].places[place.zh]);
+  else if (pos && pos.island === start) placeAt(start, pos.node);
+  else placeAt(start, WALK[start].start);
+  if (place && place.games && place.games.length) {
+    const btn = [...document.querySelectorAll('#scene-' + start + ' .spot')].find(b => (b.getAttribute('aria-label') || '').startsWith(place.zh + ' '));
+    openTopic(place, btn || null);
+  }
+})();
+</script>
+</body>
+</html>
