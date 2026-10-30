@@ -12,7 +12,7 @@
 /* 图书馆：右边是书（一个单元一章，可以翻页、可以听），左边是自己挑的配对卡（2–12 个），按「开始配对」就玩。
    不给金币、不记成绩。用法：library.html?unit=library */
 body.game { background: #F3E9D8; }
-.lib { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 14px; align-items: start; }
+.lib { display: grid; grid-template-columns: minmax(300px, 1fr) minmax(0, 2fr); gap: 14px; align-items: start; }
 @media (max-width: 820px) { .lib { grid-template-columns: 1fr; } }
 /* 左边：配对卡 */
 .tray { background: var(--card); border: 3px solid var(--ink); border-radius: 20px; padding: 10px; display: flex; flex-direction: column; gap: 8px; position: sticky; top: 8px; }
@@ -20,12 +20,15 @@ body.game { background: #F3E9D8; }
 .tray h2 .ruby .py { font-size: 11px; } .tray h2 .ruby .zh { font-size: 20px; } .tray h2 .en { font-size: 14px; color: var(--muted); }
 .count { font-weight: 700; color: var(--muted); font-size: 15px; }
 .count b { color: var(--ink); font-size: 18px; }
-.drop { min-height: 220px; max-height: calc(100vh - 360px); overflow: auto; border: 3px dashed #C9A86A; border-radius: 14px; background: #FFFBF2; padding: 6px; display: flex; flex-direction: column; gap: 5px; }
+.drop { min-height: 220px; max-height: calc(100vh - 360px); overflow: auto; border: 3px dashed #C9A86A; border-radius: 14px; background: #FFFBF2; padding: 6px; display: grid; grid-template-columns: 1fr 1fr; align-content: start; gap: 6px; }
 .drop.over { background: #FFF1C4; border-style: solid; }
-.drop .empty { color: var(--muted); font-size: 14px; text-align: center; margin: auto; padding: 10px; }
-.chip { display: flex; align-items: center; gap: 6px; background: #fff; border: 2px solid var(--ink); border-radius: 10px; padding: 2px 4px 2px 8px; }
-.chip .ruby .py { font-size: 10px; } .chip .ruby .zh { font-size: 17px; }
-.chip .ruby { flex-wrap: wrap; flex: 1; min-width: 0; }
+.drop .empty { color: var(--muted); font-size: 15px; text-align: center; margin: auto; padding: 10px; grid-column: 1 / -1; align-self: center; }
+.chip { display: flex; align-items: center; gap: 6px; background: #fff; border: 2px solid var(--ink); border-radius: 12px; padding: 4px 2px 4px 6px; min-width: 0; box-shadow: 0 3px 0 #D8C49C; }
+.chip .cpic { width: 34px; height: 34px; flex: none; display: flex; } .chip .cpic svg { width: 100%; height: 100%; }
+.chip .ctxt { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.chip .ruby .py { font-size: 10px; } .chip .ruby .zh { font-size: 18px; }
+.chip .ruby { flex-wrap: wrap; min-width: 0; }
+.chip .cen { font-size: 11px; font-weight: 700; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chip .x { border: 0; background: none; font: 700 18px var(--f-latin); color: var(--muted); cursor: pointer; padding: 0 4px; }
 .mode { display: flex; gap: 6px; }
 .mode button { flex: 1; font: 700 13px var(--f-latin); border: 2px solid var(--line); background: #fff; border-radius: 10px; padding: 5px 4px; cursor: pointer; }
@@ -47,7 +50,7 @@ body.game { background: #F3E9D8; }
 .page { padding: 10px 16px 8px; display: flex; flex-direction: column; gap: 4px; }
 .chap { display: flex; align-items: flex-end; gap: 8px; border-bottom: 2px solid #E7D4B0; padding-bottom: 4px; margin-bottom: 2px; }
 .chap .ruby .py { font-size: 12px; color: #8A5A2B; } .chap .ruby .zh { font-size: 24px; color: #8A5A2B; } .chap .en { font-weight: 700; color: var(--muted); }
-.entry { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto auto; align-items: center; gap: 8px; border-radius: 10px; padding: 3px 4px; cursor: grab; }
+.entry { display: grid; grid-template-columns: auto auto minmax(0, 13em) 44px; justify-content: start; align-items: center; gap: 8px; border-radius: 10px; padding: 3px 4px; cursor: grab; }
 .entry:hover { background: #FFF6E0; }
 .entry.chosen { background: var(--me-soft); }
 .entry .pic { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
@@ -56,7 +59,7 @@ body.game { background: #F3E9D8; }
 .entry .ruby { flex-wrap: wrap; } .entry .ruby .py { font-size: 12px; color: var(--sea-ink); } .entry .ruby .zh { font-size: 22px; }
 .entry .en { font-size: 13px; color: var(--muted); font-weight: 700; }
 .entry button { font: 700 16px var(--f-latin); width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--ink); background: #fff; cursor: pointer; padding: 0; }
-.entry .add { background: #FFF1C4; }
+.entry .add { border-radius: 8px; background: #fff; font-size: 22px; line-height: 1; color: var(--me-ink); }
 .entry.chosen .add { background: var(--me-done); }
 .flip { display: flex; justify-content: center; align-items: center; gap: 14px; padding: 8px; grid-column: 1 / -1; }
 .flip button { font: 700 15px var(--f-latin); border: 2px solid var(--ink); border-radius: 10px; background: #fff; padding: 4px 12px; cursor: pointer; }
@@ -74,7 +77,7 @@ body.game { background: #F3E9D8; }
     <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en">Library</span></div>
     <div class="controls"><button class="ctl" id="soundBtn" type="button"></button></div>
   </div>
-  <p class="help">Read the book. Drag words to the left (or tap ＋). Pick 2 to 12 words, then start matching!</p>
+  <p class="help">Read the book. Tick ☐ (or drag a word to the left). Pick 2 to 12 words, then start matching!</p>
   <div class="lib">
     <div class="tray">
       <h2><span class="ruby" id="trayRuby"></span><span class="en">My cards</span></h2>
@@ -159,8 +162,8 @@ function remove(zh) { pick.words = pick.words.filter(x => x.zh !== zh); save(); 
 function paintTray() {
   const n = pick.words.length;
   $('count').innerHTML = `<b>${n}</b> / 12`;
-  $('drop').innerHTML = n ? pick.words.map(w => `<div class="chip">${R(w)}<button type="button" class="x" data-zh="${esc(w.zh)}" aria-label="Remove">✕</button></div>`).join('')
-    : `<div class="empty">Drag words here<br>or tap ＋</div>`;
+  $('drop').innerHTML = n ? pick.words.map(w => `<div class="chip"><span class="ctxt">${R(w)}</span><button type="button" class="x" data-zh="${esc(w.zh)}" aria-label="Remove">✕</button></div>`).join('')
+    : `<div class="empty">Tick ☐ in the book<br>or drag words here</div>`;
   $('drop').querySelectorAll('.x').forEach(b => b.addEventListener('click', () => remove(b.dataset.zh)));
   $('go').disabled = n < 2;
   $('note').textContent = n < 2 ? 'Pick at least 2 words.' : '';
@@ -183,9 +186,11 @@ function paintTabs() {
   $('tabs').querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => { chap = +b.dataset.k; spread = 0; paintTabs(); paintBook(); }));
 }
 function entryHTML(w) {
-  return `<div class="entry${has(w) ? ' chosen' : ''}" draggable="true" data-zh="${esc(w.zh)}"><span class="pic">${picOf(w)}</span>` +
-    `<span class="txt">${R(w)}<span class="en">${esc(w.en || '')}</span></span>` +
-    `<button type="button" class="say" aria-label="Listen">🔊</button><button type="button" class="add" aria-label="Add">${has(w) ? '✓' : '＋'}</button></div>`;
+  // 一行：☐ 勾选 → 🔊 声音 → 生词 → 图
+  return `<div class="entry${has(w) ? ' chosen' : ''}" draggable="true" data-zh="${esc(w.zh)}">` +
+    `<button type="button" class="add" role="checkbox" aria-checked="${has(w)}" aria-label="Pick">${has(w) ? '✓' : ''}</button>` +
+    `<button type="button" class="say" aria-label="Listen">🔊</button>` +
+    `<span class="txt">${R(w)}<span class="en">${esc(w.en || '')}</span></span><span class="pic">${picOf(w)}</span></div>`;
 }
 function paintBook() {
   const c = LIBRARY.chapters[chap];
