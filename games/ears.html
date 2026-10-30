@@ -112,17 +112,30 @@ Shih.loadUnit().then(UNIT => {
   const findVoice = () => { const vs = speechSynthesis.getVoices(), cn = vs.filter(v => /zh[-_]CN/i.test(v.lang)); voice = cn.find(v => v.localService) || cn[0] || vs.find(v => /^zh/i.test(v.lang)) || null; };
   if ('speechSynthesis' in window) { findVoice(); speechSynthesis.onvoiceschanged = findVoice; }
   let sayId = 0;
+  // 英文名字用英文的声音念（中文的声音念英文名字会怪怪的）
+  let enVoice = null;
+  const findEn = () => { const vs = speechSynthesis.getVoices(), en = vs.filter(v => /^en[-_]US/i.test(v.lang)); enVoice = en.find(v => v.localService) || en[0] || vs.find(v => /^en/i.test(v.lang)) || null; };
+  if ('speechSynthesis' in window) { findEn(); speechSynthesis.addEventListener && speechSynthesis.addEventListener('voiceschanged', findEn); }
   function say(text, slow, done) {
     if (!('speechSynthesis' in window)) { done && setTimeout(done, 600); return; }
     const my = ++sayId;
     if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text.replace(/[A-Za-z]+/g, m => ' ' + m + ' '));
-    u.lang = 'zh-CN'; u.rate = 0.6;   // 一律念慢一点 if (voice) u.voice = voice;
+    // 把句子切成中文、英文名字几段，一段一段念
+    const parts = String(text).split(/([A-Za-z][A-Za-z0-9]*)/).filter(x => /[A-Za-z0-9㐀-鿿]/.test(x));
+    const us = parts.map(t => {
+      const u = new SpeechSynthesisUtterance(t), en = /[A-Za-z]/.test(t);
+      u.lang = en ? 'en-US' : 'zh-CN';
+      u.rate = en ? 0.8 : 0.6;   // 一律念慢一点
+      if (en && enVoice) u.voice = enVoice;
+      if (!en && voice) u.voice = voice;
+      return u;
+    });
     let fired = false; const fin = () => { if (!fired && my === sayId) { fired = true; done && done(); } };
-    u.onend = fin; u.onerror = fin;
+    if (!us.length) { setTimeout(fin, 300); return; }
+    us[us.length - 1].onend = fin; us[us.length - 1].onerror = fin;
     setTimeout(fin, 1500 + text.length * 600);   // 有的电脑不会通知念完
     // Chrome 的小毛病：刚 cancel 完马上 speak，有时候会没有声音，所以等一下再念
-    const go = () => { try { speechSynthesis.resume(); } catch (e) {} speechSynthesis.speak(u); };
+    const go = () => { try { speechSynthesis.resume(); } catch (e) {} us.forEach(u => speechSynthesis.speak(u)); };
     if (speechSynthesis.speaking || speechSynthesis.pending) setTimeout(go, 120); else go();
   }
   const stopSay = () => { sayId++; if ('speechSynthesis' in window) speechSynthesis.cancel(); };
@@ -134,10 +147,23 @@ Shih.loadUnit().then(UNIT => {
 
   // ---- 名字、数字、姓 ----
   const myName = () => (Shih.get('name', '') || 'Emma');
+  // 回答的那一边：画学生自己做的角色（不写名字，只是表示「我」在说话）
+  const meSVG = () => `<svg viewBox="0 0 140 140" aria-hidden="true"><g stroke="#2B2B2B" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">` +
+    `<path d="M30 140 Q30 104 70 101 Q110 104 110 140 Z" fill="#F5C531"/>` +                      // 黄色上衣
+    `<circle cx="70" cy="66" r="34" fill="#F6D9B5"/>` +                                           // 脸
+    `<path d="M34 60 Q34 24 70 24 Q106 24 106 60 Z" fill="#8CC7A0"/>` +                            // 毛线帽（盖住头发，男生女生都可以）
+    `<path d="M32 60 L108 60" stroke-width="7" stroke="#2F7A4D"/><circle cx="70" cy="22" r="8" fill="#FFFFFF"/>` +
+    `<circle cx="58" cy="74" r="4" fill="#2B2B2B" stroke="none"/><circle cx="82" cy="74" r="4" fill="#2B2B2B" stroke="none"/>` +
+    `<path d="M60 86 Q70 94 80 86" fill="none"/>` +
+    `<circle cx="48" cy="84" r="5" fill="#F4A7B9" stroke="none" opacity=".8"/><circle cx="92" cy="84" r="5" fill="#F4A7B9" stroke="none" opacity=".8"/>` +
+    `</g></svg>`;   // 回答的那一边：一个中性的小人，男生女生都能代入
+  // 说话的小朋友：不要跟学生自己同名
+  const SKIP_NAMES = ['jack'];   // 念起来容易怪的名字，不要用
+  const others = () => shuffle(ART.people.filter(p => p.first.toLowerCase() !== myName().toLowerCase() && !SKIP_NAMES.includes(p.first.toLowerCase())));
   const NUMS = { 2: ['二', 'èr'], 3: ['三', 'sān'], 4: ['四', 'sì'], 5: ['五', 'wǔ'], 6: ['六', 'liù'], 7: ['七', 'qī'], 8: ['八', 'bā'], 9: ['九', 'jiǔ'], 10: ['十', 'shí'] };
   const SURS = [['王', 'wáng', 'Wang'], ['李', 'lǐ', 'Li'], ['林', 'lín', 'Lin'], ['陈', 'chén', 'Chen']];
   // 把一题问答做出来：{ q:{zh,py,en}, a:{zh,py,en}, who, speaker, group, traps }
-  function makeQA(t, people) {
+  function makeQA(t, people, who) {
     const [kid, friend] = people;
     const vars = { me: myName(), kid: kid.first, friend: friend.first };
     const num = n => ({ zh: NUMS[n][0], py: NUMS[n][1], en: String(n) });
@@ -154,14 +180,19 @@ Shih.loadUnit().then(UNIT => {
       const f = pick(ART.FEELS.filter(w => w.level <= level));
       a = f.zh === '我很好' && Math.random() < 0.5 ? { zh: '我很好，谢谢你。', py: 'wǒ hěn hǎo, xiè xie nǐ.', en: "I'm fine, thank you." } : { zh: f.zh + '。', py: f.py + '.', en: f.en + '.' };
     } else a = fill(t.a);
-    return { group: t.group, who: t.who || pick(['teacher', 'kid']), speaker: kid, q: fill(t.q), a, traps: (t.traps || []).map(x => fill([x[0], x[1], ''])) };
+    return { group: t.group, who: t.who || who || (Math.random() < 0.65 ? 'kid' : 'teacher'),   // 没指定的问题：大多是小朋友问小朋友
+       speaker: kid, q: fill(t.q), a, traps: (t.traps || []).map(x => fill([x[0], x[1], ''])) };
   }
   // 错的回答：别的问题的回答 + 这一题特别的陷阱（同一组的不算）
-  function wrongAnswers(item, n, people) {
+  // 也算对的回答（例如问「你好吗？」，「我很好」「我很冷」都可以），不能拿来当错的选项
+  const FITS = { feel: /^我(很|不好|马马虎虎)/, name: /我叫/, surname: /^我姓/, age: /岁。$/, family: /^我家有/, grade: /年级。$/, learn: /^我学习/, friend: /^我的好朋友/ };
+  const fitsAny = (w, items) => items.some(it => w.zh === it.a.zh || (FITS[it.group] && FITS[it.group].test(w.zh)));
+  function wrongAnswers(item, n, people, also) {
+    const asked = [item].concat(also || []);
     const others = shuffle(QA.filter(t => t.group !== item.group)).map(t => makeQA(t, people).a);
     const all = shuffle(item.traps).concat(others);
     const out = [];
-    for (const w of all) { if (out.length >= n) break; if (w.zh !== item.a.zh && !out.some(o => o.zh === w.zh)) out.push(w); }
+    for (const w of all) { if (out.length >= n) break; if (!fitsAny(w, asked) && !out.some(o => o.zh === w.zh)) out.push(w); }
     return out;
   }
 
@@ -202,18 +233,28 @@ Shih.loadUnit().then(UNIT => {
     const qaList = weighted(QA);
     for (let i = 0; i < mix.qa; i++) qs.push({ kind: 'qa', t: qaList[i % qaList.length] });
     for (let i = 0; i < mix.chain; i++) {
-      const [t1, t2] = shuffle(QA).reduce((acc, t) => (acc.length < 2 && !acc.some(x => x.group === t.group) ? acc.concat([t]) : acc), []);
+      // 两题由同一个人问：史老师才说的（小朋友好）不能跟小朋友才说的（你好，我叫…）配在一起
+      const ok = (acc, t) => !acc.some(x => x.group === t.group || (x.who && t.who && x.who !== t.who));
+      const [t1, t2] = shuffle(QA).reduce((acc, t) => (acc.length < 2 && ok(acc, t) ? acc.concat([t]) : acc), []);
       // 照对话的顺序排：先打招呼，再问名字……
       const rank = t => { const r = (E.order || []).indexOf(t.group); return r < 0 ? 99 : r; };
       qs.push({ kind: 'chain', t: [t1, t2].sort((a, b) => rank(a) - rank(b)) });
     }
     // 连续两题放在后面，其他的打乱
-    return shuffle(qs.filter(q => q.kind !== 'chain')).concat(qs.filter(q => q.kind === 'chain'));
+    // 题型打乱，但问答题照口头对话的顺序：先打招呼，再问你好吗、名字，最后其他问题
+    const rank = t => { const r = (E.order || []).indexOf(t.group); return r < 0 ? 99 : r; };
+    const mixed = shuffle(qs.filter(q => q.kind !== 'chain'));
+    const qaSorted = mixed.filter(q => q.kind === 'qa').map(q => q.t).sort((a, b) => rank(a) - rank(b));
+    mixed.forEach(q => { if (q.kind === 'qa') q.t = qaSorted.shift(); });
+    return mixed.concat(qs.filter(q => q.kind === 'chain'));
   }
 
   let qs = [], qi = 0, firstTry = 0, missed = false, busy = false;
   const update = () => { scoreEl.textContent = `${firstTry} / ${qs.length}`; };
-  const KIND = { py: 'Listen. Which pinyin is right?', zh: 'Listen. Which word did you hear?', qa: 'Listen. What is the right answer?', chain: 'Listen to both questions. Answer them in order.' };
+  const KIND = { py: 'Listen. Which pinyin is right?', zh: 'Listen. Which word did you hear?', qa: 'Listen and choose the best answer.', chain: 'Listen to both questions. Choose the best answers, in order.' };
+  // 按「开始」后，先停一下再念第一题（让学生准备好）
+  let firstWait = 0;
+  function autoSay(fn) { const w = firstWait, my = qi; firstWait = 0; if (w) setTimeout(() => { if (qi === my) fn(); }, w); else fn(); }
   const topHTML = q => `<div class="top"><span class="qnum">${qi + 1} / ${qs.length}</span><span class="kind">${KIND[q.kind]}</span><span class="ear">${EAR}</span></div>`;
   const listenBtns = (big) => `<div class="listenRow"><button type="button" class="listen${big ? ' big' : ''}" id="lis" aria-label="Listen"><span class="ic">🔊</span><small>Listen</small></button>` +
     `</div>`;
@@ -271,7 +312,7 @@ Shih.loadUnit().then(UNIT => {
       box.insertBefore(choices(opts, s.py, 'py', () => { if (s.tip) { tip.innerHTML = '✓ ' + esc(s.tip); tip.hidden = false; } say(s.zh); },
         () => { if (s.tip) { tip.innerHTML = '💡 ' + esc(s.tip); tip.hidden = false; } }), tip);
       wireListen(slow => say(s.zh, slow));
-      say(s.zh);
+      autoSay(() => say(s.zh));
     } else if (q.kind === 'zh') {
       const s = q.s;
       const near = POOL.concat(E.sounds.filter(x => x.level <= 3)).filter((x, i, a) => Array.from(x.zh).length === 1 && x.zh !== s.zh && a.findIndex(y => y.zh === x.zh) === i)
@@ -280,21 +321,22 @@ Shih.loadUnit().then(UNIT => {
       box.insertAdjacentHTML('beforeend', listenBtns(true));
       box.appendChild(choices(opts, s, 'zh', b => { b.innerHTML = `<span class="ruby">${Shih.rubyText(s.zh, s.py)}</span>`; say(s.zh); }));
       wireListen(slow => say(s.zh, slow));
-      say(s.zh);
+      autoSay(() => say(s.zh));
     } else if (q.kind === 'qa') {
-      const people = shuffle(ART.people);
+      const people = others();
       const it = makeQA(q.t, people);
       const opts = shuffle([it.a].concat(wrongAnswers(it, 3, people)));
       box.insertAdjacentHTML('beforeend', `<div class="talk"><div class="row"><div class="who">${speakerSVG(it)}<span class="nm">${speakerName(it)}</span></div>` +
-        `<button type="button" class="bub" id="bub0"><span>🔊</span><span class="dots">……</span></button>` +
-        `</div></div>`);
+        `<button type="button" class="bub" id="bub0"><span>🔊</span><span class="dots">……</span></button></div>` +
+        `<div class="row me"><div class="who">${meSVG()}</div><span class="slot" id="slot0"></span></div></div>`);   // 回答的泡泡：学生一看就知道要回答
       const bub = document.getElementById('bub0');
       const play = slow => { bub.classList.add('playing'); say(it.q.zh, slow, () => bub.classList.remove('playing')); };
       box.appendChild(choices(opts, it.a, 'answer', () => {
         bub.innerHTML = R(it.q); bub.classList.remove('playing'); say(it.a.zh);
+        const slot = document.getElementById('slot0'); slot.classList.add('filled'); slot.innerHTML = R(it.a);
       }));
       bub.addEventListener('click', () => play(false));
-      play(false);
+      autoSay(() => play(false));
     } else showChain(q);
   }
   function wireListen(fn) {
@@ -306,15 +348,17 @@ Shih.loadUnit().then(UNIT => {
 
   // 连续两题：像对话框，一题一题念（中间停一下），回答依顺序放进去
   function showChain(q) {
-    const people = shuffle(ART.people);
-    const items = q.t.map((t, k) => makeQA(t, [people[k], people[2]]));
+    const people = others();
+    // 一段对话只有一个人在问：史老师，或同一个小朋友
+    const who = q.t.some(t => t.who === 'teacher') ? 'teacher' : q.t.some(t => t.who === 'kid') ? 'kid' : (Math.random() < 0.65 ? 'kid' : 'teacher');
+    const items = q.t.map(t => makeQA(t, [people[0], people[2]], who));
     const wrong = [];
-    items.forEach(it => wrongAnswers(it, 3, people).forEach(w => { if (!items.some(x => x.a.zh === w.zh) && !wrong.some(x => x.zh === w.zh)) wrong.push(w); }));
+    items.forEach(it => wrongAnswers(it, 3, people, items).forEach(w => { if (!items.some(x => x.a.zh === w.zh) && !wrong.some(x => x.zh === w.zh)) wrong.push(w); }));
     const cardsData = shuffle(items.map(it => it.a).concat(shuffle(wrong).slice(0, 3)));
     const me = esc(myName());
     box.insertAdjacentHTML('beforeend', `<div class="talk" id="talk">` + items.map((it, k) =>
       `<div class="row"><div class="who">${speakerSVG(it)}<span class="nm">${speakerName(it)}</span></div><button type="button" class="bub" data-k="${k}"><span>🔊</span><span class="dots">……</span></button></div>` +
-      `<div class="row me"><span class="meTag">${me}</span><span class="slot" data-k="${k}"></span></div>`).join('') + `</div>` +
+      `<div class="row me"><div class="who">${meSVG()}</div><span class="slot" data-k="${k}"></span></div>`).join('') + `</div>` +
       `<div class="listenRow"><button type="button" class="listen" id="lis" aria-label="Listen to both"><span class="ic">🔊</span><small>Both</small></button>` +
       `</div><div class="bank" id="bank"></div>`);
     const talk = document.getElementById('talk'), bank = document.getElementById('bank');
@@ -351,10 +395,10 @@ Shih.loadUnit().then(UNIT => {
         if (s && !accept(card, s)) { card.classList.add('shake'); setTimeout(() => card.classList.remove('shake'), 400); }
       }
     });
-    playBoth(false);
+    autoSay(() => playBoth(false));
   }
 
-  const wait = Shih.startCover(document.getElementById('playArea'), () => { if (timerOn()) timer.start(); show(); });
+  const wait = Shih.startCover(document.getElementById('playArea'), () => { if (timerOn()) timer.start(); firstWait = 1500; show(); });
   function setup() {
     paintLevels(level);
     stopSay();
