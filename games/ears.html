@@ -230,23 +230,22 @@ Shih.loadUnit().then(UNIT => {
     for (let i = 0; i < mix.py; i++) qs.push({ kind: 'py', s: take(POOL, usedPy) });
     const singles = POOL.filter(s => Array.from(s.zh).length === 1);
     for (let i = 0; i < mix.zh; i++) qs.push({ kind: 'zh', s: take(singles, usedZh) });
-    const qaList = weighted(QA);
+    // 连续两题：只从「会接在一起问」的清单里挑（两题都要是这个年级以内学过的）
+    const findQ = alts => { const m = QA.filter(t => alts.split('|').includes(t.q[0])); return m.length ? pick(m) : null; };
+    const pairs = shuffle((E.pairs || []).map(([a, b]) => [findQ(a), findQ(b)]).filter(p => p[0] && p[1]));
+    const chains = pairs.slice(0, mix.chain);
+    chains.forEach(p => qs.push({ kind: 'chain', t: p }));
+    // 一问一答：尽量不跟连续两题问一样的问题
+    const usedQ = new Set(chains.flat().map(t => t.q[0]));
+    const qaList = weighted(QA.filter(t => !usedQ.has(t.q[0])).length >= mix.qa ? QA.filter(t => !usedQ.has(t.q[0])) : QA);
     for (let i = 0; i < mix.qa; i++) qs.push({ kind: 'qa', t: qaList[i % qaList.length] });
-    for (let i = 0; i < mix.chain; i++) {
-      // 两题由同一个人问：史老师才说的（小朋友好）不能跟小朋友才说的（你好，我叫…）配在一起
-      const ok = (acc, t) => !acc.some(x => x.group === t.group || (x.who && t.who && x.who !== t.who));
-      const [t1, t2] = shuffle(QA).reduce((acc, t) => (acc.length < 2 && ok(acc, t) ? acc.concat([t]) : acc), []);
-      // 照对话的顺序排：先打招呼，再问名字……
-      const rank = t => { const r = (E.order || []).indexOf(t.group); return r < 0 ? 99 : r; };
-      qs.push({ kind: 'chain', t: [t1, t2].sort((a, b) => rank(a) - rank(b)) });
-    }
-    // 连续两题放在后面，其他的打乱
-    // 题型打乱，但问答题照口头对话的顺序：先打招呼，再问你好吗、名字，最后其他问题
+    // 题型打乱，但对话题（一问一答、连续两题）照口头对话的顺序：先打招呼，再问你好吗、名字，最后其他问题
     const rank = t => { const r = (E.order || []).indexOf(t.group); return r < 0 ? 99 : r; };
-    const mixed = shuffle(qs.filter(q => q.kind !== 'chain'));
-    const qaSorted = mixed.filter(q => q.kind === 'qa').map(q => q.t).sort((a, b) => rank(a) - rank(b));
-    mixed.forEach(q => { if (q.kind === 'qa') q.t = qaSorted.shift(); });
-    return mixed.concat(qs.filter(q => q.kind === 'chain'));
+    const convRank = q => q.kind === 'chain' ? rank(q.t[0]) + 0.5 : rank(q.t);
+    const mixed = shuffle(qs);
+    const conv = mixed.filter(q => q.kind === 'qa' || q.kind === 'chain').map(q => ({ kind: q.kind, t: q.t })).sort((a, b) => convRank(a) - convRank(b));
+    mixed.forEach(q => { if (q.kind === 'qa' || q.kind === 'chain') { const c = conv.shift(); q.kind = c.kind; q.t = c.t; } });
+    return mixed;
   }
 
   let qs = [], qi = 0, firstTry = 0, missed = false, busy = false;
