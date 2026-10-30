@@ -248,6 +248,8 @@ UNIT.ears = {
      {me} = 学生自己的名字、{kid} = 说话的小朋友、{friend} = 好朋友的名字
      {age} {n} {sur} {grade} 会随机换成数字或姓
      拼音里不用写名字；traps = 这一题特别要放的错答案 */
+  /* 连续两题的先后顺序：对话里先打招呼、问好，再问名字、姓、几岁…… */
+  order: ['hello', 'feel', 'name', 'surname', 'age', 'grade', 'family', 'learn', 'friend'],
   qa: [
     // ---- 二年级 ----
     { level: 1, group: 'hello', who: 'teacher', q: ['小朋友好！', 'xiǎo péng yǒu hǎo!', 'Hello, kids!'], a: ['老师好！', 'lǎo shī hǎo!', 'Hello, teacher!'],
