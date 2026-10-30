@@ -26,7 +26,7 @@ body.game .gameHead .gameTitle .py, body.game .gameHead .gameTitle .zh, body.gam
 .nTeams { display: flex; gap: 10px; }
 .nTeams button { font: 700 30px var(--f-latin); width: 64px; height: 64px; border-radius: 16px; border: 3px solid var(--ink); background: #fff; cursor: pointer; box-shadow: 0 4px 0 var(--ink); }
 .nTeams button[aria-pressed="true"] { background: #F5C531; }
-.names { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; width: 100%; }
+.names { display: grid; grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr)); gap: 10px; width: 100%; }
 .names label { display: flex; align-items: center; gap: 8px; border: 3px solid var(--tc); border-radius: 14px; padding: 6px 10px; background: var(--ts); }
 .names .dot { width: 18px; height: 18px; border-radius: 50%; background: var(--tc); border: 2px solid var(--ink); flex: none; }
 .names input { font: 700 20px var(--f-latin); font-family: var(--f-latin), var(--f-zh); border: 0; background: transparent; width: 100%; min-width: 0; }
@@ -192,7 +192,7 @@ function showSetup() {
   const paint = () => {
     jeo.innerHTML = `<div class="setup"><div class="q"><span class="ruby">${Shih.ruby('几队', 'jǐ duì')}</span><span class="en">How many teams?</span></div>` +
       `<div class="nTeams">${[1, 2, 3, 4, 5].map(k => `<button type="button" data-n="${k}" aria-pressed="${k === pick}">${k}</button>`).join('')}</div>` +
-      `<div class="names">${Array.from({ length: pick }, (_, k) => `<label style="${teamVars(k)}"><span class="dot"></span><input maxlength="10" data-k="${k}" value="${esc(names[k] || DEFAULT_NAMES[k][0])}" aria-label="Team ${k + 1} name"></label>`).join('')}</div>` +
+      `<div class="names" style="--cols:${pick === 4 ? 2 : Math.min(pick, 3)}">${Array.from({ length: pick }, (_, k) => `<label style="${teamVars(k)}"><span class="dot"></span><input maxlength="10" data-k="${k}" value="${esc(names[k] || DEFAULT_NAMES[k][0])}" aria-label="Team ${k + 1} name"></label>`).join('')}</div>` +
       `<div class="q"><span class="ruby">${Shih.ruby('每题时间', 'měi tí shí jiān')}</span><span class="en">Time per question</span></div>` +
       `<div class="secRow"><button type="button" id="secMinus" aria-label="minus 5 seconds">−</button><span class="secVal" id="secVal"></span><button type="button" id="secPlus" aria-label="plus 5 seconds">＋</button></div>` +
       `<button type="button" class="go" id="goBtn"><span class="ruby">${Shih.ruby('开始', 'kāi shǐ')}</span><span>Start</span></button></div>`;
