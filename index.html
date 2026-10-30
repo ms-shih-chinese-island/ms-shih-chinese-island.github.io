@@ -1226,7 +1226,8 @@ function walkToMeet(island, node) {
   if (place && WALK[start].places[place.zh]) placeAt(start, WALK[start].places[place.zh]);
   else if (pos && pos.island === start) placeAt(start, pos.node);
   else placeAt(start, WALK[start].start);
-  if (place && place.games && place.games.length) {
+  // 只有一个游戏的地方（图书馆、游乐场）：回来时小人站在门口就好，不再打开选单
+  if (place && place.games && place.games.length > 1) {
     const btn = [...document.querySelectorAll('#scene-' + start + ' .spot')].find(b => (b.getAttribute('aria-label') || '').startsWith(place.zh + ' '));
     openTopic(place, btn || null);
   }
