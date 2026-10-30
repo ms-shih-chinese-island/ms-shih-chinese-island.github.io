@@ -41,7 +41,7 @@ window.ISLANDS = {
         games: [
           { zh: '认字手牵手', py: 'rèn zì shǒu qiān shǒu', en: 'Hand in Hand', note: 'Greetings and feelings, 3 levels', href: 'games/match.html?unit=hello' },
           { zh: '你好吗？', py: 'nǐ hǎo ma?', en: 'How Are You?', note: 'Look at the kid and answer, 3 levels', href: 'games/feel.html?unit=hello' },
-          { zh: '拼音小侦探', py: 'pīn yīn xiǎo zhēn tàn', en: 'Pinyin Detective', note: 'Look at the word, pick the right pinyin', href: 'games/detective.html?unit=hello' }
+          { zh: '顺风耳', py: 'shùn fēng ěr', en: 'Super Ears', note: 'Listen first, then choose, 3 levels', href: 'games/ears.html?unit=hello' }
         ] },
       { id: 'numbers', zh: '数字', py: 'shù zì', en: 'Numbers', x: 872, y: 520, color: 'sun',
         games: [

@@ -137,7 +137,7 @@ Shih.loadUnit().then(UNIT => {
       [T('你叫什么名字？', 'nǐ jiào shén me míng zì?', "What's your name?"), nameLine(B), nameLine(A)],
       [T('你好吗？', 'nǐ hǎo ma?', 'How are you?'), feelLine(feel), feelLine(pick(feels.filter(w => w !== feel)))]
     ];
-    if (level >= 3) qa.push([T('你几岁？', 'nǐ jǐ suì?', 'How old are you?'), ageLine(age), ageLine(age === 10 ? 9 : age + 1)]);
+    if (level >= 2) qa.push([T('你几岁？', 'nǐ jǐ suì?', 'How old are you?'), ageLine(age), ageLine(age === 10 ? 9 : age + 1)]);
     qa.forEach(([q, a, wrong]) => {
       const askBlank = Math.random() < 0.3;           // 大部分空回答，有时候空问题
       lines.push({ who: 'A', t: q, blank: askBlank });

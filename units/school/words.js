@@ -42,9 +42,9 @@ UNIT.words = [
   { zh: '好同学',   py: 'hǎo tóng xué',  en: 'good classmates',  side: 'mom', level: 2 },
   { zh: '岁',       py: 'suì',           en: 'years old',        side: 'mom', level: 2 },
   { zh: '年级',     py: 'nián jí',       en: 'grade',            side: 'mom', level: 2 },
+  { zh: '你几岁？', py: 'nǐ jǐ suì?',    en: 'How old are you?', side: 'mom', level: 2 },
+  { zh: '我姓',     py: 'wǒ xìng',       en: 'my last name is',  side: 'mom', level: 2 },
   // ---- 四年级 ----
-  { zh: '你几岁？', py: 'nǐ jǐ suì?',    en: 'How old are you?', side: 'mom', level: 3 },
-  { zh: '我姓',     py: 'wǒ xìng',       en: 'my last name is',  side: 'mom', level: 3 },
   { zh: '好朋友',   py: 'hǎo péng yǒu',  en: 'best friend',      side: 'mom', level: 3 },
   { zh: '家',       py: 'jiā',           en: 'family, home',     side: 'mom', level: 3 },
   { zh: '长发',     py: 'cháng fǎ',      en: 'long hair',        side: 'mom', level: 3 },

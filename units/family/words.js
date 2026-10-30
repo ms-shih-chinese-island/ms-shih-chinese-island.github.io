@@ -5,7 +5,7 @@
    改错字、拼音、英文，只要改这里。
 
    这个档案有四个部分：
-     1. levels  每一级冰淇淋的说明
+     1. levels  每一级的说明
      2. words   生词库
      3. tree    家族树的形状（家族树游戏用）
      4. board   大富翁棋盘的顺序（大富翁游戏用）
@@ -20,7 +20,7 @@
      side   颜色：'me' = 绿色（爸妈、兄弟姐妹）
                   'dad' = 橘色（爸爸那边）
                   'mom' = 粉红色（妈妈那边）
-     level  难度 1、2、3、4……（冰淇淋几球），每一级都包含前面所有级
+     level  难度 1 = 二年级、2 = 三年级、3 = 四年级，每一级都包含前面所有级
      trad   繁体（只有和简体不一样的字才需要写）
      match  写 false 的字不会出现在家人找一找（例如「我」）
 
@@ -33,17 +33,16 @@ UNIT.matchTitle = { zh: '家人找一找', py: 'jiā rén zhǎo yi zhǎo', en: '
 UNIT.treeTitle  = { zh: '家族树',     py: 'jiā zú shù',          en: 'Family Tree' };
 UNIT.boardTitle = { zh: '家庭大富翁', py: 'jiā tíng dà fù wēng', en: 'Family Board Game' };
 
-/* ---- 1. 每一级冰淇淋的说明（按钮上的小字） ---- */
+/* ---- 1. 每一级的说明（按钮上的小字）：Level 1 = 二年级、2 = 三年级、3 = 四年级 ---- */
 UNIT.levels = [
   { note: 'parents, brothers & sisters' },
   { note: '+ grandparents' },
-  { note: "+ parents' brothers & sisters" },
-  { note: '+ cousins 堂 / 表' }
+  { note: "+ parents' brothers & sisters, cousins" }
 ];
 
 /* ---- 2. 生词库 ---- */
 UNIT.words = [
-  // ---- Level 1：爸妈、兄弟姐妹 ----
+  // ---- Level 1（二年级）：爸妈、兄弟姐妹 ----
   { zh: '我',   py: 'wǒ',      en: 'me',              short: 'Me',              side: 'me',  level: 1, match: false },
   { zh: '爸爸', py: 'bà ba',   en: 'father',          short: 'Father',          side: 'me',  level: 1 },
   { zh: '妈妈', py: 'mā ma',   en: 'mother',          short: 'Mother',          side: 'me',  level: 1, trad: '媽媽' },
@@ -52,31 +51,30 @@ UNIT.words = [
   { zh: '弟弟', py: 'dì di',   en: 'younger brother', short: 'Younger Brother', side: 'me',  level: 1 },
   { zh: '妹妹', py: 'mèi mei', en: 'younger sister',  short: 'Younger Sister',  side: 'me',  level: 1 },
 
-  // ---- Level 2：爷爷奶奶、外公外婆 ----
+  // ---- Level 2（三年级）：爷爷奶奶、外公外婆 ----
   { zh: '爷爷', py: 'yé ye',    en: "father's father", short: "Grandpa (Dad's)", side: 'dad', level: 2, trad: '爺爺' },
   { zh: '奶奶', py: 'nǎi nai',  en: "father's mother", short: "Grandma (Dad's)", side: 'dad', level: 2 },
   { zh: '外公', py: 'wài gōng', en: "mother's father", short: "Grandpa (Mom's)", side: 'mom', level: 2 },
   { zh: '外婆', py: 'wài pó',   en: "mother's mother", short: "Grandma (Mom's)", side: 'mom', level: 2 },
 
-  // ---- Level 3：爸爸、妈妈的兄弟姐妹 ----
+  // ---- Level 3（四年级）：爸爸、妈妈的兄弟姐妹，堂、表兄弟姐妹 ----
   { zh: '伯伯', py: 'bó bo',   en: "father's big brother",     short: "Uncle (Dad's older)",   side: 'dad', level: 3 },
   { zh: '叔叔', py: 'shū shu', en: "father's younger brother", short: "Uncle (Dad's younger)", side: 'dad', level: 3 },
   { zh: '姑姑', py: 'gū gu',   en: "father's sister",          short: "Aunt (Dad's)",          side: 'dad', level: 3 },
   { zh: '舅舅', py: 'jiù jiu', en: "mother's brother",         short: "Uncle (Mom's brother)", side: 'mom', level: 3 },
   { zh: '阿姨', py: 'ā yí',    en: "mother's sister",          short: "Aunt (Mom's sister)",   side: 'mom', level: 3 },
 
-  // ---- Level 4：堂、表兄弟姐妹 ----
-  { zh: '堂哥', py: 'táng gē',  en: "older boy cousin (dad's side)",    short: 'Older Boy Cousin (Dad)',    side: 'dad', level: 4 },
-  { zh: '堂姐', py: 'táng jiě', en: "older girl cousin (dad's side)",   short: 'Older Girl Cousin (Dad)',   side: 'dad', level: 4 },
-  { zh: '堂弟', py: 'táng dì',  en: "younger boy cousin (dad's side)",  short: 'Younger Boy Cousin (Dad)',  side: 'dad', level: 4 },
-  { zh: '堂妹', py: 'táng mèi', en: "younger girl cousin (dad's side)", short: 'Younger Girl Cousin (Dad)', side: 'dad', level: 4 },
-  { zh: '表哥', py: 'biǎo gē',  en: "older boy cousin (mom's side)",    short: 'Older Boy Cousin (Mom)',    side: 'mom', level: 4 },
-  { zh: '表姐', py: 'biǎo jiě', en: "older girl cousin (mom's side)",   short: 'Older Girl Cousin (Mom)',   side: 'mom', level: 4 },
-  { zh: '表弟', py: 'biǎo dì',  en: "younger boy cousin (mom's side)",  short: 'Younger Boy Cousin (Mom)',  side: 'mom', level: 4 },
-  { zh: '表妹', py: 'biǎo mèi', en: "younger girl cousin (mom's side)", short: 'Younger Girl Cousin (Mom)', side: 'mom', level: 4 }
+  { zh: '堂哥', py: 'táng gē',  en: "older boy cousin (dad's side)",    short: 'Older Boy Cousin (Dad)',    side: 'dad', level: 3 },
+  { zh: '堂姐', py: 'táng jiě', en: "older girl cousin (dad's side)",   short: 'Older Girl Cousin (Dad)',   side: 'dad', level: 3 },
+  { zh: '堂弟', py: 'táng dì',  en: "younger boy cousin (dad's side)",  short: 'Younger Boy Cousin (Dad)',  side: 'dad', level: 3 },
+  { zh: '堂妹', py: 'táng mèi', en: "younger girl cousin (dad's side)", short: 'Younger Girl Cousin (Dad)', side: 'dad', level: 3 },
+  { zh: '表哥', py: 'biǎo gē',  en: "older boy cousin (mom's side)",    short: 'Older Boy Cousin (Mom)',    side: 'mom', level: 3 },
+  { zh: '表姐', py: 'biǎo jiě', en: "older girl cousin (mom's side)",   short: 'Older Girl Cousin (Mom)',   side: 'mom', level: 3 },
+  { zh: '表弟', py: 'biǎo dì',  en: "younger boy cousin (mom's side)",  short: 'Younger Boy Cousin (Mom)',  side: 'mom', level: 3 },
+  { zh: '表妹', py: 'biǎo mèi', en: "younger girl cousin (mom's side)", short: 'Younger Girl Cousin (Mom)', side: 'mom', level: 3 }
 
   // 以后可以接着加，例如：
-  // { zh: '儿子', py: 'ér zi', en: 'son', short: 'Son', side: 'me', level: 5, trad: '兒子' },
+  // { zh: '儿子', py: 'ér zi', en: 'son', short: 'Son', side: 'me', level: 3, trad: '兒子' },
 ];
 
 /* ---------------------------------------------------------------------

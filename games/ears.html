@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>顺风耳 Super Ears</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 顺风耳：先听，再选。四种题型混在一起（选拼音、选中文字、选回答、两题连续回答）。用法：ears.html?unit=hello */
+body.game { background: #E6F4F8; }
+.box { max-width: 900px; margin: 0 auto; background: var(--card); border: 3px solid var(--ink); border-radius: 22px; padding: 14px 18px 18px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.top { align-self: stretch; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.qnum { font-weight: 700; color: var(--sea-ink); background: #D6EEF5; border: 2px solid #7FC4D8; border-radius: 999px; padding: 2px 12px; font-size: 16px; }
+.kind { font: 700 17px var(--f-latin); color: var(--muted); }
+.ear { width: 46px; height: 46px; } .ear svg { width: 100%; height: 100%; display: block; }
+.listenRow { display: flex; align-items: center; gap: 14px; }
+.listen { font: 700 15px var(--f-latin); cursor: pointer; background: #fff; border: 3px solid var(--ink); border-radius: 999px; width: 78px; height: 78px; box-shadow: 0 4px 0 var(--ink);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; gap: 2px; }
+.listen .ic { font-size: 32px; } .listen.slow { width: 62px; height: 62px; } .listen.slow .ic { font-size: 24px; }
+.listen:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--ink); }
+.listen.big { width: 120px; height: 120px; } .listen.big .ic { font-size: 54px; }
+.playing { animation: earPulse .8s ease-in-out infinite; }
+@keyframes earPulse { 50% { box-shadow: 0 0 0 8px rgba(127,196,216,.55), 0 4px 0 var(--ink); } }
+.char { font: 700 clamp(72px, 11vw, 120px)/1 var(--f-zh); background: #FFF6D6; border: 4px solid #E9B949; border-radius: 24px; padding: 10px 26px 16px; }
+.opts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; width: 100%; }
+.opts.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 640px) { .opts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.opt { font: 700 clamp(24px, 3.4vw, 34px) var(--f-latin); color: var(--sea-ink); cursor: pointer; background: #E3F0FB; border: 3px solid #5B9BD5; border-radius: 18px;
+  box-shadow: 0 4px 0 #3B78B5; padding: 12px 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 70px; }
+.opt .zhBig { font: 700 clamp(40px, 6vw, 60px)/1.1 var(--f-zh); color: var(--ink); }
+.opt .ruby .py { font-size: 14px; } .opt .ruby .zh { font-size: clamp(22px, 2.6vw, 28px); color: var(--ink); }
+.opt .ruby { flex-wrap: wrap; justify-content: center; }
+.opt.right { background: var(--me-done); border-color: var(--me-ink); box-shadow: 0 4px 0 var(--me-ink); color: var(--ink); }
+.opt.wrong { opacity: .35; animation: shake .35s; cursor: default; }
+.tip { min-height: 44px; display: flex; align-items: center; gap: 10px; font: 700 18px var(--f-latin); color: #8A5A2B; background: #FFF6D6; border: 2px dashed #E9B949; border-radius: 14px; padding: 6px 16px; }
+.tip[hidden] { display: none; }
+/* 对话（问答、连续两题） */
+.talk { align-self: stretch; display: flex; flex-direction: column; gap: 6px; }
+.row { display: flex; align-items: flex-end; gap: 8px; }
+.row.me { flex-direction: row-reverse; }
+.who { display: flex; flex-direction: column; align-items: center; width: 64px; flex: none; }
+.who svg { width: 56px; height: 56px; display: block; }
+.who .nm { font: 700 12px var(--f-latin); line-height: 1.1; text-align: center; }
+.bub { border-radius: 18px; padding: 6px 14px; border: 3px solid #7FC4D8; background: #D6EEF5; display: flex; align-items: center; gap: 10px; cursor: pointer; font: 700 22px var(--f-latin); }
+.bub .dots { letter-spacing: 4px; color: var(--sea-ink); }
+.bub.playing { border-color: var(--sea-ink); }
+.row.me .slot { min-width: 200px; min-height: 56px; border: 3px dashed #E9B949; background: #FFFBEA; border-radius: 18px; display: flex; align-items: center; justify-content: center; padding: 4px 10px; }
+.row.me .slot.filled { border-style: solid; border-color: var(--me); background: var(--me-done); }
+.row.me .slot .ruby .py { font-size: 12px; } .row.me .slot .ruby .zh { font-size: 22px; }
+.row.me .meTag { font: 700 13px var(--f-latin); color: var(--muted); width: 64px; text-align: center; flex: none; }
+.bank { width: 100%; }
+.bank .wcard .py { font-size: 12px; } .bank .wcard .zh { font-size: 22px; }
+.bank .wcard .ruby { flex-wrap: wrap; justify-content: center; }
+.bank .wcard { min-height: 56px; }
+/* 比较矮的屏幕（Chromebook） */
+@media (orientation: landscape) and (max-height: 720px) {
+  .box { gap: 7px; padding: 8px 14px 10px; }
+  .char { font-size: 64px; padding: 6px 16px 10px; }
+  .listen { width: 60px; height: 60px; } .listen .ic { font-size: 24px; } .listen.slow { width: 50px; height: 50px; } .listen.slow .ic { font-size: 19px; }
+  .listen.big { width: 84px; height: 84px; } .listen.big .ic { font-size: 38px; }
+  .opt { padding: 6px; min-height: 54px; font-size: 22px; } .opt .zhBig { font-size: 40px; }
+  .tip { min-height: 0; font-size: 15px; padding: 3px 12px; }
+  .who svg { width: 44px; height: 44px; } .bub { font-size: 18px; padding: 3px 12px; }
+  .row.me .slot { min-height: 44px; } .bank .wcard { min-height: 46px; } .bank { padding: 6px; }
+  .ear { width: 36px; height: 36px; }
+}
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill" id="timer">0:00</span>
+      <button class="ctl" id="timerBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winScore"></span> <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner"><div class="box" id="box"></div></div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/kids.js"></script>
+<script src="../shared/shih.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const E = UNIT.ears, ART = window.ART, LEVELS = UNIT.levels;
+  document.title = `${E.title.zh} ${E.title.en}`;
+  document.getElementById('titleRuby').innerHTML = Shih.ruby(E.title.zh, E.title.py);
+  document.getElementById('titleEn').textContent = E.title.en;
+  document.getElementById('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  const box = document.getElementById('box'), scoreEl = document.getElementById('score');
+  const winMsg = document.getElementById('winMsg'), winTime = document.getElementById('winTime'), winScore = document.getElementById('winScore');
+  const timerEl = document.getElementById('timer'), timer = Shih.timer(timerEl);
+  const timerOn = Shih.toggle(document.getElementById('timerBtn'), 'timer', '⏱ Timer on', '⏱ Timer off', true, on => { timerEl.hidden = !on; });
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  const esc = Shih.esc;
+
+  // ---- 念出来（这个游戏一定要有声音，所以不管 Sound on/off 都会念）----
+  let voice = null;
+  const findVoice = () => { const vs = speechSynthesis.getVoices(); voice = vs.find(v => /zh[-_]CN/i.test(v.lang)) || vs.find(v => /^zh/i.test(v.lang)) || null; };
+  if ('speechSynthesis' in window) { findVoice(); speechSynthesis.onvoiceschanged = findVoice; }
+  let sayId = 0;
+  function say(text, slow, done) {
+    if (!('speechSynthesis' in window)) { done && setTimeout(done, 600); return; }
+    const my = ++sayId;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text.replace(/[A-Za-z]+/g, m => ' ' + m + ' '));
+    u.lang = 'zh-CN'; u.rate = slow ? 0.55 : 0.85; if (voice) u.voice = voice;
+    let fired = false; const fin = () => { if (!fired && my === sayId) { fired = true; done && done(); } };
+    u.onend = fin; u.onerror = fin;
+    setTimeout(fin, 1200 + text.length * (slow ? 600 : 350));   // 有的电脑不会通知念完
+    speechSynthesis.speak(u);
+  }
+  const stopSay = () => { sayId++; if ('speechSynthesis' in window) speechSynthesis.cancel(); };
+
+  // ---- 大耳朵 ----
+  const EAR = `<svg viewBox="0 0 60 60" aria-hidden="true"><path d="M20 44 Q12 36 14 22 Q17 8 31 8 Q46 8 47 23 Q48 33 39 38 Q34 41 34 47 Q33 55 25 54 Q21 53 20 44 Z" fill="#FBDCC8" stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round"/>` +
+    `<path d="M26 40 Q22 30 25 22 Q29 15 35 17 Q41 20 38 27 Q35 31 31 30" fill="none" stroke="#C98E62" stroke-width="3" stroke-linecap="round"/>` +
+    `<path d="M51 14 Q56 20 54 28 M55 9 Q62 19 59 31" fill="none" stroke="#7FC4D8" stroke-width="3" stroke-linecap="round"/></svg>`;
+
+  // ---- 名字、数字、姓 ----
+  const myName = () => (Shih.get('name', '') || 'Emma');
+  const NUMS = { 2: ['二', 'èr'], 3: ['三', 'sān'], 4: ['四', 'sì'], 5: ['五', 'wǔ'], 6: ['六', 'liù'], 7: ['七', 'qī'], 8: ['八', 'bā'], 9: ['九', 'jiǔ'], 10: ['十', 'shí'] };
+  const SURS = [['王', 'wáng', 'Wang'], ['李', 'lǐ', 'Li'], ['林', 'lín', 'Lin'], ['陈', 'chén', 'Chen']];
+  // 把一题问答做出来：{ q:{zh,py,en}, a:{zh,py,en}, who, speaker, group, traps }
+  function makeQA(t, people) {
+    const [kid, friend] = people;
+    const vars = { me: myName(), kid: kid.first, friend: friend.first };
+    const num = n => ({ zh: NUMS[n][0], py: NUMS[n][1], en: String(n) });
+    const v = { age: num(pick([7, 8, 9, 10])), n: num(pick([3, 4, 5, 6])), grade: num(pick([2, 3, 4])) };
+    const s = pick(SURS); v.sur = { zh: s[0], py: s[1], en: s[2] };
+    const fill = (L) => {
+      let [zh, py, en] = L;
+      Object.entries(vars).forEach(([k, x]) => { zh = zh.split('{' + k + '}').join(x); en = (en || '').split('{' + k + '}').join(x); });
+      Object.entries(v).forEach(([k, x]) => { zh = zh.split('{' + k + '}').join(x.zh); py = py.split('{' + k + '}').join(x.py); en = (en || '').split('{' + k + '#}').join(x.en); });
+      return { zh, py, en: en || '' };
+    };
+    let a;
+    if (t.feel) {
+      const f = pick(ART.FEELS.filter(w => w.level <= level));
+      a = f.zh === '我很好' && Math.random() < 0.5 ? { zh: '我很好，谢谢你。', py: 'wǒ hěn hǎo, xiè xie nǐ.', en: "I'm fine, thank you." } : { zh: f.zh + '。', py: f.py + '.', en: f.en + '.' };
+    } else a = fill(t.a);
+    return { group: t.group, who: t.who || pick(['teacher', 'kid']), speaker: kid, q: fill(t.q), a, traps: (t.traps || []).map(x => fill([x[0], x[1], ''])) };
+  }
+  // 错的回答：别的问题的回答 + 这一题特别的陷阱（同一组的不算）
+  function wrongAnswers(item, n, people) {
+    const others = shuffle(QA.filter(t => t.group !== item.group)).map(t => makeQA(t, people).a);
+    const all = shuffle(item.traps).concat(others);
+    const out = [];
+    for (const w of all) { if (out.length >= n) break; if (w.zh !== item.a.zh && !out.some(o => o.zh === w.zh)) out.push(w); }
+    return out;
+  }
+
+  // ---- 发音像不像（选中文字的时候，挑发音很像的字当干扰）----
+  const TONE = { 'ā': ['a', 1], 'á': ['a', 2], 'ǎ': ['a', 3], 'à': ['a', 4], 'ē': ['e', 1], 'é': ['e', 2], 'ě': ['e', 3], 'è': ['e', 4], 'ī': ['i', 1], 'í': ['i', 2], 'ǐ': ['i', 3], 'ì': ['i', 4],
+    'ō': ['o', 1], 'ó': ['o', 2], 'ǒ': ['o', 3], 'ò': ['o', 4], 'ū': ['u', 1], 'ú': ['u', 2], 'ǔ': ['u', 3], 'ù': ['u', 4], 'ǖ': ['ü', 1], 'ǘ': ['ü', 2], 'ǚ': ['ü', 3], 'ǜ': ['ü', 4] };
+  function parse(py) {
+    let tone = 5, base = '';
+    for (const c of py) { if (TONE[c]) { base += TONE[c][0]; tone = TONE[c][1]; } else base += c; }
+    const m = /^(zh|ch|sh|[bpmfdtnlgkhjqxrzcsyw])?(.*)$/.exec(base);
+    return { ini: m[1] || '', fin: m[2], tone, base };
+  }
+  function soundsLike(a, b) {
+    const x = parse(a.py), y = parse(b.py);
+    if (x.base === y.base && x.tone === y.tone) return -1;   // 一模一样的音不能当干扰
+    return (x.fin === y.fin ? 3 : 0) + (x.ini === y.ini ? 2 : 0) + (x.tone === y.tone ? 1 : 0) + Math.random() * 1.5;
+  }
+
+  // ---- 难度 ----
+  let level = Shih.startLevel('earsLevel', LEVELS.length);
+  const paintLevels = Shih.levelButtons(document.getElementById('levels'), LEVELS, level, null,
+    lv => { level = lv; Shih.set('earsLevel', lv); setup(); }, UNIT.levelIcon);
+  let QA = [], POOL = [];
+
+  // ---- 出一回合的题 ----
+  function makeRound() {
+    POOL = E.sounds.filter(s => s.level <= level);
+    QA = E.qa.filter(t => t.level <= level);
+    const mix = E.mix[level - 1] || E.mix[0];
+    const qs = [];
+    const usedPy = new Set(), usedZh = new Set();
+    // 新学的（这个年级的）字比较常出现
+    const weighted = list => shuffle(list.flatMap(s => s.level === level ? [s, s] : [s]));
+    const take = (list, used) => { const s = weighted(list).find(x => !used.has(x.zh)) || pick(list); used.add(s.zh); return s; };
+    for (let i = 0; i < mix.py; i++) qs.push({ kind: 'py', s: take(POOL, usedPy) });
+    const singles = POOL.filter(s => Array.from(s.zh).length === 1);
+    for (let i = 0; i < mix.zh; i++) qs.push({ kind: 'zh', s: take(singles, usedZh) });
+    const qaList = weighted(QA);
+    for (let i = 0; i < mix.qa; i++) qs.push({ kind: 'qa', t: qaList[i % qaList.length] });
+    for (let i = 0; i < mix.chain; i++) {
+      const [t1, t2] = shuffle(QA).reduce((acc, t) => (acc.length < 2 && !acc.some(x => x.group === t.group) ? acc.concat([t]) : acc), []);
+      qs.push({ kind: 'chain', t: [t1, t2] });
+    }
+    // 连续两题放在后面，其他的打乱
+    return shuffle(qs.filter(q => q.kind !== 'chain')).concat(qs.filter(q => q.kind === 'chain'));
+  }
+
+  let qs = [], qi = 0, firstTry = 0, missed = false, busy = false;
+  const update = () => { scoreEl.textContent = `${firstTry} / ${qs.length}`; };
+  const KIND = { py: 'Listen. Which pinyin is right?', zh: 'Listen. Which word did you hear?', qa: 'Listen. What is the right answer?', chain: 'Listen to both questions. Answer them in order.' };
+  const topHTML = q => `<div class="top"><span class="qnum">${qi + 1} / ${qs.length}</span><span class="kind">${KIND[q.kind]}</span><span class="ear">${EAR}</span></div>`;
+  const listenBtns = (big) => `<div class="listenRow"><button type="button" class="listen${big ? ' big' : ''}" id="lis" aria-label="Listen"><span class="ic">🔊</span><small>Listen</small></button>` +
+    `<button type="button" class="listen slow" id="slow" aria-label="Slow"><span class="ic">🐢</span><small>Slow</small></button></div>`;
+  const R = t => `<span class="ruby">${Shih.rubyText(t.zh, t.py)}</span>`;
+  const speakerSVG = it => it.who === 'teacher' ? window.SHIH_AVATAR({}) : ART.kid(it.speaker, 'wave');
+  const speakerName = it => it.who === 'teacher' ? 'Ms. Shih' : esc(it.speaker.first);
+
+  function next() {
+    if (!missed) firstTry++;
+    update();
+    qi++;
+    if (qi === qs.length) {
+      const ms = timer.stop();
+      winScore.textContent = `${firstTry} / ${qs.length} on the first try.`;
+      winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
+      setTimeout(() => { winMsg.hidden = false; }, 400);
+    } else setTimeout(show, 1200);
+  }
+  // 四个选项的题（py、zh、qa）
+  function choices(opts, right, render, onRight, onWrong) {
+    const wrap = document.createElement('div');
+    wrap.className = 'opts' + (opts.length && render === 'answer' ? ' two' : '');
+    wrap.innerHTML = opts.map((o, k) => `<button type="button" class="opt" data-k="${k}">${render === 'py' ? esc(o) : render === 'zh' ? `<span class="zhBig">${esc(o.zh)}</span>` : R(o)}</button>`).join('');
+    wrap.querySelectorAll('.opt').forEach(b => b.addEventListener('click', () => {
+      if (busy || b.disabled) return;
+      const o = opts[+b.dataset.k];
+      if (o !== right) { b.classList.add('wrong'); b.disabled = true; missed = true; onWrong && onWrong(); return; }
+      busy = true;
+      b.classList.add('right');
+      wrap.querySelectorAll('.opt').forEach(x => { x.disabled = true; });
+      onRight && onRight(b);
+      next();
+    }));
+    return wrap;
+  }
+
+  function show() {
+    const q = qs[qi];
+    missed = false; busy = false; stopSay();
+    box.innerHTML = topHTML(q);
+    if (q.kind === 'py') {
+      const s = q.s, opts = shuffle([s.py].concat(s.no));
+      box.insertAdjacentHTML('beforeend', `<div class="listenRow"><span class="char">${esc(s.zh)}</span>${listenBtns(false).replace('<div class="listenRow">', '').replace(/<\/div>$/, '')}</div><div class="tip" id="tip" hidden></div>`);
+      const tip = document.getElementById('tip');
+      box.insertBefore(choices(opts, s.py, 'py', () => { if (s.tip) { tip.innerHTML = '✓ ' + esc(s.tip); tip.hidden = false; } say(s.zh); },
+        () => { if (s.tip) { tip.innerHTML = '💡 ' + esc(s.tip); tip.hidden = false; } }), tip);
+      wireListen(slow => say(s.zh, slow));
+      say(s.zh);
+    } else if (q.kind === 'zh') {
+      const s = q.s;
+      const near = POOL.concat(E.sounds.filter(x => x.level <= 3)).filter((x, i, a) => Array.from(x.zh).length === 1 && x.zh !== s.zh && a.findIndex(y => y.zh === x.zh) === i)
+        .map(x => [x, soundsLike(s, x)]).filter(p => p[1] >= 0).sort((a, b) => b[1] - a[1]).slice(0, 3).map(p => p[0]);
+      const opts = shuffle([s].concat(near));
+      box.insertAdjacentHTML('beforeend', listenBtns(true));
+      box.appendChild(choices(opts, s, 'zh', b => { b.innerHTML = `<span class="ruby">${Shih.rubyText(s.zh, s.py)}</span>`; say(s.zh); }));
+      wireListen(slow => say(s.zh, slow));
+      say(s.zh);
+    } else if (q.kind === 'qa') {
+      const people = shuffle(ART.people);
+      const it = makeQA(q.t, people);
+      const opts = shuffle([it.a].concat(wrongAnswers(it, 3, people)));
+      box.insertAdjacentHTML('beforeend', `<div class="talk"><div class="row"><div class="who">${speakerSVG(it)}<span class="nm">${speakerName(it)}</span></div>` +
+        `<button type="button" class="bub" id="bub0"><span>🔊</span><span class="dots">……</span></button>` +
+        `<button type="button" class="listen slow" id="slow" aria-label="Slow"><span class="ic">🐢</span><small>Slow</small></button></div></div>`);
+      const bub = document.getElementById('bub0');
+      const play = slow => { bub.classList.add('playing'); say(it.q.zh, slow, () => bub.classList.remove('playing')); };
+      box.appendChild(choices(opts, it.a, 'answer', () => {
+        bub.innerHTML = R(it.q); bub.classList.remove('playing'); say(it.a.zh);
+      }));
+      bub.addEventListener('click', () => play(false));
+      document.getElementById('slow').addEventListener('click', () => play(true));
+      play(false);
+    } else showChain(q);
+  }
+  function wireListen(fn) {
+    const lis = document.getElementById('lis'), slow = document.getElementById('slow');
+    const go = (b, s) => { b.classList.add('playing'); fn(s); setTimeout(() => b.classList.remove('playing'), 1200); };
+    if (lis) lis.addEventListener('click', () => go(lis, false));
+    if (slow) slow.addEventListener('click', () => go(slow, true));
+  }
+
+  // 连续两题：像对话框，一题一题念（中间停一下），回答依顺序放进去
+  function showChain(q) {
+    const people = shuffle(ART.people);
+    const items = q.t.map((t, k) => makeQA(t, [people[k], people[2]]));
+    const wrong = [];
+    items.forEach(it => wrongAnswers(it, 3, people).forEach(w => { if (!items.some(x => x.a.zh === w.zh) && !wrong.some(x => x.zh === w.zh)) wrong.push(w); }));
+    const cardsData = shuffle(items.map(it => it.a).concat(shuffle(wrong).slice(0, 3)));
+    const me = esc(myName());
+    box.insertAdjacentHTML('beforeend', `<div class="talk" id="talk">` + items.map((it, k) =>
+      `<div class="row"><div class="who">${speakerSVG(it)}<span class="nm">${speakerName(it)}</span></div><button type="button" class="bub" data-k="${k}"><span>🔊</span><span class="dots">……</span></button></div>` +
+      `<div class="row me"><span class="meTag">${me}</span><span class="slot" data-k="${k}"></span></div>`).join('') + `</div>` +
+      `<div class="listenRow"><button type="button" class="listen" id="lis" aria-label="Listen to both"><span class="ic">🔊</span><small>Both</small></button>` +
+      `<button type="button" class="listen slow" id="slow" aria-label="Slow"><span class="ic">🐢</span><small>Slow</small></button></div><div class="bank" id="bank"></div>`);
+    const talk = document.getElementById('talk'), bank = document.getElementById('bank');
+    const bubs = [...talk.querySelectorAll('.bub')], slots = [...talk.querySelectorAll('.slot')];
+    const playOne = (k, slow, done) => { bubs.forEach(b => b.classList.remove('playing')); bubs[k].classList.add('playing'); say(items[k].q.zh, slow, () => { bubs[k].classList.remove('playing'); done && done(); }); };
+    const playBoth = slow => playOne(0, slow, () => setTimeout(() => { if (qs[qi] === q) playOne(1, slow); }, 1100));
+    bubs.forEach((b, k) => b.addEventListener('click', () => playOne(k, false)));
+    document.getElementById('lis').addEventListener('click', () => playBoth(false));
+    document.getElementById('slow').addEventListener('click', () => playBoth(true));
+    const cards = cardsData.map(d => {
+      const el = document.createElement('div');
+      el.className = 'wcard'; el.dataset.zh = d.zh;
+      el.innerHTML = R(d);
+      bank.appendChild(el);
+      return el;
+    });
+    let filled = 0;
+    function accept(card, slot) {
+        const k = +slot.dataset.k;
+        if (card.dataset.zh !== items[k].a.zh) { missed = true; return false; }
+        card.classList.add('used');
+        slot.classList.add('filled'); slot.innerHTML = R(items[k].a);
+        bubs[k].innerHTML = R(items[k].q); bubs[k].classList.remove('playing');
+        say(items[k].a.zh);
+        filled++;
+        if (filled === 2 && !busy) { busy = true; next(); }
+        return true;
+    }
+    Shih.dragCards(cards, {
+      slots: () => slots.filter(s => !s.classList.contains('filled')),
+      accept,
+      // 点一下卡片：放进第一个还空着的泡泡（要照顺序）
+      onTapCard(card) {
+        const s = slots.find(x => !x.classList.contains('filled'));
+        if (s && !accept(card, s)) { card.classList.add('shake'); setTimeout(() => card.classList.remove('shake'), 400); }
+      }
+    });
+    playBoth(false);
+  }
+
+  const wait = Shih.startCover(document.getElementById('playArea'), () => { if (timerOn()) timer.start(); show(); });
+  function setup() {
+    paintLevels(level);
+    stopSay();
+    qs = makeRound(); qi = 0; firstTry = 0;
+    timer.reset(); winMsg.hidden = true; update();
+    box.innerHTML = topHTML(qs[0]);
+    wait();
+  }
+  document.getElementById('resetBtn').addEventListener('click', setup);
+  document.getElementById('againBtn').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

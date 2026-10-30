@@ -8,10 +8,10 @@
    ===================================================================== */
 (function () {
   const TABLE = {
-    'match|family': [1, 2, 3, 4], 'tree|family': [1, 2, 3, 4],
+    'match|family': [1, 2, 3], 'tree|family': [1, 2, 3],
     'match|school': [1, 2, 3], 'chat|school': [1, 2, 3], 'intro|school': 3, 'friends|school': 3,
-    'match|hello': [1, 2, 3], 'feel|hello': [1, 2, 3], 'detective|hello': 2,
-    'numbers|numbers': [1, 2, 3], 'abacus-read|numbers': 1, 'abacus-set|numbers': 2,
+    'match|hello': [1, 2, 3], 'feel|hello': [1, 2, 3], 'ears|hello': [1, 2, 3],
+    'numbers|numbers': [1, 2, 3], 'abacus-read|numbers': 1, 'abacus-set|numbers': 1,
     'windows|halloween': [1, 2, 3], 'spy|halloween': [1, 2, 3], 'dressup|halloween': [1, 2, 3], 'afraid|halloween': [1, 2, 3], 'match|halloween': [1, 2, 3],
     'story|moon': 1, 'quiz|moon': 1
   };
