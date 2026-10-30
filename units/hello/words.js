@@ -166,9 +166,10 @@ UNIT.ears = {
   title: { zh: '顺风耳', py: 'shùn fēng ěr', en: 'Super Ears' },
   count: 10,
   mix: [
-    { py: 4, zh: 4, qa: 2, chain: 0 },   // Level 1 二年级
-    { py: 3, zh: 3, qa: 3, chain: 1 },   // Level 2 三年级
-    { py: 2, zh: 3, qa: 3, chain: 2 }    // Level 3 四年级
+    { py: 3, zh: 2, qa: 5, chain: 0 },   // Level 1 二年级
+    { py: 2, zh: 2, qa: 6, chain: 0 },   // Level 2 三年级
+    { py: 1, zh: 2, qa: 7, chain: 0 }    // Level 3 四年级
+    // 连续两题（chain）先不出；以后要出，把 chain 改成 1 或 2 就好
   ],
   /* 字和词：zh 中文、py 拼音、en 英文、level 年级、no 三个错的拼音、tip 选错时的提示（可以不写） */
   sounds: [
@@ -248,7 +249,8 @@ UNIT.ears = {
      {me} = 学生自己的名字、{kid} = 说话的小朋友、{friend} = 好朋友的名字
      {age} {n} {sur} {grade} 会随机换成数字或姓
      拼音里不用写名字；traps = 这一题特别要放的错答案 */
-  /* 连续两题的先后顺序：对话里先打招呼、问好，再问名字、姓、几岁…… */
+  /* 口头对话的顺序：先打招呼（你好、早上好、下午好、小朋友好）→ 你好吗？你叫什么名字？→ 其他问题
+     一回合里的问答题会照这个顺序出 */
   order: ['hello', 'feel', 'name', 'surname', 'age', 'grade', 'family', 'learn', 'friend'],
   qa: [
     // ---- 二年级 ----
