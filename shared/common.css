@@ -172,3 +172,10 @@ svg.abacus .ab-en { font: 700 14px var(--f-latin); fill: var(--muted); }
 .flyCoin .coinIc { width: 30px; height: 30px; }
 .flyCoin { position: fixed; z-index: 80; font-size: 26px; pointer-events: none; transform: translate(-50%, -50%); transition: left .5s ease-in, top .5s ease-in, transform .5s; }
 .coinBonus { color: #8A5A2B; white-space: nowrap; }
+.level .lvCoins { display: flex; flex-wrap: wrap; gap: 1px; justify-content: center; flex: none; }
+.level .lvCoins svg.coinIc, .level .lvCoins svg { width: 21px; height: 21px; }
+.coinGoal { display: inline-flex; align-items: flex-end; gap: 4px; font: 700 18px var(--f-latin); color: #8A5A2B; background: #FFF6D6; border: 2px solid #E9B949; border-radius: 999px; padding: 2px 12px 4px; margin-bottom: 4px; }
+.coinGoal .ruby .py { font-size: 10px; } .coinGoal .ruby .zh { font-size: 16px; }
+@media (orientation: landscape) and (max-height: 720px) { .coinGoal { font-size: 14px; padding: 1px 8px 2px; margin-bottom: 0; } .coinGoal .ruby .zh { font-size: 13px; } .coinGoal .ruby .py { font-size: 8px; } }
+.coinBonus .coinNote { font-size: .8em; color: var(--muted); display: inline-flex; align-items: flex-end; gap: 4px; }
+.coinBonus .coinNote .ruby .py { font-size: 10px; } .coinBonus .coinNote .ruby .zh { font-size: 15px; }

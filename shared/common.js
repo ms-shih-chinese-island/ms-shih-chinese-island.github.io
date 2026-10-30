@@ -31,6 +31,7 @@
   };
   S.esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+  S.gameId = () => location.pathname.split('/').pop().replace(/\.html$/, '');
   // ---- 记住设定（声音、计时器、难度）。读不到也没关系 ----
   S.get = (k, d) => { try { const v = localStorage.getItem('shih:' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
   S.set = (k, v) => { try { localStorage.setItem('shih:' + k, JSON.stringify(v)); } catch (e) {} };
@@ -177,7 +178,9 @@
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'level'; b.dataset.level = k + 1;
       const n = countOf ? countOf(k + 1) : null;
-      b.innerHTML = (icon === 'ghost' ? S.ghosts(k + 1) : icon === 'money' ? S.moneyBags(k + 1) : icon === 'wave' ? S.waves(k + 1) : icon === 'bag' ? S.bags(k + 1) : S.iceCream(k + 1)) + `<span class="lv-text">Level ${k + 1}<small>${S.esc([L.note, n ? n + ' words' : ''].filter(Boolean).join(' · '))}</small></span>`;
+      const nC = window.ShihCoins ? ShihCoins.of(S.gameId(), S.unitId(), k + 1) : 0;
+      if (nC) b.dataset.coins = nC;
+      b.innerHTML = (nC ? `<span class="lvCoins" style="width:${nC === 4 ? 44 : Math.min(nC, 3) * 22}px" aria-label="${nC} coins">${S.coinSVG.repeat(nC)}</span>` : icon === 'ghost' ? S.ghosts(k + 1) : icon === 'money' ? S.moneyBags(k + 1) : icon === 'wave' ? S.waves(k + 1) : icon === 'bag' ? S.bags(k + 1) : S.iceCream(k + 1)) + `<span class="lv-text">Level ${k + 1}<small>${S.esc([L.note, n ? n + ' words' : ''].filter(Boolean).join(' · '))}</small></span>`;
       b.addEventListener('click', () => onPick(k + 1));
       box.appendChild(b);
       return b;
@@ -216,7 +219,7 @@
     const tryDrop = (card, slot) => {
       if (!slot) return;
       if (!opts.accept(card, slot)) { card.classList.add('shake'); setTimeout(() => card.classList.remove('shake'), 400); }
-      else if (slot.classList.contains('filled') && !opts.noCoin) S.coin(1, slot);
+      // （答对一格不再马上给金币）
     };
     function down(e) {
       const card = e.currentTarget;
@@ -266,8 +269,8 @@
 
 
   // ---- 金币：记在这台电脑上（localStorage 'shih:coins'），更新网站也不会不见 ----
-  //   答对一题 / 配对一组 / 填对一格：+1
-  //   一回合做完：+5；整回合都没有错：再 +5
+  //   整关全部玩完，而且全对，才给金币：Level 1 给 1 颗、Level 2 给 2 颗……（没有分难度的游戏给 1 颗）
+  //   玩到一半离开，或中间有错：没有金币
   //   老师：按住金币 3 秒可以归零
   // 自己画的金币（emoji 的金币在 Chromebook 上看起来是银色的）
   S.coinSVG = '<svg class="coinIc" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17" fill="#F5C531" stroke="#2B2B2B" stroke-width="3"/><circle cx="20" cy="20" r="11.5" fill="none" stroke="#D99A1E" stroke-width="2.5"/><path d="M20 12.5 L22.2 17.4 L27.5 17.9 L23.5 21.4 L24.7 26.6 L20 23.9 L15.3 26.6 L16.5 21.4 L12.5 17.9 L17.8 17.4 Z" fill="#FFF3C2" stroke="#D99A1E" stroke-width="1.5" stroke-linejoin="round"/></svg>';
@@ -292,10 +295,12 @@
     }));
     setTimeout(() => c.remove(), 650);
   }
-  S.coin = function (n, el) {
-    S.set('coins', S.coins() + (n || 1));
+  function addCoins(n, el) {
+    S.set('coins', S.coins() + n);
     if (el) { flyCoin(el); setTimeout(() => paintCoins(true), 550); } else paintCoins(true);
-  };
+  }
+  // 游戏里答对一题时会叫这个：现在答对不马上给金币（整关全对才给），留着让旧的游戏不会出错
+  S.coin = function () {};
   // 答错了（这一回合就不是「全对」）
   S.miss = () => { missed = true; };
   function setupCoins() {
@@ -324,12 +329,14 @@
       let wasHidden = win.hidden;
       new MutationObserver(() => {
         if (wasHidden && !win.hidden) {
-          const bonus = 5 + (missed ? 0 : 5);
-          S.coin(bonus);
+          const worth = coinWorth();
+          const got = missed ? 0 : worth;
           let tag = win.querySelector('.coinBonus');
           if (!tag) { tag = document.createElement('span'); tag.className = 'coinBonus'; (win.firstElementChild || win).appendChild(tag); }
-          tag.innerHTML = ` +${bonus} ` + S.coinSVG + (missed ? '' : ' ✨');
-          record();
+          if (got) { addCoins(got, tag); tag.innerHTML = ` ✨ +${got} ` + S.coinSVG; }
+          else if (!worth) tag.innerHTML = '';
+          else tag.innerHTML = ` <span class="coinNote">（<span class="ruby">${S.ruby('全对才有金币', 'quán duì cái yǒu jīn bì')}</span> All correct = coins!）</span>`;
+          record(got);
         }
         wasHidden = win.hidden;
       }).observe(win, { attributes: true, attributeFilter: ['hidden'] });
@@ -338,8 +345,26 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setupCoins); else setupCoins();
 
   // ---- 我的记录：玩完一回合，记在这台电脑上（最多留 300 笔），也送一份到老师的试算表 ----
-  function record() {
-    const game = location.pathname.split('/').pop().replace(/\.html$/, '');
+  // 这一关全对值几颗金币（难度 = 金币数，写在 shared/coins.js）
+  function coinWorth() {
+    const lv = document.querySelector('.level[aria-pressed="true"]');
+    return window.ShihCoins ? ShihCoins.of(S.gameId(), S.unitId(), lv ? +lv.dataset.level || 1 : 1) : 0;
+  }
+  // 标题旁边：全对 +几颗（换 Level 的时候跟着变）
+  function setupCoinGoal() {
+    const title = document.querySelector('.gameHead .gameTitle');
+    if (!title || !window.ShihCoins || !ShihCoins.range(S.gameId(), S.unitId())) return;
+    const g = document.createElement('span');
+    g.className = 'coinGoal';
+    title.appendChild(g);
+    const paint = () => { const n = coinWorth(); g.innerHTML = `<span class="ruby">${S.ruby('全对', 'quán duì')}</span> +${n} ${S.coinSVG}`; g.hidden = !n; };
+    paint();
+    new MutationObserver(paint).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['aria-pressed'] });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setupCoinGoal); else setupCoinGoal();
+
+  function record(got) {
+    const game = S.gameId();
     const m = ((document.getElementById('score') || {}).textContent || '').match(/(\d+)\s*\/\s*(\d+)/);
     const lv = document.querySelector('.level[aria-pressed="true"]');
     const titleEl = document.querySelector('.gameTitle .zh') ? [...document.querySelectorAll('.gameTitle .ruby .zh')].map(x => x.textContent).join('') : '';
@@ -349,7 +374,7 @@
       score: m ? +m[1] : 0, total: m ? +m[2] : 0,
       sec: Math.max(0, Math.min(7200, Math.round((Date.now() - roundStart) / 1000))),
       perfect: !missed,
-      coins: Math.max(0, S.coins() - coinsAtStart)
+      coins: got || 0
     };
     const list = S.get('records', []);
     list.push(Object.assign({ t: Date.now(), title: titleEl || document.title }, row));

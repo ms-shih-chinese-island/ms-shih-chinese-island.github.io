@@ -31,7 +31,7 @@ window.ISLANDS = {
           { zh: '对话框', py: 'duì huà kuàng', en: 'Chat Bubbles', note: 'Fill in the chat, 3 levels', href: 'games/chat.html?unit=school' },
           { zh: '自我介绍', py: 'zì wǒ jiè shào', en: 'About Me', note: 'Read the card, build the sentences', href: 'games/intro.html?unit=school' }
         ] },
-      { id: 'playground', zh: '操场', py: 'cāo chǎng', en: 'Playground', x: 420, y: 588, color: 'me',
+      { id: 'playground', zh: '游乐场', py: 'yóu lè chǎng', en: 'Playground', x: 420, y: 588, color: 'me',
         games: [
           { zh: '好朋友', py: 'hǎo péng yǒu', en: 'Best Friends', note: 'Look at the picture, finish the sentences', href: 'games/friends.html?unit=school' }
         ] },

@@ -67,7 +67,7 @@ UNIT.chat = { title: { zh: '对话框', py: 'duì huà kuàng', en: 'Chat Bubble
 /* 自我介绍（四年级的 project） */
 UNIT.intro = { title: { zh: '自我介绍', py: 'zì wǒ jiè shào', en: 'About Me' } };
 
-/* 好朋友（操场）：看图，完成句子
+/* 好朋友（游乐场）：看图，完成句子
      我叫＿＿。我很＿＿。
      我的好朋友叫＿＿。…很＿＿。
    名字卡 = 2 张对的 + wrongNames 张别人的名字；形容词卡 = 2 张对的 + wrongAdj 张不对的（形容词就是上面 adj: true 的字）

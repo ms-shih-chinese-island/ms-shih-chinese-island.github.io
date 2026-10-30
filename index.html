@@ -269,6 +269,12 @@ body.holiday { background: #CBC3E8; }
 .flashSpot { animation: flashPulse 1.6s ease-in-out infinite; }
 @keyframes flashPulse { 50% { box-shadow: 0 0 0 6px rgba(245,197,49,.55), 0 4px 0 var(--ink); } }
 @media (prefers-reduced-motion: reduce) { .flashSpot { animation: none; } }
+/* 游戏选单：全对可以拿几颗金币 */
+.gCoins { display: inline-flex; align-items: center; gap: 3px; font: 700 13px var(--f-latin); color: #8A5A2B; background: #FFF6D6; border: 1.5px solid #E9B949; border-radius: 999px; padding: 0 8px; margin-top: 3px; white-space: nowrap; }
+.gCoins .coinIc { width: 14px; height: 14px; }
+/* 史老师头上的名牌（跟学生角色的名牌一样）；说话的时候先收起来 */
+.npc .nameTag { position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, -2px); font-size: clamp(9px, 1vw, 14px); padding: 0 7px; border-width: 2px; box-shadow: 0 2px 0 var(--ink); }
+.npc:not(.quiet) .nameTag { visibility: hidden; }
 /* 地图上：角色头上的名牌 */
 .walker .nameTag { position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, -2px); font-size: clamp(9px, 1vw, 14px); padding: 0 7px; border-width: 2px; box-shadow: 0 2px 0 var(--ink); }
 .walker.talking .nameTag { visibility: hidden; }
@@ -567,6 +573,7 @@ table.rec tr:nth-child(even) td { background: #F6FAFB; }
   </div>
 </div>
 
+<script src="shared/coins.js"></script>
 <script src="shared/name.js"></script>
 <script src="shared/flash.js"></script>
 <script src="island.js"></script>
@@ -597,10 +604,14 @@ let lastFocus = null;
 
 function gameCards(t) {
   const [c, cs] = COLORS[t.color] || COLORS.me;
-  return t.games.map(g => `<a class="game" href="${g.href}" style="--c:${c};--cs:${cs}">
+  return t.games.map(g => {
+    // 全对可以拿几颗金币（难度 = 金币数）
+    const m = /games\/([\w-]+)\.html\?unit=([\w-]+)/.exec(g.href || ''), r = m && window.ShihCoins ? ShihCoins.range(m[1], m[2]) : null;
+    const coins = r ? `<span class="gCoins">${ShihCoins.svg} ${r[0] === r[1] ? r[0] : r[0] + '–' + r[1]}</span>` : '';
+    return `<a class="game" href="${g.href}" style="--c:${c};--cs:${cs}">
       <span class="ruby">${rubyHTML(g.zh, g.py)}</span>
-      <span><span class="en">${g.en}</span><small>${g.note || ''}</small></span>
-      <span class="go" aria-hidden="true">→</span></a>`).join('');
+      <span><span class="en">${g.en}</span><small>${g.note || ''}</small>${coins}</span>
+      <span class="go" aria-hidden="true">→</span></a>`; }).join('');
 }
 
 Object.entries(ISLANDS).forEach(([id, I]) => {
@@ -694,7 +705,7 @@ const WALK = {
     },
     edges: [['school', 'A'], ['A', 'B'], ['B', 'restroom'], ['B', 'fountain'], ['B', 'C'], ['C', 'P1'], ['P1', 'plaza'], ['C', 'D'], ['D', 'home'],
             ['D', 'E'], ['E', 'Bk'], ['Bk', 'bank'], ['E', 'G'], ['G', 'dock'], ['A', 'F'], ['F', 'visitor'], ['F', 'playground']],
-    places: { '家': 'home', '学校': 'school', '卫生间': 'restroom', '饮水机': 'fountain', '你好': 'visitor', '数字': 'bank', '操场': 'playground' },
+    places: { '家': 'home', '学校': 'school', '卫生间': 'restroom', '饮水机': 'fountain', '你好': 'visitor', '数字': 'bank', '游乐场': 'playground' },
     start: 'plaza', dock: 'dock',
     boatOut: [[1002, 372], [1040, 406], [1084, 402]], boatIn: [[1084, 402], [1040, 406], [1002, 372]]
   },
@@ -1082,7 +1093,7 @@ let npcHello = null;
   b.type = 'button'; b.className = 'npc';
   b.style.left = (168 / 1240 * 100) + '%'; b.style.top = (348 / 620 * 100) + '%';
   const hi = ['小朋友好！', 'xiǎo péng yǒu hǎo!', 'Hello, kids!'];
-  b.innerHTML = `<span class="say"><span class="ruby">${rubyHTML(hi[0], hi[1])}</span><span class="en">${hi[2]}</span></span>` + SHIH_AVATAR({ wave: false, hold: 'star' });
+  b.innerHTML = `<span class="say"><span class="ruby">${rubyHTML(hi[0], hi[1])}</span><span class="en">${hi[2]}</span></span>` + SHIH_AVATAR({ wave: false, hold: 'star' }) + '<span class="nameTag">Ms. Shih</span>';
   b.setAttribute('aria-label', 'Ms. Shih says ' + hi[2]);
   b.classList.add('quiet');   // 平常不显示泡泡
   npcHello = done => { b.classList.remove('quiet', 'talk'); void b.offsetWidth; b.classList.add('talk'); sayZh(hi[0], done); };

@@ -80,6 +80,7 @@ body.game { background: #EEF7F1; }
     </div>
   </div>
 
+<script src="../shared/coins.js"></script>
 <script src="../shared/common.js"></script>
 <script src="../shared/kids.js"></script>
 <script src="../shared/adj.js"></script>
@@ -103,7 +104,7 @@ Shih.loadUnit().then(UNIT => {
   const pick = a => a[Math.floor(Math.random() * a.length)];
   const ADJ = UNIT.words.filter(w => w.adj);
 
-  // ---- 图：两个小朋友在操场一起玩（溜滑梯、荡秋千、踢球、放风筝） ----
+  // ---- 图：两个小朋友在游乐场一起玩（溜滑梯、荡秋千、踢球、放风筝） ----
   const INK = '#2B2B2B', sw = `stroke="${INK}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"`;
   const PLAY = {
     slide: `<path d="M120 150 L120 64 M146 150 L146 64" ${sw}/><path d="M120 84 L146 84 M120 104 L146 104 M120 124 L146 124" ${sw}/><rect x="114" y="56" width="38" height="10" rx="3" fill="#E63946" ${sw}/>` +

@@ -46,7 +46,7 @@
       `<path d="M38 34 L52 34 Q56 46 66 50 L82 54 Q90 56 88 66 L36 66 Q32 50 38 34 Z" fill="#E63946" ${sw()}/>` +
       `<path d="M34 66 L90 66 L88 74 L36 74 Z" fill="#FFFFFF" ${sw()}/><path d="M54 42 L60 40 M58 48 L64 46" ${sw(2.5)}/>`)
   };
-  // 好朋友：两块拼在一起的拼图（跟操场「好朋友」游戏里的一样）
+  // 好朋友：两块拼在一起的拼图（跟游乐场「好朋友」游戏里的一样）
   window.FRIEND_ICON = () => `<svg viewBox="-30 -20 60 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">` +
     `<path d="M0 -14 L-22 -14 L-22 14 L0 14 L0 7 Q7 9 7 0 Q7 -9 0 -7 Z" fill="#F5C531" ${sw()}/>` +
     `<g transform="scale(-1 1)"><path d="M0 -14 L-22 -14 L-22 14 L0 14 L0 7 Q-7 9 -7 0 Q-7 -9 0 -7 Z" fill="#7FC4D8" ${sw()}/></g></svg>`;
