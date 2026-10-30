@@ -108,7 +108,8 @@ Shih.loadUnit().then(UNIT => {
 
   // ---- 念出来（这个游戏一定要有声音，所以不管 Sound on/off 都会念）----
   let voice = null;
-  const findVoice = () => { const vs = speechSynthesis.getVoices(); voice = vs.find(v => /zh[-_]CN/i.test(v.lang)) || vs.find(v => /^zh/i.test(v.lang)) || null; };
+  // 先找电脑里本来就有的中文声音（不用上网，开始念比较快）
+  const findVoice = () => { const vs = speechSynthesis.getVoices(), cn = vs.filter(v => /zh[-_]CN/i.test(v.lang)); voice = cn.find(v => v.localService) || cn[0] || vs.find(v => /^zh/i.test(v.lang)) || null; };
   if ('speechSynthesis' in window) { findVoice(); speechSynthesis.onvoiceschanged = findVoice; }
   let sayId = 0;
   function say(text, slow, done) {
@@ -116,10 +117,10 @@ Shih.loadUnit().then(UNIT => {
     const my = ++sayId;
     if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text.replace(/[A-Za-z]+/g, m => ' ' + m + ' '));
-    u.lang = 'zh-CN'; u.rate = slow ? 0.55 : 0.85; if (voice) u.voice = voice;
+    u.lang = 'zh-CN'; u.rate = 0.6;   // 一律念慢一点 if (voice) u.voice = voice;
     let fired = false; const fin = () => { if (!fired && my === sayId) { fired = true; done && done(); } };
     u.onend = fin; u.onerror = fin;
-    setTimeout(fin, 1200 + text.length * (slow ? 600 : 350));   // 有的电脑不会通知念完
+    setTimeout(fin, 1500 + text.length * 600);   // 有的电脑不会通知念完
     // Chrome 的小毛病：刚 cancel 完马上 speak，有时候会没有声音，所以等一下再念
     const go = () => { try { speechSynthesis.resume(); } catch (e) {} speechSynthesis.speak(u); };
     if (speechSynthesis.speaking || speechSynthesis.pending) setTimeout(go, 120); else go();
@@ -202,7 +203,9 @@ Shih.loadUnit().then(UNIT => {
     for (let i = 0; i < mix.qa; i++) qs.push({ kind: 'qa', t: qaList[i % qaList.length] });
     for (let i = 0; i < mix.chain; i++) {
       const [t1, t2] = shuffle(QA).reduce((acc, t) => (acc.length < 2 && !acc.some(x => x.group === t.group) ? acc.concat([t]) : acc), []);
-      qs.push({ kind: 'chain', t: [t1, t2] });
+      // 照对话的顺序排：先打招呼，再问名字……
+      const rank = t => { const r = (E.order || []).indexOf(t.group); return r < 0 ? 99 : r; };
+      qs.push({ kind: 'chain', t: [t1, t2].sort((a, b) => rank(a) - rank(b)) });
     }
     // 连续两题放在后面，其他的打乱
     return shuffle(qs.filter(q => q.kind !== 'chain')).concat(qs.filter(q => q.kind === 'chain'));
@@ -213,7 +216,7 @@ Shih.loadUnit().then(UNIT => {
   const KIND = { py: 'Listen. Which pinyin is right?', zh: 'Listen. Which word did you hear?', qa: 'Listen. What is the right answer?', chain: 'Listen to both questions. Answer them in order.' };
   const topHTML = q => `<div class="top"><span class="qnum">${qi + 1} / ${qs.length}</span><span class="kind">${KIND[q.kind]}</span><span class="ear">${EAR}</span></div>`;
   const listenBtns = (big) => `<div class="listenRow"><button type="button" class="listen${big ? ' big' : ''}" id="lis" aria-label="Listen"><span class="ic">🔊</span><small>Listen</small></button>` +
-    `<button type="button" class="listen slow" id="slow" aria-label="Slow"><span class="ic">🐢</span><small>Slow</small></button></div>`;
+    `</div>`;
   const R = t => `<span class="ruby">${Shih.rubyText(t.zh, t.py)}</span>`;
   const speakerSVG = it => it.who === 'teacher' ? window.SHIH_AVATAR({}) : ART.kid(it.speaker, 'wave');
   const speakerName = it => it.who === 'teacher' ? 'Ms. Shih' : esc(it.speaker.first);
@@ -227,7 +230,17 @@ Shih.loadUnit().then(UNIT => {
       winScore.textContent = `${firstTry} / ${qs.length} on the first try.`;
       winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
       setTimeout(() => { winMsg.hidden = false; }, 400);
-    } else setTimeout(show, 1200);
+    } else afterSpeech(show);
+  }
+  // 等答案念完，再停一下，才出下一题（不会一题接一题太赶）
+  function afterSpeech(fn) {
+    const t0 = Date.now(), my = qi;
+    const tick = () => {
+      const talking = 'speechSynthesis' in window && (speechSynthesis.speaking || speechSynthesis.pending);
+      if ((talking || Date.now() - t0 < 700) && Date.now() - t0 < 8000) { setTimeout(tick, 150); return; }
+      setTimeout(() => { if (qi === my) fn(); }, 1300);
+    };
+    setTimeout(tick, 300);
   }
   // 四个选项的题（py、zh、qa）
   function choices(opts, right, render, onRight, onWrong) {
@@ -274,14 +287,13 @@ Shih.loadUnit().then(UNIT => {
       const opts = shuffle([it.a].concat(wrongAnswers(it, 3, people)));
       box.insertAdjacentHTML('beforeend', `<div class="talk"><div class="row"><div class="who">${speakerSVG(it)}<span class="nm">${speakerName(it)}</span></div>` +
         `<button type="button" class="bub" id="bub0"><span>🔊</span><span class="dots">……</span></button>` +
-        `<button type="button" class="listen slow" id="slow" aria-label="Slow"><span class="ic">🐢</span><small>Slow</small></button></div></div>`);
+        `</div></div>`);
       const bub = document.getElementById('bub0');
       const play = slow => { bub.classList.add('playing'); say(it.q.zh, slow, () => bub.classList.remove('playing')); };
       box.appendChild(choices(opts, it.a, 'answer', () => {
         bub.innerHTML = R(it.q); bub.classList.remove('playing'); say(it.a.zh);
       }));
       bub.addEventListener('click', () => play(false));
-      document.getElementById('slow').addEventListener('click', () => play(true));
       play(false);
     } else showChain(q);
   }
@@ -304,14 +316,13 @@ Shih.loadUnit().then(UNIT => {
       `<div class="row"><div class="who">${speakerSVG(it)}<span class="nm">${speakerName(it)}</span></div><button type="button" class="bub" data-k="${k}"><span>🔊</span><span class="dots">……</span></button></div>` +
       `<div class="row me"><span class="meTag">${me}</span><span class="slot" data-k="${k}"></span></div>`).join('') + `</div>` +
       `<div class="listenRow"><button type="button" class="listen" id="lis" aria-label="Listen to both"><span class="ic">🔊</span><small>Both</small></button>` +
-      `<button type="button" class="listen slow" id="slow" aria-label="Slow"><span class="ic">🐢</span><small>Slow</small></button></div><div class="bank" id="bank"></div>`);
+      `</div><div class="bank" id="bank"></div>`);
     const talk = document.getElementById('talk'), bank = document.getElementById('bank');
     const bubs = [...talk.querySelectorAll('.bub')], slots = [...talk.querySelectorAll('.slot')];
     const playOne = (k, slow, done) => { bubs.forEach(b => b.classList.remove('playing')); bubs[k].classList.add('playing'); say(items[k].q.zh, slow, () => { bubs[k].classList.remove('playing'); done && done(); }); };
     const playBoth = slow => playOne(0, slow, () => setTimeout(() => { if (qs[qi] === q) playOne(1, slow); }, 1100));
     bubs.forEach((b, k) => b.addEventListener('click', () => playOne(k, false)));
     document.getElementById('lis').addEventListener('click', () => playBoth(false));
-    document.getElementById('slow').addEventListener('click', () => playBoth(true));
     const cards = cardsData.map(d => {
       const el = document.createElement('div');
       el.className = 'wcard'; el.dataset.zh = d.zh;
