@@ -350,16 +350,23 @@
     const lv = document.querySelector('.level[aria-pressed="true"]');
     return window.ShihCoins ? ShihCoins.of(S.gameId(), S.unitId(), lv ? +lv.dataset.level || 1 : 1) : 0;
   }
-  // 标题旁边：全对 +几颗（换 Level 的时候跟着变）
+  // 没有分等级的游戏：标题旁边一个框，里面放这一关值几颗金币
   function setupCoinGoal() {
     const title = document.querySelector('.gameHead .gameTitle');
     if (!title || !window.ShihCoins || !ShihCoins.range(S.gameId(), S.unitId())) return;
     const g = document.createElement('span');
     g.className = 'coinGoal';
     title.appendChild(g);
-    const paint = () => { const n = coinWorth(); g.innerHTML = `<span class="ruby">${S.ruby('全对', 'quán duì')}</span> +${n} ${S.coinSVG}`; g.hidden = !n; };
+    // 有分等级的游戏：Level 按钮上已经有金币，这里不用再放；没有分等级的：一个框，里面直接放金币
+    let last = '';
+    const paint = () => {
+      const n = coinWorth(), hide = !n || !!document.querySelector('.level'), key = n + '|' + hide;
+      if (key === last) return;     // 没有变就不要动（不然会一直重画）
+      last = key;
+      g.innerHTML = S.coinSVG.repeat(n); g.setAttribute('aria-label', n + ' coins'); g.hidden = hide;
+    };
     paint();
-    new MutationObserver(paint).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['aria-pressed'] });
+    new MutationObserver(paint).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['aria-pressed'] });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setupCoinGoal); else setupCoinGoal();
 
