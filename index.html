@@ -265,6 +265,10 @@ body.holiday { background: #CBC3E8; }
   .homeBtns { gap: 9px; } .hbtn { padding: 5px 16px 7px; } .hbtn.go { padding: 8px 16px 10px; }
   .hbtn .ruby .zh { font-size: 20px; } .hbtn.go .ruby .zh { font-size: 26px; }
 }
+/* 快闪活动的牌子：一闪一闪 */
+.flashSpot { animation: flashPulse 1.6s ease-in-out infinite; }
+@keyframes flashPulse { 50% { box-shadow: 0 0 0 6px rgba(245,197,49,.55), 0 4px 0 var(--ink); } }
+@media (prefers-reduced-motion: reduce) { .flashSpot { animation: none; } }
 /* 地图上：角色头上的名牌 */
 .walker .nameTag { position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, -2px); font-size: clamp(9px, 1vw, 14px); padding: 0 7px; border-width: 2px; box-shadow: 0 2px 0 var(--ink); }
 .walker.talking .nameTag { visibility: hidden; }
@@ -366,6 +370,18 @@ table.rec tr:nth-child(even) td { background: #F6FAFB; }
         <path d="M484 438 L484 386 M636 438 L636 386"/>
         <path d="M484 386 Q560 368 636 386" fill="none" stroke-width="2"/>
         <path d="M500 381 l6 14 l6 -16 M526 376 l6 14 l6 -16 M552 374 l6 14 l6 -16 M578 376 l6 14 l6 -16 M604 380 l6 14 l6 -16" fill="#EC8FB3" stroke-width="2"/>
+      </g>
+
+      <!-- 快闪活动的帐篷（试算表选「开」才会出现） -->
+      <g id="flashTent" class="flashTent" style="display:none" stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M640 404 L640 380" stroke-width="2.5"/><path d="M640 380 L656 386 L640 392 Z" fill="#E63946" stroke-width="2"/>
+        <path d="M640 404 L600 440 L680 440 Z" fill="#FFFFFF"/>
+        <path d="M640 404 L613 440 L627 440 Z M640 404 L640 440 L654 440 Z M640 404 L667 440 L680 440 L680 440 Z" fill="#E63946" stroke-width="2"/>
+        <path d="M600 440 L680 440 L680 448 Q670 456 660 448 Q650 456 640 448 Q630 456 620 448 Q610 456 600 448 Z" fill="#F5C531"/>
+        <rect x="606" y="448" width="68" height="34" fill="#FFF6D6"/>
+        <path d="M626 482 L626 462 Q640 448 654 462 L654 482 Z" fill="#7A4FB0"/>
+        <path d="M640 452 L640 482" stroke-width="2"/>
+        <circle cx="614" cy="458" r="3" fill="#F28C3A" stroke-width="1.5"/><circle cx="666" cy="458" r="3" fill="#5BB36A" stroke-width="1.5"/>
       </g>
 
       <!-- bank (bottom-right): columns, 123 on the roof -->
@@ -552,6 +568,7 @@ table.rec tr:nth-child(even) td { background: #F6FAFB; }
 </div>
 
 <script src="shared/name.js"></script>
+<script src="shared/flash.js"></script>
 <script src="island.js"></script>
 <script src="shared/kids.js"></script>
 <script src="shared/shih.js"></script>
@@ -1022,6 +1039,27 @@ function openRecords() {
 document.getElementById('recClose').addEventListener('click', () => { recOverlay.hidden = true; });
 recOverlay.addEventListener('click', e => { if (e.target === recOverlay) recOverlay.hidden = true; });
 if (window.ShihReport) ShihReport.visit();
+
+// ---- 快闪活动：试算表选「开」，广场上才会冒出帐篷，「全部游戏」最上面也会出现 ----
+const FLASH = { zh: '快闪活动', py: 'kuài shǎn huó dòng', en: 'Pop-up Event', color: 'sun', x: 640, y: 560,
+  games: [{ zh: '抢答大挑战', py: 'qiǎng dá dà tiǎo zhàn', en: 'Jeopardy', note: 'Teams take turns. Pick a box, answer the question!', href: 'games/jeopardy.html' }] };
+if (window.ShihFlash) ShihFlash.isOn().then(on => {
+  if (!on) return;
+  document.getElementById('flashTent').style.display = '';
+  WALK.main.places[FLASH.zh] = 'plaza';
+  const map = document.getElementById('map-main');
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'spot flashSpot';
+  b.style.left = (FLASH.x / 1240 * 100) + '%'; b.style.top = (FLASH.y / 620 * 100) + '%';
+  b.style.setProperty('--c', (COLORS[FLASH.color] || COLORS.me)[0]);
+  b.innerHTML = `<span class="ruby">${rubyHTML(FLASH.zh, FLASH.py)}</span><span class="en">${FLASH.en}</span>`;
+  b.setAttribute('aria-label', FLASH.zh + ' ' + FLASH.en);
+  b.addEventListener('click', () => goTo('main', FLASH, b));
+  map.appendChild(b);
+  const sec = document.createElement('div');
+  sec.innerHTML = `<h3>✨ ${FLASH.en}</h3><section><h2><span class="ruby">${rubyHTML(FLASH.zh, FLASH.py)}</span> ${FLASH.en}</h2><div class="games">${gameCards(FLASH)}</div></section>`;
+  list.prepend(...sec.childNodes);
+});
 
 
 // read Chinese out loud (follows the same sound on/off setting as the games)

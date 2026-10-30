@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>抢答大挑战 Jeopardy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 快闪活动 · 抢答大挑战：上课用投影机，全班分队一起玩。题目从「快闪活动」试算表读。
+   不算金币、不传成绩。 */
+body.game { background: #2E3A66; color: var(--ink); }
+body.game .gameHead { color: #fff; }
+body.game .gameHead .gameTitle .py, body.game .gameHead .gameTitle .zh, body.game .gameHead .gameTitle .en { color: #fff; }
+.ctl.light { background: #fff; }
+.jeo { display: flex; flex-direction: column; gap: 12px; height: calc(100vh - 92px); min-height: 420px; }
+@media (orientation: landscape) and (max-height: 720px) { .jeo { height: calc(100vh - 70px); gap: 8px; min-height: 0; } }
+
+/* 开始前：几队？ */
+.setup { margin: auto; background: #fff; border: 4px solid var(--ink); border-radius: 26px; box-shadow: 0 8px 0 #1B2447; padding: 22px 30px; width: min(720px, 100%);
+  display: flex; flex-direction: column; gap: 16px; align-items: center; }
+.setup .q .py { font-size: 15px; color: #1F5E73; } .setup .q .zh { font-size: 32px; }
+.setup .q { display: flex; flex-direction: column; align-items: center; } .setup .q .en { font-weight: 700; color: var(--muted); font-size: 18px; }
+.nTeams { display: flex; gap: 10px; }
+.nTeams button { font: 700 30px var(--f-latin); width: 64px; height: 64px; border-radius: 16px; border: 3px solid var(--ink); background: #fff; cursor: pointer; box-shadow: 0 4px 0 var(--ink); }
+.nTeams button[aria-pressed="true"] { background: #F5C531; }
+.names { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; width: 100%; }
+.names label { display: flex; align-items: center; gap: 8px; border: 3px solid var(--tc); border-radius: 14px; padding: 6px 10px; background: var(--ts); }
+.names .dot { width: 18px; height: 18px; border-radius: 50%; background: var(--tc); border: 2px solid var(--ink); flex: none; }
+.names input { font: 700 20px var(--f-latin); font-family: var(--f-latin), var(--f-zh); border: 0; background: transparent; width: 100%; min-width: 0; }
+.go { font: 700 24px var(--f-latin); cursor: pointer; background: #8CC7A0; border: 3px solid #2F7A4D; border-radius: 18px; box-shadow: 0 5px 0 #2F7A4D; padding: 8px 30px 10px; display: flex; align-items: center; gap: 12px; }
+.go .ruby .py { font-size: 14px; } .go .ruby .zh { font-size: 30px; }
+
+.secRow { display: flex; align-items: center; gap: 14px; }
+.secRow button { font: 700 30px var(--f-latin); width: 56px; height: 56px; border-radius: 50%; border: 3px solid var(--ink); background: #fff; cursor: pointer; box-shadow: 0 4px 0 var(--ink); }
+.secRow button:disabled { opacity: .3; cursor: default; }
+.secVal { font: 700 34px var(--f-latin); min-width: 160px; text-align: center; display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
+.secVal small { font-size: 14px; color: var(--muted); }
+.secVal .ruby .py { font-size: 13px; } .secVal .ruby .zh { font-size: 28px; }
+.clock { display: flex; align-items: center; gap: 8px; background: #E6F4F8; border: 4px solid #1F5E73; border-radius: 999px; padding: 2px 6px 2px 18px; }
+.clock .num { font: 700 clamp(30px, 3.4vw, 48px) var(--f-latin); color: #1F5E73; min-width: 1.6em; text-align: center; }
+.clock .pause { font-size: 20px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--ink); background: #fff; cursor: pointer; }
+.clock.hurry { background: #FDECEE; border-color: #E63946; animation: hurryPulse .5s infinite; } @keyframes hurryPulse { 50% { transform: scale(1.08); } } .clock.hurry .num { color: #E63946; }
+.clock.paused { animation: none; opacity: .7; }
+.clock.up { background: #E63946; border-color: #B3202D; color: #fff; padding: 4px 18px; animation: none; font-weight: 700; font-size: 24px; }
+.clock.up .ruby .py { font-size: 12px; color: #fff; } .clock.up .ruby .zh { font-size: 28px; color: #fff; }
+.tBtn button:disabled { opacity: .35; cursor: default; }
+/* 题板 */
+.board { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(var(--c), minmax(0, 1fr)); grid-template-rows: auto repeat(var(--r), minmax(0, 1fr)); gap: 8px; }
+.cat { background: #1B2447; color: #fff; border: 3px solid #0E1530; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px 4px; text-align: center; }
+.cat .ruby .py { font-size: clamp(11px, 1.2vw, 18px); color: #BFE3EE; } .cat .ruby .zh { font-size: clamp(18px, 2.4vw, 38px); color: #fff; }
+.cat .plain { font-weight: 700; font-family: var(--f-latin), var(--f-zh); line-height: 1.15; overflow-wrap: anywhere; }
+.cell { font: 700 clamp(26px, 4vw, 64px) var(--f-latin); color: #F5C531; background: #3B4E9A; border: 3px solid #0E1530; border-radius: 14px; cursor: pointer;
+  text-shadow: 0 3px 0 #0E1530; box-shadow: inset 0 -6px 0 rgba(0,0,0,.2); transition: transform .1s; }
+.cell:hover { transform: scale(1.03); }
+.cell.used { background: #26315E; color: transparent; text-shadow: none; cursor: default; box-shadow: none; transform: none; position: relative; }
+.cell.used::after { content: ''; position: absolute; left: 50%; top: 50%; height: 42%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; background: var(--won, transparent); border: 3px solid var(--won-b, transparent); opacity: .9; }
+
+/* 分数 */
+.scores { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.team { background: #fff; border: 4px solid var(--tc); border-radius: 18px; padding: 4px 8px 6px 14px; display: flex; align-items: center; gap: 10px; min-width: 150px; }
+.team .nm { font: 700 clamp(16px, 1.6vw, 24px) var(--f-latin); font-family: var(--f-latin), var(--f-zh); display: flex; align-items: center; }
+.team .nm .ruby .py { font-size: 11px; } .team .nm .ruby .zh { font-size: clamp(16px, 1.6vw, 24px); }
+.team .pts { font: 700 clamp(24px, 2.6vw, 40px) var(--f-latin); color: var(--tc-ink); margin-left: auto; min-width: 2.5em; text-align: right; }
+.team .adj { display: flex; flex-direction: column; gap: 2px; }
+.team .adj button { font: 700 14px var(--f-latin); width: 28px; height: 22px; border-radius: 8px; border: 2px solid var(--line); background: #fff; cursor: pointer; padding: 0; line-height: 1; }
+.team.bump .pts { animation: bump .4s; }
+@keyframes bump { 40% { transform: scale(1.35); } }
+
+/* 翻开的题目 */
+.qOverlay { position: fixed; inset: 0; z-index: 50; background: rgba(14,21,48,.75); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.qCard { background: #fff; border: 5px solid var(--ink); border-radius: 28px; box-shadow: 0 10px 0 #0E1530; width: min(1100px, 100%); max-height: calc(100vh - 32px); overflow: auto;
+  padding: 18px 26px 22px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.qTop { align-self: stretch; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.qTag { background: #1B2447; color: #fff; border-radius: 999px; padding: 4px 16px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.qTag .ruby .py { font-size: 11px; color: #BFE3EE; } .qTag .ruby .zh { font-size: 20px; } .qTag b { color: #F5C531; font-size: 24px; }
+.qPic { width: clamp(110px, 18vh, 200px); aspect-ratio: 1; } .qPic svg { width: 100%; height: 100%; display: block; }
+.qText { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.qText .ruby .py { font-size: clamp(16px, 2vw, 28px); color: #1F5E73; } .qText .ruby .zh { font-size: clamp(34px, 5vw, 72px); }
+.qText .plain { font-weight: 700; font-family: var(--f-latin), var(--f-zh); text-align: center; line-height: 1.3; }
+.qText { max-width: 100%; } .qText .plain { overflow-wrap: anywhere; }
+.qEn { font: 700 clamp(18px, 2vw, 28px) var(--f-latin); color: var(--muted); text-align: center; }
+.say { font: 700 16px var(--f-latin); cursor: pointer; background: #fff; border: 3px solid var(--ink); border-radius: 999px; width: 56px; height: 56px; box-shadow: 0 3px 0 var(--ink); font-size: 26px; flex: none; }
+.ansBtn { font: 700 22px var(--f-latin); cursor: pointer; background: #F5C531; border: 3px solid var(--ink); border-radius: 16px; box-shadow: 0 5px 0 var(--ink); padding: 6px 22px 8px; display: flex; align-items: center; gap: 10px; }
+.ansBtn .ruby .py { font-size: 13px; } .ansBtn .ruby .zh { font-size: 26px; }
+.ans { background: var(--me-done, #E3F3E8); border: 4px solid #2F7A4D; border-radius: 20px; padding: 8px 22px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.ans .ruby .py { font-size: clamp(14px, 1.6vw, 24px); color: #1D4D30; } .ans .ruby .zh { font-size: clamp(30px, 4.2vw, 60px); }
+.ans .plain { font-weight: 700; font-family: var(--f-latin), var(--f-zh); text-align: center; line-height: 1.3; overflow-wrap: anywhere; }
+.who { align-self: stretch; border-top: 3px dashed var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.who .lab { font-weight: 700; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.who .lab .ruby .py { font-size: 11px; } .who .lab .ruby .zh { font-size: 18px; color: var(--ink); }
+.whoRow { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.tBtn { display: flex; align-items: center; border: 3px solid var(--tc); border-radius: 14px; overflow: hidden; background: var(--ts); }
+.tBtn .nm { font: 700 18px var(--f-latin); font-family: var(--f-latin), var(--f-zh); padding: 0 10px; display: flex; align-items: center; }
+.tBtn .nm .ruby .py { font-size: 10px; } .tBtn .nm .ruby .zh { font-size: 18px; }
+.tBtn button { font: 700 20px var(--f-latin); border: 0; border-left: 3px solid var(--tc); background: #fff; cursor: pointer; padding: 8px 12px; color: var(--tc-ink); }
+.tBtn button.plus { background: var(--tc); color: #fff; }
+.nobody { font: 700 17px var(--f-latin); cursor: pointer; background: #fff; border: 3px solid var(--line); border-radius: 14px; padding: 6px 14px; display: flex; align-items: center; gap: 8px; }
+.nobody .ruby .py { font-size: 10px; } .nobody .ruby .zh { font-size: 17px; }
+
+/* 结束 */
+.endCard { background: #fff; border: 5px solid var(--ink); border-radius: 28px; box-shadow: 0 10px 0 #0E1530; padding: 26px 40px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.endCard .trophy { font-size: 90px; line-height: 1; }
+.endCard .big { font: 700 44px var(--f-latin); font-family: var(--f-latin), var(--f-zh); display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.endCard .big .ruby .py { font-size: 16px; } .endCard .big .ruby .zh { font-size: 44px; }
+.endCard .rank { display: flex; flex-direction: column; gap: 4px; font-size: 22px; font-weight: 700; align-items: center; }
+.endCard .rank > span { display: flex; align-items: flex-end; gap: 8px; }
+.endCard .rank .ruby .py { font-size: 11px; } .endCard .rank .ruby .zh { font-size: 22px; }
+
+.closed { margin: auto; background: #fff; border: 4px solid var(--ink); border-radius: 26px; padding: 26px 34px; text-align: center; max-width: 560px; }
+.closed .ruby .py { font-size: 16px; color: #1F5E73; } .closed .ruby .zh { font-size: 38px; }
+.closed p { font-size: 20px; font-weight: 700; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en">Jeopardy</span></div>
+    <div class="controls">
+      <button class="ctl light" id="soundBtn" type="button"></button>
+      <button class="ctl light" id="fullBtn" type="button">⛶ Full screen</button>
+      <button class="ctl light" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="jeo" id="jeo"></div>
+
+<script src="../shared/common.js"></script>
+<script src="../shared/flash.js"></script>
+<script>
+Shih.islandBar();
+const $ = id => document.getElementById(id);
+const esc = Shih.esc;
+$('titleRuby').innerHTML = Shih.ruby('抢答大挑战', 'qiǎng dá dà tiǎo zhàn');
+Shih.soundButton($('soundBtn'));
+// 题板刚好填满画面（投影机、Chromebook 都不用往下拉）
+function fit() { const j = $('jeo'); j.style.height = Math.max(300, innerHeight - j.getBoundingClientRect().top - 10) + 'px'; }
+addEventListener('resize', fit); addEventListener('load', fit); document.addEventListener('fullscreenchange', () => setTimeout(fit, 100)); setTimeout(fit, 0);
+$('fullBtn').addEventListener('click', () => {
+  if (document.fullscreenElement) document.exitFullscreen(); else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+});
+// 题目、答案：照试算表打的字放（格子里按 Ctrl + Enter 换行，这里也会换行）；字多就自动缩小
+const lines = t => esc(String(t)).replace(/\r?\n/g, '<br>');
+function zhHTML(t, big) {
+  const n = Array.from(String(t).replace(/\s/g, '')).length;
+  const k = n <= 10 ? 1 : n <= 20 ? .8 : n <= 35 ? .64 : n <= 60 ? .5 : .4;
+  return `<span class="plain" style="font-size:calc(${big} * ${k})">${lines(t)}</span>`;
+}
+const catSize = t => { const n = Array.from(t).length; return n <= 4 ? 1 : n <= 6 ? .8 : n <= 9 ? .64 : .5; };
+
+// 小小的提示音（跟着 Sound on / off）
+let actx = null;
+function beep(f, len) {
+  if (!Shih.get('sound', true)) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.frequency.value = f; o.type = f < 400 ? 'sawtooth' : 'sine';
+    g.gain.setValueAtTime(.15, actx.currentTime); g.gain.exponentialRampToValueAtTime(.001, actx.currentTime + len);
+    o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + len);
+  } catch (e) {}
+}
+
+// ---- 队伍 ----
+const TEAM_COLORS = [['#E63946', '#FDECEE', '#B3202D'], ['#4A86D0', '#E3F0FB', '#2B5E9E'], ['#5BB36A', '#E6F4E8', '#2F7A4D'], ['#F28C3A', '#FFF1E3', '#B4471C'], ['#9B6BC9', '#F1E9F9', '#6A3E96']];
+const DEFAULT_NAMES = [['第一队', 'dì yī duì'], ['第二队', 'dì èr duì'], ['第三队', 'dì sān duì'], ['第四队', 'dì sì duì'], ['第五队', 'dì wǔ duì']];
+const teamVars = k => `--tc:${TEAM_COLORS[k][0]};--ts:${TEAM_COLORS[k][1]};--tc-ink:${TEAM_COLORS[k][2]}`;
+const teamName = (t, k) => { const d = DEFAULT_NAMES[k]; return t.name === d[0] ? `<span class="ruby">${Shih.ruby(d[0], d[1])}</span>` : esc(t.name); };
+
+let QS = [], CATS = [], VALS = [], st = null;
+const SAVE = 'jeopardy';
+const save = () => { try { sessionStorage.setItem('shih:' + SAVE, JSON.stringify(st)); } catch (e) {} };
+
+function build(questions) {
+  // 类别照第一次出现的顺序，最多 6 类；分数从小到大
+  const cats = [];
+  questions.forEach(q => { if (!cats.find(c => c.zh === q.cat) && cats.length < 6) cats.push({ zh: q.cat }); });
+  const vals = [...new Set(questions.filter(q => cats.find(c => c.zh === q.cat)).map(q => q.pts))].sort((a, b) => a - b).slice(0, 6);
+  CATS = cats; VALS = vals;
+  QS = questions;
+}
+const qAt = (ci, vi) => QS.find(q => q.cat === CATS[ci].zh && q.pts === VALS[vi]);
+
+// ---- 开始前：几队、队名 ----
+function showSetup() {
+  const n = st && st.teams ? st.teams.length : 2;
+  const names = st && st.teams ? st.teams.map(t => t.name) : DEFAULT_NAMES.map(d => d[0]);
+  let pick = n;
+  let sec = Shih.get('jeoSec', 20);
+  if (!(sec >= 0 && sec <= 40)) sec = 20;
+  const jeo = $('jeo');
+  const paint = () => {
+    jeo.innerHTML = `<div class="setup"><div class="q"><span class="ruby">${Shih.ruby('几队', 'jǐ duì')}</span><span class="en">How many teams?</span></div>` +
+      `<div class="nTeams">${[1, 2, 3, 4, 5].map(k => `<button type="button" data-n="${k}" aria-pressed="${k === pick}">${k}</button>`).join('')}</div>` +
+      `<div class="names">${Array.from({ length: pick }, (_, k) => `<label style="${teamVars(k)}"><span class="dot"></span><input maxlength="10" data-k="${k}" value="${esc(names[k] || DEFAULT_NAMES[k][0])}" aria-label="Team ${k + 1} name"></label>`).join('')}</div>` +
+      `<div class="q"><span class="ruby">${Shih.ruby('每题时间', 'měi tí shí jiān')}</span><span class="en">Time per question</span></div>` +
+      `<div class="secRow"><button type="button" id="secMinus" aria-label="minus 5 seconds">−</button><span class="secVal" id="secVal"></span><button type="button" id="secPlus" aria-label="plus 5 seconds">＋</button></div>` +
+      `<button type="button" class="go" id="goBtn"><span class="ruby">${Shih.ruby('开始', 'kāi shǐ')}</span><span>Start</span></button></div>`;
+    jeo.querySelectorAll('.nTeams button').forEach(b => b.addEventListener('click', () => { keep(); pick = +b.dataset.n; paint(); }));
+    jeo.querySelectorAll('.names input').forEach(i => i.addEventListener('input', keep));
+    // 每题时间：一次加减 5 秒，0 = 不计时，最多 40 秒
+    const paintSec = () => {
+      $('secVal').innerHTML = sec ? `<span style="display:flex;align-items:flex-end;gap:6px">${sec}<span class="ruby">${Shih.ruby('秒', 'miǎo')}</span></span><small>seconds</small>` : `<span class="ruby">${Shih.ruby('不计时', 'bù jì shí')}</span><small>No timer</small>`;
+      $('secMinus').disabled = sec <= 0; $('secPlus').disabled = sec >= 40;
+    };
+    $('secMinus').addEventListener('click', () => { sec = Math.max(0, sec - 5); Shih.set('jeoSec', sec); paintSec(); });
+    $('secPlus').addEventListener('click', () => { sec = Math.min(40, sec + 5); Shih.set('jeoSec', sec); paintSec(); });
+    paintSec();
+    $('goBtn').addEventListener('click', () => {
+      keep();
+      st = { teams: Array.from({ length: pick }, (_, k) => ({ name: (names[k] || '').trim().slice(0, 10) || DEFAULT_NAMES[k][0], pts: 0 })), used: {}, sec };
+      save(); showBoard();
+    });
+  };
+  const keep = () => jeo.querySelectorAll('.names input').forEach(i => { names[+i.dataset.k] = i.value; });
+  paint();
+}
+
+// ---- 题板 ----
+function showBoard() {
+  const jeo = $('jeo');
+  jeo.innerHTML = `<div class="board" id="board" style="--c:${CATS.length};--r:${VALS.length}">` +
+    CATS.map(c => `<div class="cat"><span class="plain" style="font-size:calc(clamp(18px, 2.4vw, 38px) * ${catSize(c.zh)})">${esc(c.zh)}</span></div>`).join('') +
+    VALS.map((v, vi) => CATS.map((c, ci) => {
+      const q = qAt(ci, vi), key = ci + ':' + vi, u = st.used[key];
+      if (!q) return `<div></div>`;
+      const won = u && u.team >= 0 ? `--won:${TEAM_COLORS[u.team][0]};--won-b:#fff` : '';
+      return `<button type="button" class="cell${u ? ' used' : ''}" data-key="${key}" style="${won}" ${u ? 'disabled aria-label="done"' : ''}>${v}</button>`;
+    }).join('')).join('') + `</div><div class="scores" id="scores"></div>`;
+  jeo.querySelectorAll('.cell:not(.used)').forEach(b => b.addEventListener('click', () => openQ(b.dataset.key)));
+  paintScores();
+  if (allUsed()) setTimeout(showEnd, 400);
+}
+function paintScores(bumpK) {
+  const box = $('scores'); if (!box) return;
+  box.innerHTML = st.teams.map((t, k) => `<div class="team${k === bumpK ? ' bump' : ''}" style="${teamVars(k)}"><span class="nm">${teamName(t, k)}</span><span class="pts">${t.pts}</span>` +
+    `<span class="adj"><button type="button" data-k="${k}" data-d="100" aria-label="plus 100">+</button><button type="button" data-k="${k}" data-d="-100" aria-label="minus 100">−</button></span></div>`).join('');
+  box.querySelectorAll('.adj button').forEach(b => b.addEventListener('click', () => { st.teams[+b.dataset.k].pts += +b.dataset.d; save(); paintScores(+b.dataset.k); }));
+}
+const allUsed = () => CATS.every((c, ci) => VALS.every((v, vi) => !qAt(ci, vi) || st.used[ci + ':' + vi]));
+
+// ---- 翻开一题 ----
+function openQ(key) {
+  const [ci, vi] = key.split(':').map(Number), q = qAt(ci, vi), c = CATS[ci];
+  const ov = document.createElement('div');
+  ov.className = 'qOverlay';
+  ov.innerHTML = `<div class="qCard" role="dialog" aria-modal="true">` +
+    `<div class="qTop"><span class="qTag">${esc(c.zh)} <b>${q.pts}</b></span>` +
+    (st.sec ? `<span class="clock" id="clock"><span class="num" id="clockNum">${st.sec}</span><button type="button" class="pause" id="pauseBtn" aria-label="Pause">⏸</button></span>` : '') +
+    `<button type="button" class="ctl" id="qBack">✕ Back</button></div>` +
+    `<div class="qText">${zhHTML(q.q, 'clamp(34px, 5vw, 72px)')}<button type="button" class="say" id="sayQ" aria-label="Listen">🔊</button></div>` +
+    `<div id="ansBox">${q.a ? `<button type="button" class="ansBtn" id="showA"><span class="ruby">${Shih.ruby('看答案', 'kàn dá àn')}</span><span>Show answer</span></button>` : ''}</div>` +
+    `<div class="who"><span class="lab"><span class="ruby">${Shih.ruby('哪一队答对', 'nǎ yī duì dá duì')}</span><span>Who got it right?</span></span>` +
+    `<div class="whoRow">${st.teams.map((t, k) => `<span class="tBtn" style="${teamVars(k)}"><span class="nm">${teamName(t, k)}</span>` +
+      `<button type="button" class="plus" data-k="${k}">+${q.pts}</button><button type="button" class="minus" data-k="${k}" aria-label="wrong">−${q.pts}</button></span>`).join('')}` +
+    `<button type="button" class="nobody" id="nobody"><span class="ruby">${Shih.ruby('没人答对', 'méi rén dá duì')}</span><span>Nobody</span></button></div></div></div>`;
+  document.body.appendChild(ov);
+  // 倒数：翻开就开始；最后 5 秒变红、滴答响；时间到 = 没人答对（不能再加分）
+  let left = st.sec * 1000, paused = false, last = Date.now(), tick = 0, lastSec = st.sec;
+  const stopClock = () => clearInterval(tick);
+  const close = () => { stopClock(); ov.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  $('qBack').addEventListener('click', close);    // 还没答：放回去，等一下再翻
+  $('sayQ').addEventListener('click', () => Shih.speak(q.q));
+  Shih.speak(q.q);
+  const showA = $('showA');
+  if (showA) showA.addEventListener('click', () => {
+    $('ansBox').innerHTML = `<div class="ans">${zhHTML(q.a, 'clamp(30px, 4.2vw, 60px)')}<button type="button" class="say" id="sayA" aria-label="Listen">🔊</button></div>`;
+    $('sayA').addEventListener('click', () => Shih.speak(q.a));
+    Shih.speak(q.a);
+  });
+  const done = team => { st.used[key] = { team }; save(); close(); showBoard(); if (team >= 0) paintScores(team); };
+  ov.querySelectorAll('.plus').forEach(b => b.addEventListener('click', () => { st.teams[+b.dataset.k].pts += q.pts; done(+b.dataset.k); }));
+  ov.querySelectorAll('.minus').forEach(b => b.addEventListener('click', () => {
+    st.teams[+b.dataset.k].pts -= q.pts; save(); paintScores(+b.dataset.k);
+    b.disabled = true; b.style.opacity = '.4';      // 答错扣分，这一题还可以给别队答
+  }));
+  $('nobody').addEventListener('click', () => done(-1));
+  if (st.sec) {
+    const num = $('clockNum'), clock = $('clock');
+    tick = setInterval(() => {
+      const now = Date.now();
+      if (!paused) left -= now - last;
+      last = now;
+      const s = Math.max(0, Math.ceil(left / 1000));
+      if (s !== lastSec) { lastSec = s; num.textContent = s; if (s > 0 && s <= 5) beep(880, .08); }
+      clock.classList.toggle('hurry', s <= 5);
+      if (left <= 0) {
+        stopClock(); beep(220, .5);
+        clock.classList.add('up'); clock.innerHTML = `<span class="ruby">${Shih.ruby('时间到', 'shí jiān dào')}</span><b>!</b>`;
+        ov.querySelectorAll('.plus').forEach(b => { b.disabled = true; });
+        $('nobody').innerHTML = `<span class="ruby">${Shih.ruby('下一题', 'xià yī tí')}</span><span>Next</span>`;
+      }
+    }, 100);
+    $('pauseBtn').addEventListener('click', e => { paused = !paused; e.currentTarget.textContent = paused ? '▶' : '⏸'; clock.classList.toggle('paused', paused); });
+  }
+}
+
+// ---- 全部翻完 ----
+function showEnd() {
+  if (document.querySelector('.qOverlay')) return;
+  const order = st.teams.map((t, k) => ({ t, k })).sort((a, b) => b.t.pts - a.t.pts);
+  const top = order[0], tie = order.length > 1 && order[1].t.pts === top.t.pts;
+  const ov = document.createElement('div');
+  ov.className = 'qOverlay';
+  ov.innerHTML = `<div class="endCard"><div class="trophy">🏆</div>` +
+    (st.teams.length === 1 ? `<div class="big"><span class="ruby">${Shih.ruby('总分', 'zǒng fēn')}</span> ${top.t.pts}</div>`
+      : tie ? `<div class="big"><span class="ruby">${Shih.ruby('平手', 'píng shǒu')}</span> Tie!</div>`
+      : `<div class="big" style="color:${TEAM_COLORS[top.k][2]}">${teamName(top.t, top.k)} <span class="ruby">${Shih.ruby('赢了', 'yíng le')}</span></div>`) +
+    (st.teams.length > 1 ? `<div class="rank">${order.map((o, i) => `<span style="color:${TEAM_COLORS[o.k][2]}">${i + 1}. ${teamName(o.t, o.k)} · ${o.t.pts}</span>`).join('')}</div>` : '') +
+    `<button type="button" class="go" id="again"><span class="ruby">${Shih.ruby('再玩一次', 'zài wán yī cì')}</span><span>Play again</span></button></div>`;
+  document.body.appendChild(ov);
+  $('again').addEventListener('click', () => { ov.remove(); restart(); });
+}
+function restart() { try { sessionStorage.removeItem('shih:' + SAVE); } catch (e) {} const keepTeams = st ? st.teams.map(t => ({ name: t.name, pts: 0 })) : null; st = keepTeams ? { teams: keepTeams, sec: st.sec } : null; showSetup(); }
+$('resetBtn').addEventListener('click', () => { document.querySelectorAll('.qOverlay').forEach(x => x.remove()); restart(); });
+
+function showClosed() {
+  $('jeo').innerHTML = `<div class="closed"><div style="font-size:70px">🎪</div><span class="ruby">${Shih.ruby('快闪活动休息中', 'kuài shǎn huó dòng xiū xi zhōng')}</span>` +
+    `<p>The pop-up event isn't open right now.</p><a class="ctl" href="../index.html">🏝 Back to the island</a></div>`;
+  $('resetBtn').hidden = true;
+}
+
+ShihFlash.load().then(F => {
+  if (!F.on || !F.questions.length) { showClosed(); return; }
+  build(F.questions);
+  try { st = JSON.parse(sessionStorage.getItem('shih:' + SAVE) || 'null'); } catch (e) { st = null; }
+  if (st && st.teams && st.used) showBoard(); else showSetup();
+});
+</script>
+</body>
+</html>
