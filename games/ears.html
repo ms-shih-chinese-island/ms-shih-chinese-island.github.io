@@ -114,13 +114,15 @@ Shih.loadUnit().then(UNIT => {
   function say(text, slow, done) {
     if (!('speechSynthesis' in window)) { done && setTimeout(done, 600); return; }
     const my = ++sayId;
-    speechSynthesis.cancel();
+    if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text.replace(/[A-Za-z]+/g, m => ' ' + m + ' '));
     u.lang = 'zh-CN'; u.rate = slow ? 0.55 : 0.85; if (voice) u.voice = voice;
     let fired = false; const fin = () => { if (!fired && my === sayId) { fired = true; done && done(); } };
     u.onend = fin; u.onerror = fin;
     setTimeout(fin, 1200 + text.length * (slow ? 600 : 350));   // 有的电脑不会通知念完
-    speechSynthesis.speak(u);
+    // Chrome 的小毛病：刚 cancel 完马上 speak，有时候会没有声音，所以等一下再念
+    const go = () => { try { speechSynthesis.resume(); } catch (e) {} speechSynthesis.speak(u); };
+    if (speechSynthesis.speaking || speechSynthesis.pending) setTimeout(go, 120); else go();
   }
   const stopSay = () => { sayId++; if ('speechSynthesis' in window) speechSynthesis.cancel(); };
 
