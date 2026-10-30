@@ -19,25 +19,29 @@ window.ISLANDS = {
   main: {
     zh: '史老师的中文游戏岛', py: 'shǐ lǎo shī de zhōng wén yóu xì dǎo', en: "Ms. Shih's Island of Chinese Games", width: 1240,
     places: [
-      { id: 'family', zh: '家', py: 'jiā', en: 'Family', x: 765, y: 92, color: 'dad',
+      { id: 'family', zh: '家', py: 'jiā', en: 'Family', x: 875, y: 132, color: 'dad',
         games: [
           { zh: '家人找一找', py: 'jiā rén zhǎo yi zhǎo', en: 'Family Find', note: 'Match Chinese and English, 4 levels', href: 'games/match.html?unit=family' },
           { zh: '家族树', py: 'jiā zú shù', en: 'Family Tree', note: 'Drag the words onto the tree, 4 levels', href: 'games/tree.html?unit=family' },
           { zh: '家庭大富翁', py: 'jiā tíng dà fù wēng', en: 'Family Board Game', note: 'Roll the dice and ask 你有……吗？', href: 'games/board.html?unit=family' }
         ] },
-      { id: 'school', zh: '学校', py: 'xué xiào', en: 'School', x: 265, y: 296, color: 'mom',
+      { id: 'school', zh: '学校', py: 'xué xiào', en: 'School', x: 410, y: 112, color: 'mom',
         games: [
           { zh: '认字对对碰', py: 'rèn zì duì duì pèng', en: 'Word Pairs', note: 'School words, 3 levels', href: 'games/match.html?unit=school' },
           { zh: '对话框', py: 'duì huà kuàng', en: 'Chat Bubbles', note: 'Fill in the chat, 3 levels', href: 'games/chat.html?unit=school' },
           { zh: '自我介绍', py: 'zì wǒ jiè shào', en: 'About Me', note: 'Read the card, build the sentences', href: 'games/intro.html?unit=school' }
         ] },
-      { id: 'playground', zh: '游乐场', py: 'yóu lè chǎng', en: 'Playground', x: 420, y: 588, color: 'me',
+      { id: 'playground', zh: '游乐场', py: 'yóu lè chǎng', en: 'Playground', x: 557, y: 590, color: 'me',
         games: [
           { zh: '好朋友', py: 'hǎo péng yǒu', en: 'Best Friends', note: 'Look at the picture, finish the sentences', href: 'games/friends.html?unit=school' }
         ] },
-      { zh: '卫生间', py: 'wèi shēng jiān', en: 'Restroom', x: 470, y: 140, labelOnly: true },
-      { zh: '饮水机', py: 'yǐn shuǐ jī', en: 'Water Fountain', x: 414, y: 384, labelOnly: true },
-      { id: 'hello', zh: '你好', py: 'nǐ hǎo', en: 'Hello', x: 193, y: 548, color: 'sea',
+      { id: 'library', zh: '图书馆', py: 'tú shū guǎn', en: 'Library', x: 615, y: 112, color: 'night',
+        games: [
+          { zh: '图书馆', py: 'tú shū guǎn', en: 'Library', note: 'Read the book, pick your words, make your own matching game', href: 'games/library.html?unit=library' }
+        ] },
+      { zh: '卫生间', py: 'wèi shēng jiān', en: 'Restroom', x: 348, y: 600, labelOnly: true },
+      { zh: '饮水机', py: 'yǐn shuǐ jī', en: 'Water Fountain', x: 435, y: 378, labelOnly: true },
+      { id: 'hello', zh: '你好', py: 'nǐ hǎo', en: 'Hello', x: 158, y: 548, color: 'sea',
         games: [
           { zh: '认字手牵手', py: 'rèn zì shǒu qiān shǒu', en: 'Hand in Hand', note: 'Greetings and feelings, 3 levels', href: 'games/match.html?unit=hello' },
           { zh: '你好吗？', py: 'nǐ hǎo ma?', en: 'How Are You?', note: 'Look at the kid and answer, 3 levels', href: 'games/feel.html?unit=hello' },

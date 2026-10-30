@@ -336,8 +336,19 @@ table.rec tr:nth-child(even) td { background: #F6FAFB; }
         <rect x="282" y="180" width="26" height="22" fill="#BFE3EE"/><rect x="318" y="180" width="26" height="22" fill="#BFE3EE"/>
         <rect x="250" y="208" width="30" height="42" fill="#3B78B5"/>
       </g>
-      <!-- restroom (next to the school) -->
-      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round">
+      <!-- library (next to the school): brown roof, an open book on the front -->
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" transform="translate(90 0)">
+        <rect x="390" y="196" width="90" height="56" fill="#F6E7C8"/>
+        <path d="M380 198 L490 198 L474 170 L396 170 Z" fill="#8A5A2B"/>
+        <path d="M420 182 Q428 177 435 182 Q442 177 450 182 L450 192 Q442 187 435 192 Q428 187 420 192 Z" fill="#FFFFFF" stroke-width="2"/>
+        <path d="M435 182 L435 192" stroke-width="1.5"/>
+        <rect x="398" y="206" width="18" height="18" fill="#BFE3EE"/><rect x="454" y="206" width="18" height="18" fill="#BFE3EE"/>
+        <path d="M398 215 L416 215 M454 215 L472 215" stroke-width="1.5"/>
+        <path d="M424 252 L424 228 Q435 218 446 228 L446 252 Z" fill="#B4471C"/>
+        <path d="M384 252 L486 252" stroke-width="4"/>
+      </g>
+      <!-- restroom (down by the visitor center and the playground) -->
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" transform="translate(-85 300)">
         <rect x="395" y="196" width="70" height="54" fill="#E6F4F8"/>
         <path d="M389 198 L471 198 L465 184 L395 184 Z" fill="#7FC4D8"/>
         <rect x="405" y="204" width="50" height="24" rx="4" fill="#FFFFFF" stroke-width="2"/>
@@ -346,8 +357,8 @@ table.rec tr:nth-child(even) td { background: #F6FAFB; }
         <path d="M430 206 L430 226" stroke-width="1.5"/>
         <rect x="422" y="232" width="16" height="18" fill="#3B78B5"/>
       </g>
-      <!-- water fountain (in front of the school) -->
-      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+      <!-- water fountain (next to the visitor center; the restroom is right below it) -->
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" transform="translate(-74 114)">
         <path d="M402 330 L398 296 L430 296 L426 330 Z" fill="#CFD2CC"/>
         <rect x="390" y="288" width="48" height="10" rx="5" fill="#E6E8E4"/>
         <path d="M424 288 C424 270 440 266 446 282" fill="none" stroke="#3B9BD5" stroke-width="3"/>
@@ -363,7 +374,7 @@ table.rec tr:nth-child(even) td { background: #F6FAFB; }
       </g>
 
       <!-- visitor center (bottom-left, by the shore): big i -->
-      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round">
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" transform="translate(-35 0)">
         <rect x="150" y="440" width="86" height="56" fill="#E6F4F8"/>
         <path d="M141 442 L193 412 L245 442 Z" fill="#7FC4D8"/>
         <circle cx="193" cy="469" r="21" fill="#3B78B5"/>
@@ -371,7 +382,7 @@ table.rec tr:nth-child(even) td { background: #F6FAFB; }
       </g>
 
       <!-- plaza (middle): round square with flags（往下移，跟饮水机的牌子隔开） -->
-      <g stroke="#2B2B2B" stroke-width="3" transform="translate(30 38)">
+      <g stroke="#2B2B2B" stroke-width="3" transform="translate(700 455) scale(0.84) translate(-560 -440)">
         <ellipse cx="560" cy="440" rx="96" ry="40" fill="#F6E7BE"/>
         <path d="M484 438 L484 386 M636 438 L636 386"/>
         <path d="M484 386 Q560 368 636 386" fill="none" stroke-width="2"/>
@@ -379,7 +390,7 @@ table.rec tr:nth-child(even) td { background: #F6FAFB; }
       </g>
 
       <!-- 快闪活动的帐篷（试算表选「开」才会出现） -->
-      <g id="flashTent" class="flashTent" style="display:none" stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+      <g id="flashTent" class="flashTent" style="display:none" stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" transform="translate(96 -20)">
         <path d="M640 404 L640 380" stroke-width="2.5"/><path d="M640 380 L656 386 L640 392 Z" fill="#E63946" stroke-width="2"/>
         <path d="M640 404 L600 440 L680 440 Z" fill="#FFFFFF"/>
         <path d="M640 404 L613 440 L627 440 Z M640 404 L640 440 L654 440 Z M640 404 L667 440 L680 440 L680 440 Z" fill="#E63946" stroke-width="2"/>
@@ -399,8 +410,8 @@ table.rec tr:nth-child(even) td { background: #F6FAFB; }
       </g>
       <text x="872" y="396" text-anchor="middle" font-family="Andika, sans-serif" font-weight="700" font-size="18" fill="#2B2B2B">123</text>
 
-      <!-- playground: a slide and a swing -->
-      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+      <!-- playground: a slide and a swing（往上、往左移一点，下面给卫生间） -->
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" transform="translate(115 0)">
         <ellipse cx="410" cy="532" rx="78" ry="16" fill="#E8D29A" stroke="none"/>
         <path d="M352 536 L352 470 M372 536 L372 470" />
         <path d="M352 486 L372 486 M352 502 L372 502 M352 518 L372 518" stroke-width="2.5"/>
@@ -414,10 +425,9 @@ table.rec tr:nth-child(even) td { background: #F6FAFB; }
       <!-- trees -->
       <g stroke="#2B2B2B" stroke-width="3">
         <path d="M120 270 L120 294"/><circle cx="120" cy="258" r="18" fill="#86BD72"/>
-        <path d="M560 120 L560 144"/><circle cx="560" cy="108" r="18" fill="#86BD72"/>
         <path d="M630 200 L630 224"/><circle cx="630" cy="188" r="16" fill="#86BD72"/>
         <path d="M920 250 L920 274"/><circle cx="920" cy="238" r="18" fill="#86BD72"/>
-        <path d="M720 500 L720 524"/><circle cx="720" cy="488" r="16" fill="#86BD72"/>
+        <path d="M985 472 L985 496"/><circle cx="985" cy="460" r="15" fill="#86BD72"/>
       </g>
 
       <!-- boat route to the holiday island -->
@@ -699,18 +709,18 @@ listBtn.addEventListener('click', () => {
 const WALK = {
   main: {
     nodes: {
-      A: [300, 300], B: [440, 322], C: [560, 332], D: [690, 336], E: [820, 345], G: [955, 355], Bk: [795, 420], F: [290, 420],
-      school: [216, 350], restroom: [430, 268], fountain: [470, 338], P1: [560, 420], plaza: [590, 490], home: [735, 300],
-      visitor: [262, 505], bank: [790, 478], dock: [1002, 372], playground: [320, 520]
+      A: [300, 300], B: [440, 322], C: [560, 332], D: [690, 336], E: [820, 345], G: [955, 355], F: [290, 420],
+      school: [216, 350], schoolDoor: [265, 258], library: [525, 268], restroom: [388, 556], fountain: [382, 458], P1: [670, 400], plaza: [700, 467], home: [735, 300],
+      visitor: [227, 505], bank: [800, 418], dock: [1002, 372], playground: [540, 548]
     },
-    edges: [['school', 'A'], ['A', 'B'], ['B', 'restroom'], ['B', 'fountain'], ['B', 'C'], ['C', 'P1'], ['P1', 'plaza'], ['C', 'D'], ['D', 'home'],
-            ['D', 'E'], ['E', 'Bk'], ['Bk', 'bank'], ['E', 'G'], ['G', 'dock'], ['A', 'F'], ['F', 'visitor'], ['F', 'playground']],
-    places: { '家': 'home', '学校': 'school', '卫生间': 'restroom', '饮水机': 'fountain', '你好': 'visitor', '数字': 'bank', '游乐场': 'playground' },
+    edges: [['school', 'A'], ['A', 'schoolDoor'], ['A', 'B'], ['B', 'library'], ['fountain', 'restroom'],  ['B', 'C'], ['C', 'P1'], ['P1', 'plaza'], ['C', 'D'], ['D', 'home'],
+            ['D', 'E'], ['E', 'bank'], ['E', 'G'], ['G', 'dock'], ['A', 'F'], ['F', 'visitor'], ['F', 'fountain'], ['fountain', 'playground']],
+    places: { '家': 'home', '学校': 'school', '卫生间': 'restroom', '图书馆': 'library', '饮水机': 'fountain', '你好': 'visitor', '数字': 'bank', '游乐场': 'playground' },
     start: 'plaza', dock: 'dock',
     boatOut: [[1002, 372], [1040, 406], [1084, 402]], boatIn: [[1084, 402], [1040, 406], [1002, 372]]
   },
   holiday: {
-    nodes: { dock: [410, 440], h1: [480, 398], haunted: [560, 352], h2: [720, 350], market: [880, 346], m1: [700, 430], moon: [690, 516], treat: [718, 336] },
+    nodes: { dock: [410, 440], h1: [480, 398], haunted: [560, 352], h2: [720, 350], market: [880, 346], m1: [700, 430], moon: [690, 516], treat: [711, 298] },
     edges: [['dock', 'h1'], ['h1', 'haunted'], ['haunted', 'h2'], ['h2', 'market'], ['h2', 'm1'], ['m1', 'moon'], ['h2', 'treat']],
     places: { '鬼屋': 'haunted', '感恩节市场': 'market', '中秋节': 'moon' },
     start: 'dock', dock: 'dock',
@@ -1052,7 +1062,7 @@ recOverlay.addEventListener('click', e => { if (e.target === recOverlay) recOver
 if (window.ShihReport) ShihReport.visit();
 
 // ---- 快闪活动：试算表选「开」，广场上才会冒出帐篷，「全部游戏」最上面也会出现 ----
-const FLASH = { zh: '快闪活动', py: 'kuài shǎn huó dòng', en: 'Pop-up Event', color: 'sun', x: 640, y: 560,
+const FLASH = { zh: '快闪活动', py: 'kuài shǎn huó dòng', en: 'Pop-up Event', color: 'sun', x: 738, y: 548,
   games: [{ zh: '抢答大挑战', py: 'qiǎng dá dà tiǎo zhàn', en: 'Jeopardy', note: 'Teams take turns. Pick a box, answer the question!', href: 'games/jeopardy.html' }] };
 if (window.ShihFlash) ShihFlash.isOn().then(on => {
   if (!on) return;
