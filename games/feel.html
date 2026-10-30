@@ -117,14 +117,14 @@ Shih.loadUnit().then(UNIT => {
         if (busy) return;
         if (!right) { b.classList.remove('wrong'); void b.offsetWidth; b.classList.add('wrong'); return; }
         busy = true;
-        b.classList.add('right');
+        b.classList.add('right'); Shih.coin(1, b);
         Shih.speak(w.zh);
         qi++; update();
         if (qi === qs.length) {
           const ms = timer.stop();
           winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
-          setTimeout(() => { winMsg.hidden = false; }, 700);
-        } else setTimeout(show, 1300);
+          setTimeout(() => { winMsg.hidden = false; }, 400);
+        } else setTimeout(show, 800);
       });
       box.appendChild(b);
     });

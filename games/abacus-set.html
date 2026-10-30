@@ -30,7 +30,7 @@ body.game { background: #FFF8E1; }
 .big:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--ink); }
 .big.shake { animation: shake .35s; border-color: var(--bad); }
 /* 对不对：大大的牌子盖在算盘上面，一眼就看得到 */
-.abWrap { position: relative; width: 100%; max-width: 760px; }
+.abWrap { position: relative; width: 100%; max-width: min(760px, calc((100vh - 360px) * 1.55)); }
 .abWrap .abBox { max-width: none; }
 .abWrap.good svg.abacus rect:first-child, .abWrap.good svg.abacus rect:nth-child(2) { stroke: var(--me-ink); stroke-width: 4; }
 .abWrap.try svg.abacus rect:first-child, .abWrap.try svg.abacus rect:nth-child(2) { stroke: var(--bad); stroke-width: 4; }
@@ -45,6 +45,12 @@ body.game { background: #FFF8E1; }
 .msg .made { font-size: 16px; font-weight: 400; margin-top: 2px; }
 .msg.good { background: var(--me-ink); } .msg.try { background: var(--bad); }
 @keyframes pop { from { transform: translate(-50%, -50%) scale(.6); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+/* 宽而矮的屏幕（Chromebook）：题目和按钮在左边，算盘在右边，一页放得下 */
+@media (min-width: 1000px) and (max-height: 900px) {
+  .stage { max-width: 1250px; display: grid; grid-template-columns: minmax(300px, 380px) auto; grid-template-areas: "target ab" "btns ab"; align-items: start; justify-content: center; column-gap: 24px; }
+  .target { grid-area: target; } .btns { grid-area: btns; }
+  .abWrap { grid-area: ab; width: calc((100vh - 175px) * 1.55); max-width: 760px; }
+}
 </style>
 </head>
 <body class="game">
@@ -122,15 +128,15 @@ Shih.loadUnit().then(UNIT => {
     // 算总数：两颗上珠一起拨下来（一档 10 以上）也可以，只要整个算盘的数对就算对
     if (ab.get() === q.n) {
       busy = true;
-      document.getElementById('goal').classList.add('ok');
+      document.getElementById('goal').classList.add('ok'); Shih.coin(1, document.getElementById('goal'));
       say('good', '✓', Shih.ruby('对了', 'duì le'), 'Correct!', '');
       Shih.speak(N.zh(q.n));
       qi++; update();
       if (qi === qs.length) {
         const ms = timer.stop();
         winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
-        setTimeout(() => { winMsg.hidden = false; }, 700);
-      } else setTimeout(show, 1500);
+        setTimeout(() => { winMsg.hidden = false; }, 400);
+      } else setTimeout(show, 900);
     } else {
       checkBtn.classList.remove('shake'); void checkBtn.offsetWidth; checkBtn.classList.add('shake');
       say('try', '✗', Shih.rubyText('再试一次', 'zài shì yí cì'), 'Try again', `You made ${ab.get()}`);

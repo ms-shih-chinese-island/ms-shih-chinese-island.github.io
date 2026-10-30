@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>好朋友 Best Friends</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 好朋友：看图（两个小朋友一起玩），把名字和形容词拖进句子。用法：friends.html?unit=school */
+body.game { background: #EEF7F1; }
+.wrap { max-width: 1150px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+.top { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 14px; align-items: stretch; }
+@media (max-width: 760px) { .top { grid-template-columns: 1fr; } }
+.card { background: var(--card); border: 3px solid var(--ink); border-radius: 22px; padding: 12px; }
+.pic { position: relative; display: flex; flex-direction: column; gap: 8px; }
+.qnum { position: absolute; left: 20px; top: 18px; z-index: 2; font-weight: 700; color: var(--me-ink); background: #fff; border: 2px solid var(--me); border-radius: 999px; padding: 2px 12px; font-size: 16px; }
+.pic .scene > svg { width: 100%; height: auto; display: block; border-radius: 14px; }
+.hints { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.hint { display: flex; align-items: center; gap: 8px; border: 2px solid var(--line); border-radius: 14px; padding: 6px 10px; background: #FAFBF8; }
+.hint .ic { width: 52px; height: 52px; flex: none; } .hint .ic svg { width: 100%; height: 100%; display: block; }
+.hint .t { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+.hint .nm { font: 700 18px var(--f-latin); }
+.hint .who { font-size: 13px; color: var(--muted); }
+.hint .py { font-size: 16px; color: var(--sea-ink); }
+.hint .en { font-size: 15px; font-weight: 700; color: var(--muted); }
+.lines { display: flex; flex-direction: column; justify-content: center; gap: 14px; }
+.sent { display: flex; flex-direction: column; gap: 2px; }
+.sent .row { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 4px 6px; }
+.sent .ruby .zh { font-size: 30px; } .sent .ruby .py { font-size: 15px; }
+.sent .name { font: 700 26px var(--f-latin); padding-bottom: 2px; }
+.sent .en { font-size: 15px; color: var(--muted); min-height: 19px; padding-left: 4px; }
+.sent .dropSlot { min-width: 104px; min-height: 64px; border-color: var(--me); background: var(--me-soft); }
+.sent .dropSlot.filled { border-color: var(--me); background: var(--me-done); }
+.sent .dropSlot .name { font-size: 24px; }
+.echo { font: 700 26px var(--f-latin); color: var(--muted); padding-bottom: 2px; min-width: 40px; text-align: center; }
+.bank { min-height: 92px; align-items: center; justify-content: center; gap: 18px; }
+.bank .grp { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; padding: 8px 10px; border-radius: 14px; }
+.bank .grp.names { background: #FFF6D6; border: 2px dashed #E9B949; }
+.bank .grp.adjs { background: var(--me-soft); border: 2px dashed var(--me); }
+.lines { gap: 10px; }
+.sent .row { min-height: 66px; }
+.bank .wcard .name { font: 700 24px var(--f-latin); }
+/* 比较矮的屏幕（Chromebook） */
+@media (min-width: 900px) and (max-height: 720px) {
+  .pic .scene > svg { max-height: calc(100vh - 420px); width: auto; max-width: 100%; margin: 0 auto; }
+  .hint { padding: 3px 8px; } .hint .ic { width: 40px; height: 40px; }
+  .sent .ruby .zh { font-size: 24px; } .sent .row { min-height: 52px; } .sent .dropSlot { min-height: 50px; }
+  .lines { gap: 4px; padding: 8px 12px; } .bank { min-height: 0; padding: 6px; }
+}
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill" id="timer">0:00</span>
+      <button class="ctl" id="timerBtn" type="button"></button>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="pyBtn" type="button"></button>
+      <button class="ctl" id="enBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <p class="help">Look at the picture. Drag the cards into the sentences. You can also tap a card, then tap a blank.</p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="wrap">
+        <div class="top">
+          <div class="card pic"><span class="qnum" id="qnum"></span><div class="scene" id="scene"></div><div class="hints" id="hints"></div></div>
+          <div class="card lines" id="lines"></div>
+        </div>
+        <div class="bank" id="bank"></div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/common.js"></script>
+<script src="../shared/kids.js"></script>
+<script src="../shared/adj.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const ART = window.ART, F = UNIT.friends;
+  document.title = `${F.title.zh} ${F.title.en}`;
+  document.getElementById('titleRuby').innerHTML = Shih.ruby(F.title.zh, F.title.py);
+  document.getElementById('titleEn').textContent = F.title.en;
+  document.getElementById('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  const scene = document.getElementById('scene'), hints = document.getElementById('hints'), lines = document.getElementById('lines'), bank = document.getElementById('bank');
+  const qnum = document.getElementById('qnum'), scoreEl = document.getElementById('score'), winMsg = document.getElementById('winMsg'), winTime = document.getElementById('winTime');
+  const timerEl = document.getElementById('timer'), timer = Shih.timer(timerEl);
+  const timerOn = Shih.toggle(document.getElementById('timerBtn'), 'timer', '⏱ Timer on', '⏱ Timer off', true, on => { timerEl.hidden = !on; });
+  Shih.soundButton(document.getElementById('soundBtn'));
+  // 提示的拼音、英文可以关掉（关掉就只剩图示）
+  const pyOn = Shih.toggle(document.getElementById('pyBtn'), 'friendsPinyin', 'Pinyin on', 'Pinyin off', true, on => document.querySelectorAll('.hint .py').forEach(e => { e.hidden = !on; }));
+  const enOn = Shih.toggle(document.getElementById('enBtn'), 'friendsEnglish', 'English on', 'English off', true, on => document.querySelectorAll('.hint .en, .sent .en').forEach(e => { e.hidden = !on; }));
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  const ADJ = UNIT.words.filter(w => w.adj);
+
+  // ---- 图：两个小朋友在操场一起玩（溜滑梯、荡秋千、踢球、放风筝） ----
+  const INK = '#2B2B2B', sw = `stroke="${INK}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"`;
+  const PLAY = {
+    slide: `<path d="M120 150 L120 64 M146 150 L146 64" ${sw}/><path d="M120 84 L146 84 M120 104 L146 104 M120 124 L146 124" ${sw}/><rect x="114" y="56" width="38" height="10" rx="3" fill="#E63946" ${sw}/>` +
+           `<path d="M150 60 Q176 62 186 104 Q194 140 212 150 L222 144 Q204 136 198 100 Q188 52 152 50 Z" fill="#F5C531" ${sw}/>`,
+    swing: `<path d="M110 150 L130 50 L150 150 M190 150 L210 50 L230 150" fill="none" stroke="#5B9BD5" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>` +
+           `<path d="M126 50 L214 50" stroke="#5B9BD5" stroke-width="8" stroke-linecap="round"/><path d="M160 52 L160 112 M180 52 L180 112" stroke="${INK}" stroke-width="2"/><rect x="154" y="110" width="32" height="8" rx="3" fill="#E63946" ${sw}/>`,
+    ball:  `<path d="M150 120 L150 70 L230 70 L230 120" fill="none" stroke="#FFFFFF" stroke-width="5"/><path d="M150 70 L230 70" stroke="#FFFFFF" stroke-width="5"/>` +
+           `<circle cx="196" cy="128" r="14" fill="#FFFFFF" ${sw}/><path d="M196 121 L202 125 L200 132 L192 132 L190 125 Z" fill="${INK}"/>`,
+    kite:  `<path d="M190 30 L214 54 L190 86 L166 54 Z" fill="#E63946" ${sw}/><path d="M190 30 L190 86 M166 54 L214 54" stroke="${INK}" stroke-width="2"/>` +
+           `<path d="M190 86 Q180 100 194 110 Q206 120 196 132" fill="none" stroke="${INK}" stroke-width="2"/><path d="M190 86 Q150 120 120 150" fill="none" stroke="${INK}" stroke-width="1.5" stroke-dasharray="3 3"/>`
+  };
+  // 两个小朋友中间的小图示：两块拼在一起的拼图（好朋友）
+  function together() {
+    const piece = (c, flip) => `<g transform="translate(170 180) scale(${flip ? -1.25 : 1.25} 1.25)">` +
+      `<path d="M0 -14 L-22 -14 L-22 14 L0 14 L0 7 Q7 9 7 0 Q7 -9 0 -7 Z" fill="${c}" ${sw}/></g>`;
+    return piece('#F5C531', false) + `<g transform="translate(170 180) scale(-1.25 1.25)"><path d="M0 -14 L-22 -14 L-22 14 L0 14 L0 7 Q-7 9 -7 0 Q-7 -9 0 -7 Z" fill="#7FC4D8" ${sw}/></g>`;
+  }
+  function sceneSVG(A, B, play) {
+    const bust = (p, x) => `<svg x="${x}" y="80" width="130" height="130" viewBox="0 0 140 140">${ART.kid(p, 'good').replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '')}</svg>`;
+    const tag = (x, txt, color) => `<g transform="translate(${x} 72)"><rect x="-46" y="-18" width="92" height="28" rx="14" fill="#FFFFFF" stroke="${color}" stroke-width="3"/>` +
+      `<text x="0" y="2" text-anchor="middle" font-family="Andika, Trebuchet MS, sans-serif" font-weight="700" font-size="17" fill="${INK}">${txt}</text></g>`;
+    return `<svg viewBox="0 0 340 210" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">` +
+      `<rect width="340" height="210" fill="#D6EEF5"/><circle cx="300" cy="34" r="18" fill="#F5C531" ${sw}/>` +
+      `<path d="M0 150 Q170 136 340 150 L340 210 L0 210 Z" fill="#B5DB98" ${sw}/>` + PLAY[play] +
+      bust(A, 6) + bust(B, 204) + tag(71, Shih.esc(A.first), '#E9B949') + tag(269, Shih.esc(B.first), '#8CC7A0') +
+      together() + `</svg>`;
+  }
+
+  // ---- 出题 ----
+  function makeQ(play) {
+    const [A, B] = shuffle(ART.people);
+    const ok = p => ADJ.filter(w => !w.girl || !p.boy);
+    const a = pick(ok(A)), b = pick(ok(B).filter(w => w !== a));
+    const wrong = shuffle(ADJ.filter(w => w !== a && w !== b)).slice(0, F.wrongAdj || 3);
+    const others = shuffle(ART.people.filter(p => p !== A && p !== B)).slice(0, F.wrongNames == null ? 2 : F.wrongNames).map(p => ({ name: p.first }));
+    return { A, B, a, b, wrong, others, play };
+  }
+
+  let qs = [], qi = 0, done = 0, total = 0, busy = false;
+  const update = () => { scoreEl.textContent = `${done} / ${total}`; };
+  const R = (zh, py) => `<span class="ruby">${Shih.rubyText(zh, py)}</span>`;
+
+  function show() {
+    const q = qs[qi];
+    busy = false;
+    qnum.textContent = `${qi + 1} / ${qs.length}`;
+    scene.innerHTML = sceneSVG(q.A, q.B, q.play);
+    const hint = (p, w, who) => `<div class="hint"><span class="ic">${ADJ_ICON(w.zh)}</span><span class="t"><span class="nm">${Shih.esc(p.first)} <span class="who">${who}</span></span>` +
+      `<span class="py"${pyOn() ? '' : ' hidden'}>${w.py}</span><span class="en"${enOn() ? '' : ' hidden'}>${Shih.esc(w.en)}</span></span></div>`;
+    hints.innerHTML = hint(q.A, q.a, '(me)') + hint(q.B, q.b, '(my friend)');
+    // 四个空格：0 我叫＿＿  1 我很＿＿  2 我的好朋友叫＿＿  3 …很＿＿
+    const slot = i => `<span class="dropSlot" data-i="${i}"></span>`;
+    const line = (k, html) => `<div class="sent"><div class="row">${html}</div><span class="en" data-en="${k}"></span></div>`;
+    lines.innerHTML =
+      line(0, `${R('你好，我叫', 'nǐ hǎo, wǒ jiào')}${slot(0)}${R('。', '')}`) +
+      line(1, `${R('我很', 'wǒ hěn')}${slot(1)}${R('。', '')}`) +
+      line(2, `${R('我的好朋友叫', 'wǒ de hǎo péng yǒu jiào')}${slot(2)}${R('。', '')}`) +
+      line(3, `<span class="echo" id="echo">…</span>${R('很', 'hěn')}${slot(3)}${R('。', '')}`);
+    const ANS = [{ name: q.A.first }, q.a, { name: q.B.first }, q.b];
+    const cards = shuffle([{ name: q.A.first }, { name: q.B.first }].concat(q.others)).concat(shuffle([q.a, q.b].concat(q.wrong))).map(c => {
+      const el = document.createElement('div');
+      el.className = 'wcard';
+      el.dataset.key = c.name || c.zh;
+      el.innerHTML = c.name ? `<span class="name">${Shih.esc(c.name)}</span>` : R(c.zh, c.py);
+      return el;
+    });
+    // 名字放一组、形容词放一组
+    bank.innerHTML = '<div class="grp names"></div><div class="grp adjs"></div>';
+    cards.forEach(c => bank.querySelector(c.querySelector('.name') ? '.names' : '.adjs').appendChild(c));
+    const filled = new Set();
+    const enLine = k => {
+      const el = lines.querySelector(`[data-en="${k}"]`);
+      el.textContent = [`Hi, my name is ${q.A.first}.`, `I'm ${q.a.en}.`, `My best friend is ${q.B.first}.`, `${q.B.first} is ${q.b.en}.`][k];
+      el.hidden = !enOn();
+    };
+    const dnd = Shih.dragCards(cards, {
+      slots: () => [...lines.querySelectorAll('.dropSlot:not(.filled)')],
+      accept(card, s) {
+        const i = +s.dataset.i, want = ANS[i];
+        if (card.dataset.key !== (want.name || want.zh)) return false;
+        card.classList.add('used');
+        s.classList.add('filled');
+        s.innerHTML = want.name ? `<span class="name">${Shih.esc(want.name)}</span>` : R(want.zh, want.py);
+        filled.add(i);
+        if (i === 2) { const e = document.getElementById('echo'); e.textContent = q.B.first; e.classList.remove('echo'); e.classList.add('name'); }   // 好朋友的名字自动出现
+        Shih.speak(want.name ? (i === 0 ? '你好，我叫' : '我的好朋友叫') : (i === 1 ? '我很' : '很') + want.zh);
+        enLine(i);
+        done++; update();
+        if (filled.size === 4 && !busy) {
+          busy = true;
+          qi++;
+          if (qi === qs.length) {
+            const ms = timer.stop();
+            winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
+            setTimeout(() => { winMsg.hidden = false; }, 400);
+          } else setTimeout(show, 1000);
+        }
+        return true;
+      }
+    });
+    lines.querySelectorAll('.dropSlot').forEach(s => s.addEventListener('click', () => dnd.tapSlot(s)));
+  }
+
+  const wait = Shih.startCover(document.getElementById('playArea'), () => { if (timerOn()) timer.start(); });
+  function setup() {
+    const plays = shuffle(Object.keys(PLAY));
+    qs = Array.from({ length: F.rounds || 5 }, (_, k) => makeQ(plays[k % plays.length]));
+    total = qs.length * 4; qi = 0; done = 0;
+    timer.reset(); winMsg.hidden = true; update();
+    show();
+    wait();
+  }
+  document.getElementById('resetBtn').addEventListener('click', setup);
+  document.getElementById('againBtn').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

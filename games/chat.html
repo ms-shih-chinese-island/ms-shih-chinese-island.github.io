@@ -12,31 +12,49 @@
 /* 对话框：两个小朋友聊天，把字卡拖进空的泡泡。用法：chat.html?unit=hello */
 body.game { background: #E6F4F8; }
 .wrap { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 14px; align-items: start; }
-.wrap .bank { position: sticky; top: 10px; flex-direction: column; align-items: stretch; }
-@media (max-width: 760px) { .wrap { grid-template-columns: 1fr; } .wrap .bank { flex-direction: row; } }
+.wrap .side { position: sticky; top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.wrap .bank { flex-direction: column; align-items: stretch; }
+.side .top { background: var(--card); border: 2px solid var(--line); border-radius: 18px; padding: 6px 12px; }
+@media (max-width: 760px) { .wrap { grid-template-columns: 1fr; } .wrap .bank { flex-direction: row; } .wrap .side { position: static; } }
 .chatBox { background: var(--card); border: 3px solid var(--ink); border-radius: 22px; padding: 14px; display: flex; flex-direction: column; gap: 4px; }
 .top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .qnum { font-weight: 700; color: var(--sea-ink); background: #D6EEF5; border: 2px solid #7FC4D8; border-radius: 999px; padding: 2px 12px; font-size: 16px; }
-.clock { width: 120px; }
+.clock { width: 84px; position: absolute; left: 50%; top: 8px; transform: translateX(-50%); }
+.chatBox { position: relative; }
+.chatBox { padding: 8px 14px; gap: 2px; max-width: 640px; width: 100%; justify-self: center; }
+.bub { padding: 4px 12px; }
+.cake { font-size: 15px; padding: 0 6px; }
 .clock svg { width: 100%; height: auto; display: block; }
-.row { display: flex; align-items: flex-end; gap: 10px; }
+.row { display: flex; align-items: flex-end; gap: 8px; min-width: 0; }
 .row.B { flex-direction: row-reverse; }
-.who { display: flex; flex-direction: column; align-items: center; width: 92px; flex: none; }
-.who svg { width: 92px; height: 92px; }
-.who .nm { font: 700 15px var(--f-latin); }
-.say { display: flex; flex-direction: column; gap: 2px; max-width: 70%; }
+.row.A + .row.B { margin-top: -22px; }   /* 回答的人在右边，往上靠一点（还是比问的人低），看得出先后 */
+.who { display: flex; flex-direction: column; align-items: center; width: 54px; flex: none; }
+.who svg { width: 48px; height: 48px; }
+.who .nm { font: 700 12px var(--f-latin); line-height: 1; }
+.say { display: flex; flex-direction: column; gap: 0; min-width: 0; max-width: 75%; }
 .row.B .say { align-items: flex-end; }
 .bub { position: relative; border-radius: 18px; padding: 8px 14px; border: 3px solid; }
 .row.A .bub { background: #D6EEF5; border-color: #7FC4D8; }
 .row.B .bub { background: #FFF6D6; border-color: #E9B949; }
-.bub .ruby .py { font-size: 14px; } .bub .ruby .zh { font-size: 28px; }
-.say .en { font-size: 14px; color: var(--muted); padding: 0 6px; }
+.bub .ruby .py { font-size: 11px; } .bub .ruby .zh { font-size: 22px; }
+.bub .ruby { flex-wrap: wrap; }
+.say .en { font-size: 11px; color: var(--muted); padding: 0 6px; min-height: 13px; line-height: 1.2; }
 .cake { display: inline-flex; align-items: center; gap: 4px; font: 700 18px var(--f-latin); background: #FDEEF3; border: 2px solid var(--mom); border-radius: 12px; padding: 2px 8px; }
-.bub .dropSlot { min-width: 160px; min-height: 58px; border-color: #7FC4D8; background: #fff; }
+.bub .dropSlot { min-width: 130px; min-height: 42px; border-color: #7FC4D8; background: #fff; }
 .bub .dropSlot.filled { border-color: var(--me); background: var(--me-done); }
 .bub.slotted { padding: 4px; }
-.bank .wcard .zh { font-size: 26px; }
-.bank .wcard .py { font-size: 13px; }
+.bank .wcard .zh { font-size: 22px; }
+.bank .wcard { min-height: 54px; padding: 4px 10px; }
+.wrap .bank { gap: 7px; padding: 8px; }
+.bank .wcard .py { font-size: 11px; }
+/* 比较矮的屏幕（Chromebook）：对话再排紧一点 */
+@media (min-width: 900px) and (max-height: 720px) {
+  .who { width: 46px; } .who svg { width: 38px; height: 38px; } .who .nm { font-size: 11px; }
+  .bub { padding: 2px 10px; } .bub .ruby .py { font-size: 10px; } .bub .ruby .zh { font-size: 19px; }
+  .bub .dropSlot { min-height: 34px; min-width: 110px; } .say .en { font-size: 10px; min-height: 12px; }
+  .row.A + .row.B { margin-top: -24px; } .clock { width: 64px; }
+  .bank .wcard { min-height: 44px; } .bank .wcard .zh { font-size: 19px; }
+}
 </style>
 </head>
 <body class="game">
@@ -58,7 +76,7 @@ body.game { background: #E6F4F8; }
     <div class="playInner">
       <div class="wrap">
         <div class="chatBox" id="chat"></div>
-        <div class="bank" id="bank"></div>
+        <div class="side"><div class="top" id="sideTop"></div><div class="bank" id="bank"></div></div>
       </div>
     </div>
   </div>
@@ -133,7 +151,10 @@ Shih.loadUnit().then(UNIT => {
   function show() {
     const c = chats[ci];
     busy = false;
-    chat.innerHTML = `<div class="top"><span class="qnum">${ci + 1} / ${chats.length}</span>${c.morning === null ? '' : `<div class="clock">${ART.time(c.morning ? 'morning' : 'afternoon')}</div>`}</div>`;   // 第 1 级没有早上／下午
+    // 早上／下午的时钟放在对话框上方中间（不占一排）；第 1 级没有
+    chat.innerHTML = c.morning === null ? '' : `<div class="clock">${ART.time(c.morning ? 'morning' : 'afternoon')}</div>`;
+    document.getElementById('sideTop').innerHTML = `<span class="qnum">${ci + 1} / ${chats.length}</span>`;   // 第 1 级没有早上／下午
+    // 一句一排（看得出谁先说），排得紧一点，整个对话不用往下拉
     c.lines.forEach((L, i) => {
       const p = L.who === 'A' ? c.A : c.B;
       const row = document.createElement('div');
@@ -178,8 +199,8 @@ Shih.loadUnit().then(UNIT => {
           if (ci === chats.length) {
             const ms = timer.stop();
             winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
-            setTimeout(() => { winMsg.hidden = false; }, 700);
-          } else setTimeout(show, 1600);
+            setTimeout(() => { winMsg.hidden = false; }, 400);
+          } else setTimeout(show, 900);
         }
         return true;
       }

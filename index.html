@@ -50,6 +50,14 @@ header { display: flex; align-items: flex-end; justify-content: space-between; g
 button:focus-visible, a:focus-visible { outline: 3px solid #1F5E73; outline-offset: 2px; }
 
 .map { position: relative; width: 100%; aspect-ratio: var(--ar, 1000 / 620); }
+/* 手机横着拿：地图照画面的高度缩放，整座岛都看得到 */
+@media (orientation: landscape) and (max-height: 720px) {
+  body { padding-top: 8px; padding-bottom: 8px; }
+  .wrap { gap: 6px; }
+  .brand .en { font-size: 18px; } .brand .ruby .py { font-size: 11px; } .brand .ruby .zh { font-size: 18px; }
+  .listBtn { font-size: 15px; padding: 6px 12px; }
+  .map { width: min(100%, calc((100vh - 84px) * var(--ar, 1000 / 620))); margin: 0 auto; }
+}
 .goHoliday {
   position: absolute; transform: translate(-50%, -50%); cursor: pointer; font: inherit; color: var(--ink);
   background: #FFFFFF; border: 3px solid var(--ink); border-radius: 12px; padding: 4px 12px 6px; box-shadow: 0 4px 0 var(--ink);
@@ -155,12 +163,31 @@ body.holiday { background: #CBC3E8; }
 @keyframes armCycle { 0%, 100% { transform: rotate(-35deg); } 50% { transform: rotate(35deg); } }
 @keyframes rock { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
 .spot.label { cursor: pointer; }
-.whoPanel { width: min(760px, 100%); }
-.whoGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+.whoPanel { width: min(900px, 100%); max-height: calc(100vh - 24px); overflow: auto; }
+.maker { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 640px) { .maker { grid-template-columns: 1fr; } .maker .preview { width: 120px; margin: 0 auto; } }
+.maker .preview { background: #E6F4F8; border: 3px solid #BFE3EE; border-radius: 18px; padding: 12px 18px 8px; }
+.maker .preview svg { width: 100%; height: auto; display: block; overflow: visible; }
+.maker .preview .boat { display: none; }
+.maker .rows { display: flex; flex-direction: column; gap: 6px; }
+.mrow { display: grid; grid-template-columns: 150px minmax(0, 1fr); align-items: center; gap: 8px; }
+.mlab { display: flex; flex-direction: column; line-height: 1.1; }
+.mlab .ruby .py { font-size: 11px; color: #1F5E73; } .mlab .ruby .zh { font-size: 18px; } .mlab .en { font-size: 12px; color: var(--muted); font-weight: 700; }
+.mopts { display: flex; flex-wrap: wrap; gap: 6px; }
+.mopt { font: inherit; color: var(--ink); background: var(--card); border: 3px solid var(--line); border-radius: 12px; padding: 3px 10px; cursor: pointer; min-height: 40px; display: flex; align-items: center; }
+.mopt .ruby .py { font-size: 10px; } .mopt .ruby .zh { font-size: 17px; }
+.mopt[aria-pressed="true"] { border-color: #1F5E73; background: #E6F4F8; box-shadow: 0 0 0 2px #1F5E73; }
+.mopt .sw { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--ink); display: block; }
+.mopt .sw + .ruby { margin-left: 5px; }
+.mopt.face { padding: 2px; } .mopt.face svg { width: 46px; height: 46px; display: block; }
+.whoGrid { display: block; }
 .whoGrid button { font: 700 15px var(--f-latin); color: var(--ink); background: var(--card); border: 3px solid var(--line); border-radius: 14px; padding: 6px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .whoGrid button svg { width: 84px; height: 84px; }
 .whoGrid button[aria-pressed="true"] { border-color: #1F5E73; background: #E6F4F8; }
 .whoGrid .ruby .py { font-size: 11px; } .whoGrid .ruby .zh { font-size: 17px; }
+.coins { display: inline-flex; align-items: center; gap: 4px; font: 700 20px var(--f-latin); color: #8A5A2B; background: #FFF6D6; border: 2px solid #E9B949; border-radius: 999px; padding: 8px 16px; user-select: none; touch-action: none; }
+@media (orientation: landscape) and (max-height: 720px) { .coins { font-size: 15px; padding: 4px 10px; } }
+.coins .coinIc { width: 1.2em; height: 1.2em; }
 #whoBtn { display: flex; align-items: center; gap: 8px; padding: 4px 14px 6px; }
 #whoBtn svg { width: 36px; height: 36px; }
 #whoBtn .ruby .py { font-size: 11px; } #whoBtn .ruby .zh { font-size: 18px; }
@@ -182,10 +209,82 @@ body.holiday { background: #CBC3E8; }
 .walker .say .ruby { gap: 4px; }
 .walker.talking { z-index: 6; }
 .npc.quiet .say { visibility: hidden; }
+.gift { position: absolute; width: 3%; transform: translate(-50%, -50%); z-index: 3; pointer-events: none; transition: left .32s ease-in-out, top .32s cubic-bezier(.3, -.8, .7, 1), transform .2s, opacity .2s; }
+.gift svg { width: 100%; height: auto; display: block; }
+.gift.got { transform: translate(-50%, -50%) scale(.3); opacity: 0; }
 .npc.talk svg { animation: npcHop .3s ease-out; }
 @keyframes pop { 0% { transform: translate(-50%, -6px) scale(.6); } 100% { transform: translate(-50%, -6px) scale(1); } }
 @keyframes npcHop { 50% { transform: translateY(-8%); } }
 @media (prefers-reduced-motion: reduce) { .spot::before { animation: none; } .scene.enter { animation: none; } .walker * { animation: none !important; } }
+
+/* ===== 主选单（开始画面） ===== */
+#home { position: fixed; inset: 0; z-index: 15; background: rgba(191,227,238,.86); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+  display: flex; align-items: center; justify-content: center; padding: 16px; overflow: auto; }
+.homeCard { background: var(--card); border: 4px solid var(--ink); border-radius: 28px; box-shadow: 0 8px 0 #1F5E73; padding: 18px 28px 24px;
+  width: min(860px, 100%); display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 10px 28px; align-items: center; }
+.homeTitle { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
+.homeTitle .ruby .py { font-size: 15px; color: #1F5E73; } .homeTitle .ruby .zh { font-size: 30px; color: #1F5E73; }
+.homeTitle .en { font-size: 20px; font-weight: 700; color: #1F5E73; }
+.stage { position: relative; background: #E6F4F8; border: 3px solid #BFE3EE; border-radius: 22px; padding: 46px 40px 14px; display: flex; flex-direction: column; align-items: center; }
+.stage svg { width: 190px; height: auto; display: block; overflow: visible; }
+.stage .boat { display: none; }
+.stage .nameTag { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); max-width: 90%; overflow: hidden; text-overflow: ellipsis; }
+.nameTag { font: 700 20px var(--f-latin); font-family: var(--f-latin), var(--f-zh); background: #fff; border: 2.5px solid var(--ink); border-radius: 999px; padding: 2px 14px; white-space: nowrap; box-shadow: 0 3px 0 var(--ink); }
+.stage .coins { margin-top: 10px; }
+.homeBtns { display: flex; flex-direction: column; gap: 12px; }
+.hbtn { font: inherit; color: var(--ink); cursor: pointer; background: var(--card); border: 3px solid var(--ink); border-radius: 18px; box-shadow: 0 5px 0 var(--ink);
+  padding: 8px 18px 10px; display: flex; align-items: center; gap: 14px; text-align: left; transition: transform .08s; }
+.hbtn:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--ink); }
+.hbtn .ic { font-size: 30px; width: 40px; text-align: center; flex: none; }
+.hbtn .ic svg { width: 40px; height: 40px; display: block; }
+.hbtn .txt { display: flex; flex-direction: column; line-height: 1.15; }
+.hbtn .ruby .py { font-size: 13px; color: #1F5E73; } .hbtn .ruby .zh { font-size: 24px; }
+.hbtn .en { font-size: 15px; font-weight: 700; color: var(--muted); }
+.hbtn.go { background: #8CC7A0; border-color: #2F7A4D; box-shadow: 0 5px 0 #2F7A4D; padding: 12px 18px 14px; }
+.hbtn.go .ruby .zh { font-size: 32px; } .hbtn.go .ruby .py { font-size: 15px; color: #1D4D30; } .hbtn.go .en { font-size: 18px; color: #1D4D30; }
+.nameForm { display: flex; flex-direction: column; gap: 12px; }
+.nameForm .q .ruby .py { font-size: 15px; color: #1F5E73; } .nameForm .q .ruby .zh { font-size: 30px; }
+.nameForm .q .en { display: block; font-size: 18px; font-weight: 700; color: var(--muted); }
+.nameRow { display: flex; gap: 10px; }
+.nameIn { font: 700 26px var(--f-latin); font-family: var(--f-latin), var(--f-zh); flex: 1; min-width: 0; border: 3px solid var(--ink); border-radius: 14px; padding: 8px 14px; }
+.nameIn:focus { outline: 3px solid #1F5E73; outline-offset: 2px; }
+.nameOk { font: 700 20px var(--f-latin); cursor: pointer; background: #8CC7A0; border: 3px solid #2F7A4D; border-radius: 14px; box-shadow: 0 4px 0 #2F7A4D; padding: 4px 16px; display: flex; flex-direction: column; align-items: center; }
+.nameOk .ruby .py { font-size: 12px; } .nameOk .ruby .zh { font-size: 22px; }
+.nameMsg { min-height: 26px; font-weight: 700; color: #B4471C; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.nameMsg .ruby .py { font-size: 11px; } .nameMsg .ruby .zh { font-size: 18px; }
+.nameHint { font-size: 14px; color: var(--muted); font-weight: 700; }
+.mrow .nameRow { max-width: 420px; } .mrow .nameRow .nameIn { font-size: 20px; padding: 3px 10px; } .mrow .nameRow .nameOk { flex-direction: row; gap: 6px; padding: 0 12px; box-shadow: 0 3px 0 #2F7A4D; font-size: 16px; }
+.mrow .nameRow .nameOk .ruby .zh { font-size: 18px; } .mrow > div.nameMsg { grid-column: 2; }
+.whoGrid button.nameOk { background: #8CC7A0; border: 3px solid #2F7A4D; border-radius: 14px; flex-direction: row; }
+.mrow .nameMsg { min-height: 0; font-size: 14px; }
+@media (max-width: 700px) { .homeCard { grid-template-columns: 1fr; } .stage svg { width: 110px; } }
+@media (orientation: landscape) and (max-height: 720px) {
+  .homeCard { padding: 12px 22px 16px; gap: 6px 24px; }
+  .homeTitle .ruby .zh { font-size: 24px; } .homeTitle .ruby .py { font-size: 12px; } .homeTitle .en { font-size: 16px; }
+  .stage { padding-top: 40px; } .stage svg { width: 160px; }
+  .homeBtns { gap: 9px; } .hbtn { padding: 5px 16px 7px; } .hbtn.go { padding: 8px 16px 10px; }
+  .hbtn .ruby .zh { font-size: 20px; } .hbtn.go .ruby .zh { font-size: 26px; }
+}
+/* 地图上：角色头上的名牌 */
+.walker .nameTag { position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, -2px); font-size: clamp(9px, 1vw, 14px); padding: 0 7px; border-width: 2px; box-shadow: 0 2px 0 var(--ink); }
+.walker.talking .nameTag { visibility: hidden; }
+#whoBtn .nm { font: 700 18px var(--f-latin); font-family: var(--f-latin), var(--f-zh); max-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 我的记录 */
+.recPanel { width: min(900px, 100%); max-height: calc(100vh - 24px); overflow: auto; }
+.recSum { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0 12px; }
+.recSum .chip { background: #FFF6D6; border: 2px solid #E9B949; border-radius: 14px; padding: 4px 14px; display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.recSum .chip b { font-size: 26px; color: #8A5A2B; }
+.recSum .ruby .py { font-size: 11px; } .recSum .ruby .zh { font-size: 17px; }
+.recSum .coinIc { width: 22px; height: 22px; }
+table.rec { width: 100%; border-collapse: collapse; font-size: 16px; }
+table.rec th, table.rec td { text-align: left; }
+table.rec th { padding: 4px 8px; border-bottom: 3px solid var(--ink); vertical-align: bottom; }
+table.rec th .ruby .py { font-size: 10px; } table.rec th .ruby .zh { font-size: 16px; } table.rec th .en { display: block; font-size: 12px; color: var(--muted); }
+table.rec td { padding: 6px 8px; border-bottom: 1px solid var(--line); }
+table.rec td.g { font-family: var(--f-zh); font-weight: 700; }
+table.rec tr:nth-child(even) td { background: #F6FAFB; }
+.recEmpty { text-align: center; padding: 24px; font-weight: 700; color: var(--muted); }
+.recEmpty .ruby .py { font-size: 13px; } .recEmpty .ruby .zh { font-size: 24px; color: var(--ink); }
 </style>
 </head>
 <body>
@@ -195,9 +294,10 @@ body.holiday { background: #CBC3E8; }
       <span class="ruby" id="brandRuby"></span>
       <span class="en" id="brandEn">Ms. Shih's Island of Chinese Games</span>
     </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button class="listBtn" id="whoBtn" type="button"></button>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <span class="coins" id="coins" title="Coins"><svg class="coinIc" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17" fill="#F5C531" stroke="#2B2B2B" stroke-width="3"/><circle cx="20" cy="20" r="11.5" fill="none" stroke="#D99A1E" stroke-width="2.5"/><path d="M20 12.5 L22.2 17.4 L27.5 17.9 L23.5 21.4 L24.7 26.6 L20 23.9 L15.3 26.6 L16.5 21.4 L12.5 17.9 L17.8 17.4 Z" fill="#FFF3C2" stroke="#D99A1E" stroke-width="1.5" stroke-linejoin="round"/></svg> <b id="coinNum">0</b></span>
       <button class="listBtn" id="listBtn" type="button" aria-pressed="false">☰ All games</button>
+      <button class="listBtn" id="whoBtn" type="button"></button>
     </div>
   </header>
 
@@ -260,8 +360,8 @@ body.holiday { background: #CBC3E8; }
         <path d="M193 467 L193 479" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/><circle cx="193" cy="459" r="3.4" fill="#FFFFFF" stroke="none"/>
       </g>
 
-      <!-- plaza (middle): round square with flags -->
-      <g stroke="#2B2B2B" stroke-width="3">
+      <!-- plaza (middle): round square with flags（往下移，跟饮水机的牌子隔开） -->
+      <g stroke="#2B2B2B" stroke-width="3" transform="translate(30 38)">
         <ellipse cx="560" cy="440" rx="96" ry="40" fill="#F6E7BE"/>
         <path d="M484 438 L484 386 M636 438 L636 386"/>
         <path d="M484 386 Q560 368 636 386" fill="none" stroke-width="2"/>
@@ -277,13 +377,24 @@ body.holiday { background: #CBC3E8; }
       </g>
       <text x="872" y="396" text-anchor="middle" font-family="Andika, sans-serif" font-weight="700" font-size="18" fill="#2B2B2B">123</text>
 
+      <!-- playground: a slide and a swing -->
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+        <ellipse cx="410" cy="532" rx="78" ry="16" fill="#E8D29A" stroke="none"/>
+        <path d="M352 536 L352 470 M372 536 L372 470" />
+        <path d="M352 486 L372 486 M352 502 L372 502 M352 518 L372 518" stroke-width="2.5"/>
+        <rect x="348" y="464" width="30" height="8" rx="2" fill="#E63946"/>
+        <path d="M376 468 Q392 470 400 500 Q406 530 420 536 L428 532 Q414 526 408 498 Q400 466 378 462 Z" fill="#F5C531"/>
+        <path d="M432 536 L444 468 L456 536 M462 536 L474 468 L486 536" fill="none" stroke="#5B9BD5" stroke-width="4"/>
+        <path d="M440 468 L478 468" stroke="#5B9BD5" stroke-width="5"/>
+        <path d="M452 470 L452 512 M466 470 L466 512" stroke-width="1.8"/>
+        <rect x="448" y="510" width="22" height="6" rx="2" fill="#E63946"/>
+      </g>
       <!-- trees -->
       <g stroke="#2B2B2B" stroke-width="3">
         <path d="M120 270 L120 294"/><circle cx="120" cy="258" r="18" fill="#86BD72"/>
         <path d="M560 120 L560 144"/><circle cx="560" cy="108" r="18" fill="#86BD72"/>
         <path d="M630 200 L630 224"/><circle cx="630" cy="188" r="16" fill="#86BD72"/>
         <path d="M920 250 L920 274"/><circle cx="920" cy="238" r="18" fill="#86BD72"/>
-        <path d="M400 500 L400 524"/><circle cx="400" cy="488" r="16" fill="#86BD72"/>
         <path d="M720 500 L720 524"/><circle cx="720" cy="488" r="16" fill="#86BD72"/>
       </g>
 
@@ -339,8 +450,17 @@ body.holiday { background: #CBC3E8; }
         <path d="M288 330 L288 292 Q300 280 312 292 L312 330" fill="#3E3260"/>
         <path d="M276 250 L276 270 M266 259 L286 259 M324 250 L324 270 M314 259 L334 259" stroke-width="2"/>
         <path d="M380 180 q8 -8 16 0 q8 -8 16 0" fill="none" stroke-width="2.5"/><path d="M200 210 q7 -7 14 0 q7 -7 14 0" fill="none" stroke-width="2.5"/>
-        <ellipse cx="380" cy="320" rx="22" ry="17" fill="#F28C3A"/><path d="M380 303 L383 294" />
-        <path d="M372 318 l4 -5 l4 5 M384 318 l4 -5 l4 5 M372 326 q8 6 16 0" fill="none" stroke-width="2"/>
+        <ellipse cx="216" cy="320" rx="22" ry="17" fill="#F28C3A"/><path d="M216 303 L219 294" />
+        <path d="M208 318 l4 -5 l4 5 M220 318 l4 -5 l4 5 M208 326 q8 6 16 0" fill="none" stroke-width="2"/>
+      </g>
+      <!-- the neighbor's house (next to the haunted house): trick or treat! -->
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round">
+        <rect x="436" y="232" width="72" height="60" fill="#FFF6E5"/>
+        <path d="M424 236 L472 196 L520 236 Z" fill="#D9603B"/>
+        <path d="M462 292 L462 264 Q471 256 480 264 L480 292 Z" fill="#9B8BC4"/><circle cx="476" cy="278" r="1.8" fill="#2B2B2B"/>
+        <rect x="444" y="246" width="12" height="12" fill="#F5C531"/><rect x="488" y="246" width="12" height="12" fill="#F5C531"/>
+        <ellipse cx="496" cy="286" rx="9" ry="7" fill="#F28C3A"/><path d="M496 279 L497 275" stroke-width="2"/>
+        <path d="M492 285 l2 -2 l2 2 M497 285 l2 -2 l2 2" fill="none" stroke-width="1.5"/>
       </g>
       <!-- Thanksgiving market (right): stalls with pumpkins, corn and pies -->
       <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round">
@@ -380,7 +500,7 @@ body.holiday { background: #CBC3E8; }
       </g>
       <!-- autumn trees -->
       <g stroke="#2B2B2B" stroke-width="3">
-        <path d="M470 190 L470 214"/><circle cx="470" cy="178" r="17" fill="#F2A65A"/>
+        <path d="M560 176 L560 200"/><circle cx="560" cy="164" r="17" fill="#F2A65A"/>
         <path d="M380 470 L380 494"/><circle cx="380" cy="458" r="17" fill="#D9603B"/>
         <path d="M230 420 L230 444"/><circle cx="230" cy="408" r="17" fill="#E9B949"/>
       </g>
@@ -391,6 +511,24 @@ body.holiday { background: #CBC3E8; }
 </div>
 
   <div class="list" id="list" hidden></div>
+</div>
+
+<div id="home" hidden>
+  <div class="homeCard" role="dialog" aria-modal="true" aria-label="Main menu">
+    <div class="homeTitle"><span class="ruby" id="homeBrand"></span><span class="en">Ms. Shih's Island of Chinese Games</span></div>
+    <div class="stage" id="homeStage"></div>
+    <div id="homeRight"></div>
+  </div>
+</div>
+
+<div class="overlay" id="recOverlay" hidden>
+  <div class="panel recPanel" role="dialog" aria-modal="true" aria-labelledby="recTitle">
+    <div class="panel-head">
+      <div id="recTitle"></div>
+      <button class="close" id="recClose" type="button" aria-label="Close">✕</button>
+    </div>
+    <div id="recBody"></div>
+  </div>
 </div>
 
 <div class="overlay" id="whoOverlay" hidden>
@@ -413,9 +551,12 @@ body.holiday { background: #CBC3E8; }
   </div>
 </div>
 
+<script src="shared/name.js"></script>
 <script src="island.js"></script>
 <script src="shared/kids.js"></script>
 <script src="shared/shih.js"></script>
+<script src="shared/npcs.js"></script>
+<script src="shared/vocab.js"></script>
 <script>
 const ISLANDS = window.ISLANDS;
 const COLORS = {
@@ -531,18 +672,18 @@ const WALK = {
   main: {
     nodes: {
       A: [300, 300], B: [440, 322], C: [560, 332], D: [690, 336], E: [820, 345], G: [955, 355], Bk: [795, 420], F: [290, 420],
-      school: [216, 350], restroom: [430, 268], fountain: [470, 338], plaza: [560, 452], home: [735, 300],
-      visitor: [262, 505], bank: [790, 478], dock: [1002, 372]
+      school: [216, 350], restroom: [430, 268], fountain: [470, 338], P1: [560, 420], plaza: [590, 490], home: [735, 300],
+      visitor: [262, 505], bank: [790, 478], dock: [1002, 372], playground: [320, 520]
     },
-    edges: [['school', 'A'], ['A', 'B'], ['B', 'restroom'], ['B', 'fountain'], ['B', 'C'], ['C', 'plaza'], ['C', 'D'], ['D', 'home'],
-            ['D', 'E'], ['E', 'Bk'], ['Bk', 'bank'], ['E', 'G'], ['G', 'dock'], ['A', 'F'], ['F', 'visitor']],
-    places: { '家': 'home', '学校': 'school', '卫生间': 'restroom', '饮水机': 'fountain', '你好': 'visitor', '数字': 'bank' },
+    edges: [['school', 'A'], ['A', 'B'], ['B', 'restroom'], ['B', 'fountain'], ['B', 'C'], ['C', 'P1'], ['P1', 'plaza'], ['C', 'D'], ['D', 'home'],
+            ['D', 'E'], ['E', 'Bk'], ['Bk', 'bank'], ['E', 'G'], ['G', 'dock'], ['A', 'F'], ['F', 'visitor'], ['F', 'playground']],
+    places: { '家': 'home', '学校': 'school', '卫生间': 'restroom', '饮水机': 'fountain', '你好': 'visitor', '数字': 'bank', '操场': 'playground' },
     start: 'plaza', dock: 'dock',
     boatOut: [[1002, 372], [1040, 406], [1084, 402]], boatIn: [[1084, 402], [1040, 406], [1002, 372]]
   },
   holiday: {
-    nodes: { dock: [410, 440], h1: [480, 398], haunted: [560, 352], h2: [720, 350], market: [880, 346], m1: [700, 430], moon: [702, 512] },
-    edges: [['dock', 'h1'], ['h1', 'haunted'], ['haunted', 'h2'], ['h2', 'market'], ['h2', 'm1'], ['m1', 'moon']],
+    nodes: { dock: [410, 440], h1: [480, 398], haunted: [560, 352], h2: [720, 350], market: [880, 346], m1: [700, 430], moon: [690, 516], treat: [718, 336] },
+    edges: [['dock', 'h1'], ['h1', 'haunted'], ['haunted', 'h2'], ['h2', 'market'], ['h2', 'm1'], ['m1', 'moon'], ['h2', 'treat']],
     places: { '鬼屋': 'haunted', '感恩节市场': 'market', '中秋节': 'moon' },
     start: 'dock', dock: 'dock',
     boatOut: [[410, 440], [330, 470], [246, 462]], boatIn: [[246, 462], [330, 470], [410, 440]]
@@ -561,21 +702,24 @@ Object.entries(WALK).forEach(([id, W]) => {
     `<path d="${d}" fill="none" stroke="${id === 'main' ? '#F7ECCB' : '#E9D3A0'}" stroke-width="7" stroke-dasharray="1 14" stroke-linecap="round"/>`;
 });
 
-// who is walking: the island kid (default) or one of the 16 kids
-const MASCOT = { id: 'mascot', first: 'Island Kid', zh: '小岛主', py: 'xiǎo dǎo zhǔ', skin: 'light', hair: 'short', hairColor: 'brown', shirt: '#F5C531', hat: true };
-const PEOPLE = [MASCOT].concat((window.ART && ART.people) || []);
-const who = () => PEOPLE.find(p => (p.id || p.first) === store.get('avatar', 'mascot')) || MASCOT;
-const hat = '<g stroke="#2B2B2B" stroke-width="2.5" stroke-linejoin="round"><ellipse cx="70" cy="40" rx="46" ry="10" fill="#F2D27A"/>' +
-  '<path d="M44 40 Q46 12 70 12 Q94 12 96 40 Z" fill="#F2D27A"/><path d="M45 34 Q70 42 95 34 L96 40 Q70 46 44 40 Z" fill="#D9603B"/></g>';
+// 我的角色：学生自己做的人物（只在地图上走来走去），记在这台电脑上
+const ME_DEFAULT = { boy: true, skin: 'light', long: false, hair: 'short', hairColor: 'brown', shirt: '#4A86D0', glasses: false, hat: 'straw' };
+const who = () => { const m = Object.assign({}, ME_DEFAULT, store.get('me', {})); m.lashes = !m.boy; return m; };
+const HATS = {
+  straw: '<g stroke="#2B2B2B" stroke-width="2.5" stroke-linejoin="round"><ellipse cx="70" cy="40" rx="46" ry="10" fill="#F2D27A"/>' +
+    '<path d="M44 40 Q46 12 70 12 Q94 12 96 40 Z" fill="#F2D27A"/><path d="M45 34 Q70 42 95 34 L96 40 Q70 46 44 40 Z" fill="#D9603B"/></g>',
+  cap: '<g stroke="#2B2B2B" stroke-width="2.5" stroke-linejoin="round"><path d="M41 46 Q42 22 70 22 Q98 22 99 46 Z" fill="#5B9BD5"/>' +
+    '<path d="M70 46 L24 46 Q22 54 36 55 L70 52 Z" fill="#3B78B5"/><circle cx="70" cy="22" r="3.5" fill="#3B78B5"/></g>'
+};
 function face(p, state) {
   if (!window.ART) return '';
   const inner = ART.kid(p, state).replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
-  return inner + (p.hat ? hat : '');
+  return inner + (HATS[p.hat === true ? 'straw' : p.hat] || '');
 }
 function portrait(p) { return `<svg viewBox="0 0 140 140" aria-hidden="true">${face(p, 'good')}</svg>`; }
 // a little chibi person: a big head (from the kid pictures), a small round body, tiny arms and stubby legs
 function walkerSVG(p, state) {
-  const skin = { light: '#FBDCC8', asian: '#F6D9B5', tan: '#C98E62' }[p.skin] || '#FBDCC8';
+  const skin = { light: '#FBDCC8', asian: '#F6D9B5', tan: '#C98E62', dark: '#8D5A3B' }[p.skin] || '#FBDCC8';
   const sw = 'stroke="#2B2B2B" stroke-width="3.5" stroke-linejoin="round"';
   const arm = cls => `<g class="${cls}"><rect x="-6" y="0" width="12" height="20" rx="6" fill="${p.shirt}" ${sw}/><circle cx="0" cy="22" r="6.5" fill="${skin}" ${sw}/></g>`;
   const leg = (cls, x) => `<g class="${cls}"><rect x="${x}" y="122" width="14" height="22" rx="7" fill="#5B6E9A" ${sw}/><ellipse cx="${x + 7}" cy="146" rx="10" ry="6" fill="#2B2B2B"/></g>`;
@@ -594,7 +738,12 @@ const walker = document.createElement('div');
 walker.className = 'walker';
 walker.innerHTML = '<div class="flip"></div>';
 const flip = walker.firstChild;
-function paintWalker(state) { flip.innerHTML = walkerSVG(who(), state || 'good'); }
+const tag = document.createElement('span');
+tag.className = 'nameTag';
+walker.appendChild(tag);
+const myName = () => store.get('name', '');
+const escH = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function paintWalker(state) { flip.innerHTML = walkerSVG(who(), state || 'good'); tag.textContent = myName(); tag.hidden = !myName(); }
 paintWalker();
 let pos = store.get('walker', null);          // { island, node }
 function put(island, xy) {
@@ -675,7 +824,8 @@ function goTo(island, P, btn) {
   move(island, route(W, pos.node, node), () => {
     if (my !== trip) return;
     placeAt(island, node);
-    if (island === 'main' && node === 'school' && npcHello) { greetTeacher(my, open); return; }
+    const M = MEET[island + ':' + node];
+    if (M && M.onArrive) { meet(Object.assign({}, M, { thenOpen: true }), my, open); return; }
     const line = SAY_AT[island + ':' + node];
     if (line) { kidSays(line, my); }
     wave(); setTimeout(() => { if (my === trip) open(); }, REDUCE ? 0 : 350);
@@ -693,24 +843,7 @@ function kidSays(line, my) {
   walker.appendChild(bub);
   walker.classList.add('talking');
   sayZh(line[0]);
-  setTimeout(() => { bub.remove(); walker.classList.remove('talking'); }, 2200);
-}
-// at the school: the kid says 老师好！ and Ms. Shih answers 小朋友好！
-function greetTeacher(my, open) {
-  walker.classList.add('left');                    // face Ms. Shih
-  paintWalker('wave');
-  const bub = document.createElement('span');
-  bub.className = 'say';
-  bub.innerHTML = `<span class="ruby">${rubyHTML('老师好！', 'lǎo shī hǎo!')}</span><span class="en">Hello, teacher!</span>`;
-  walker.appendChild(bub);
-  walker.classList.add('talking');
-  npcHello.quiet(true);                            // one speech bubble at a time
-  const end = () => { bub.remove(); walker.classList.remove('talking'); npcHello.quiet(false); paintWalker(); };
-  sayZh('老师好！', () => {
-    if (my !== trip) { end(); return; }
-    bub.remove(); walker.classList.remove('talking'); paintWalker();
-    npcHello(() => { end(); if (my === trip) open(); });
-  });
+  setTimeout(() => { bub.remove(); walker.classList.remove('talking'); }, 1500);
 }
 // the boat: walk to the dock, sail over, and step off on the other island
 function sail(to) {
@@ -734,38 +867,172 @@ function sail(to) {
   });
 }
 
-// pick who you are
+// 金币：在游戏里赚的，记在这台电脑上（老师：按住 3 秒归零）
+(function () {
+  const el = document.getElementById('coins'), num = document.getElementById('coinNum');
+  const paint = () => { num.textContent = +store.get('coins', 0) || 0; };
+  paint();
+  addEventListener('pageshow', paint);
+  let t = 0;
+  el.addEventListener('pointerdown', () => { t = setTimeout(() => { store.set('coins', 0); paint(); }, 3000); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => el.addEventListener(ev, () => clearTimeout(t)));
+})();
+
+// 我的角色：男生／女生、肤色、头发、发色、衣服、眼镜、帽子，学生想怎么选就怎么选
 const whoBtn = document.getElementById('whoBtn'), whoOverlay = document.getElementById('whoOverlay'), whoGrid = document.getElementById('whoGrid');
-document.getElementById('whoTitle').innerHTML = `<span class="ruby">${rubyHTML('我是谁？', 'wǒ shì shéi?')}</span><span class="en">Pick your character</span>`;
-function paintWhoBtn() { whoBtn.innerHTML = portrait(who()) + `<span class="ruby">${rubyHTML('换人物', 'huàn rén wù')}</span>`; whoBtn.setAttribute('aria-label', 'Pick your character'); }
+document.getElementById('whoTitle').innerHTML = `<span class="ruby">${rubyHTML('我的角色', 'wǒ de jué sè')}</span><span class="en">My character</span>`;
+// 上面那个按钮：我的头像 + 名字，点了回到主选单
+function paintWhoBtn() {
+  whoBtn.innerHTML = portrait(who()) + (myName() ? `<span class="nm">${escH(myName())}</span>` : `<span class="ruby">${rubyHTML('主选单', 'zhǔ xuǎn dān')}</span>`);
+  whoBtn.setAttribute('aria-label', 'Main menu');
+}
 paintWhoBtn();
-whoBtn.addEventListener('click', () => {
-  const cur = who();
-  whoGrid.innerHTML = PEOPLE.map((p, i) => `<button type="button" data-i="${i}" aria-pressed="${p === cur}">${portrait(p)}` +
-    (p.zh ? `<span class="ruby">${rubyHTML(p.zh, p.py)}</span>` : `<span>${p.first}</span>`) + `</button>`).join('');
-  whoGrid.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-    const p = PEOPLE[+b.dataset.i];
-    store.set('avatar', p.id || p.first);
-    paintWalker(); paintWhoBtn(); wave();
-    whoOverlay.hidden = true; whoBtn.focus();
+const SWATCH = c => `<span class="sw" style="background:${c}"></span>`;
+const R = (zh, py) => `<span class="ruby">${rubyHTML(zh, py)}</span>`;
+const MAKER = [
+  { key: 'boy', zh: '男生／女生', py: 'nán shēng / nǚ shēng', en: 'Boy / Girl', opts: [[true, R('男生', 'nán shēng')], [false, R('女生', 'nǚ shēng')]] },
+  { key: 'skin', zh: '肤色', py: 'fū sè', en: 'Skin', opts: [['light', SWATCH('#FBDCC8')], ['asian', SWATCH('#F6D9B5')], ['tan', SWATCH('#C98E62')], ['dark', SWATCH('#8D5A3B')]] },
+  { key: 'long', zh: '头发', py: 'tóu fǎ', en: 'Hair', opts: [[false, R('短', 'duǎn')], [true, R('长', 'cháng')]] },
+  { key: 'hair', zh: '发型', py: 'fǎ xíng', en: 'Style', styles: true },
+  { key: 'hairColor', zh: '发色', py: 'fǎ sè', en: 'Hair color', opts: [['blonde', SWATCH('#E8C25A')], ['brown', SWATCH('#7A4B2A')], ['dark', SWATCH('#4A3424')], ['black', SWATCH('#2E2A2A')], ['red', SWATCH('#C0602E')]] },
+  // 衣服：学过的颜色，用中文写
+  { key: 'shirt', zh: '衣服', py: 'yī fu', en: 'Shirt', opts: [['#3A3A3A', '黑色', 'hēi sè'], ['#FFFFFF', '白色', 'bái sè'], ['#E63946', '红色', 'hóng sè'], ['#5BB36A', '绿色', 'lǜ sè'], ['#F28C3A', '橙色', 'chéng sè'], ['#4A86D0', '蓝色', 'lán sè'], ['#F5C531', '黄色', 'huáng sè']]
+      .map(([c, zh, py]) => [c, SWATCH(c) + R(zh, py)]) },
+  { key: 'glasses', zh: '眼镜', py: 'yǎn jìng', en: 'Glasses', opts: [[false, R('不戴', 'bú dài')], [true, R('戴', 'dài')]] },
+  { key: 'hat', zh: '帽子', py: 'mào zi', en: 'Hat', opts: [['none', R('没有', 'méi yǒu')], ['straw', R('草帽', 'cǎo mào')], ['cap', R('棒球帽', 'bàng qiú mào')]] }
+];
+const STYLES = { false: ['short', 'spiky', 'side', 'curly', 'wavy', 'bob'], true: ['long', 'ponytail', 'pigtails'] };
+function paintMaker() {
+  const me = who();
+  const styleOpts = STYLES[me.long].map(h => [h, `<svg viewBox="28 18 84 84" aria-hidden="true">${face(Object.assign({}, me, { hair: h, glasses: false, hat: 'none' }), 'good')}</svg>`]);
+  whoGrid.innerHTML = `<div class="maker"><div class="preview">${walkerSVG(me, 'wave')}</div><div class="rows">` +
+    `<div class="mrow"><span class="mlab"><span class="ruby">${rubyHTML('名字', 'míng zì')}</span><span class="en">Name</span></span>${nameFormHTML()}</div>` +
+    MAKER.map(R => `<div class="mrow"><span class="mlab"><span class="ruby">${rubyHTML(R.zh, R.py)}</span><span class="en">${R.en}</span></span><span class="mopts">` +
+      (R.styles ? styleOpts : R.opts).map(([v, html]) => `<button type="button" class="mopt${R.styles ? ' face' : ''}" data-k="${R.key}" data-v='${JSON.stringify(v)}' aria-pressed="${me[R.key] === v}">${html}</button>`).join('') +
+      `</span></div>`).join('') + `</div></div>`;
+  hookName(whoGrid, () => { paintWalker(); paintWhoBtn(); });
+  whoGrid.querySelectorAll('.mopt').forEach(b => b.addEventListener('click', () => {
+    const cur = Object.assign({}, ME_DEFAULT, store.get('me', {}));
+    cur[b.dataset.k] = JSON.parse(b.dataset.v);
+    if (b.dataset.k === 'long' && !STYLES[cur.long].includes(cur.hair)) cur.hair = STYLES[cur.long][0];   // 换长短，发型也跟着换
+    store.set('me', cur);
+    paintMaker(); paintWalker(); paintWhoBtn();
   }));
+}
+function openMaker() {
+  paintMaker();
   whoOverlay.hidden = false;
   document.getElementById('whoClose').focus();
+}
+function closeMaker() { whoOverlay.hidden = true; paintHome(); }
+document.getElementById('whoClose').addEventListener('click', closeMaker);
+whoOverlay.addEventListener('click', e => { if (e.target === whoOverlay) closeMaker(); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (!whoOverlay.hidden) closeMaker();
+  else if (!recOverlay.hidden) recOverlay.hidden = true;
 });
-document.getElementById('whoClose').addEventListener('click', () => { whoOverlay.hidden = true; whoBtn.focus(); });
-whoOverlay.addEventListener('click', e => { if (e.target === whoOverlay) { whoOverlay.hidden = true; whoBtn.focus(); } });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !whoOverlay.hidden) { whoOverlay.hidden = true; whoBtn.focus(); } });
+
+// ---- 名字：只能是中文（简体、繁体）、英文字母、数字，最多 12 个字，不能有脏字 ----
+function nameFormHTML() {
+  return `<div class="nameRow"><input class="nameIn" type="text" maxlength="12" autocomplete="off" spellcheck="false" placeholder="Emma / 小明" value="${escH(myName())}" aria-label="Name">` +
+    `<button class="nameOk" type="button"><span class="ruby">${rubyHTML('好', 'hǎo')}</span><span>OK</span></button></div><div class="nameMsg" aria-live="polite"></div>`;
+}
+const NAME_MSG = {
+  empty: ['请打你的名字', 'qǐng dǎ nǐ de míng zì', 'Please type your name.'],
+  long: ['最多十二个字', 'zuì duō shí èr gè zì', '12 letters at most.'],
+  chars: ['只能用中文、英文字母、数字', 'zhǐ néng yòng zhōng wén yīng wén zì mǔ shù zì', 'Only Chinese, letters and numbers. No spaces or symbols.'],
+  bad: ['请换一个名字', 'qǐng huàn yī gè míng zì', 'Please choose another name.'],
+  ok: ['好了！', 'hǎo le!', 'Saved!']
+};
+function hookName(box, onSaved) {
+  const inp = box.querySelector('.nameIn'), msg = box.querySelector('.nameMsg');
+  const say = k => { const m = NAME_MSG[k]; msg.innerHTML = `<span class="ruby">${rubyHTML(m[0].replace(/[、！]/g, ''), m[1].replace(/!/g, ''))}</span><span>${m[2]}</span>`; msg.style.color = k === 'ok' ? '#2F7A4D' : ''; };
+  const save = () => {
+    const v = ShihName.clean(inp.value);
+    const k = !v ? 'empty' : Array.from(v).length > 12 ? 'long' : ShihName.check(v);
+    if (k) { say(k); inp.focus(); return; }
+    store.set('name', v); inp.value = v;
+    say('ok');
+    onSaved && onSaved(v);
+  };
+  box.querySelector('.nameOk').addEventListener('click', save);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') save(); });
+  inp.addEventListener('input', () => { msg.innerHTML = ''; });
+}
+
+// ---- 主选单：像一般游戏的开始画面 ----
+const home = document.getElementById('home'), homeStage = document.getElementById('homeStage'), homeRight = document.getElementById('homeRight');
+document.getElementById('homeBrand').innerHTML = rubyHTML(ISLANDS.main.zh, ISLANDS.main.py);
+const COIN_SVG = document.querySelector('#coins .coinIc').outerHTML;
+function hbtn(cls, ic, zh, py, en) { return `<button type="button" class="hbtn ${cls}"><span class="ic" aria-hidden="true">${ic}</span><span class="txt"><span class="ruby">${rubyHTML(zh, py)}</span><span class="en">${en}</span></span></button>`; }
+function paintHome() {
+  if (home.hidden) return;
+  const name = myName();
+  homeStage.innerHTML = (name ? `<span class="nameTag">${escH(name)}</span>` : '') + walkerSVG(who(), 'wave') +
+    `<span class="coins">${COIN_SVG} <b>${+store.get('coins', 0) || 0}</b></span>`;
+  if (!name) {
+    // 第一次来：先打名字
+    homeRight.innerHTML = `<div class="nameForm"><div class="q"><span class="ruby">${rubyHTML('你叫什么名字？', 'nǐ jiào shén me míng zì?')}</span><span class="en">What's your name?</span></div>` +
+      nameFormHTML() + `<div class="nameHint">Just your first name. Chinese, letters and numbers only.</div></div>`;
+    hookName(homeRight, () => { paintWalker(); paintWhoBtn(); setTimeout(() => { paintHome(); openMaker(); }, 500); });
+    setTimeout(() => { const i = homeRight.querySelector('.nameIn'); if (i) i.focus(); }, 50);
+    return;
+  }
+  homeRight.innerHTML = `<div class="homeBtns">` +
+    hbtn('go', '🏝', '开始', 'kāi shǐ', 'Start') +
+    hbtn('who', portrait(who()), '我的角色', 'wǒ de jué sè', 'My character') +
+    hbtn('rec', '⭐', '我的记录', 'wǒ de jì lù', 'My records') +
+    hbtn('all', '☰', '全部游戏', 'quán bù yóu xì', 'All games') + `</div>`;
+  homeRight.querySelector('.go').addEventListener('click', () => hideHome());
+  homeRight.querySelector('.who').addEventListener('click', openMaker);
+  homeRight.querySelector('.rec').addEventListener('click', openRecords);
+  homeRight.querySelector('.all').addEventListener('click', () => { hideHome(); if (list.hidden) listBtn.click(); });
+  homeRight.querySelector('.go').focus();
+}
+function showHome() { home.hidden = false; paintHome(); }
+function hideHome() { home.hidden = true; try { sessionStorage.setItem('shih:inIsland', '1'); } catch (e) {} paintWalker(); paintWhoBtn(); whoBtn.focus(); }
+whoBtn.addEventListener('click', showHome);
+
+// ---- 我的记录：只读这台电脑上的记录 ----
+const recOverlay = document.getElementById('recOverlay');
+document.getElementById('recTitle').innerHTML = `<span class="ruby">${rubyHTML('我的记录', 'wǒ de jì lù')}</span><span class="en">My records</span>`;
+const TH = (zh, py, en) => `<th><span class="ruby">${rubyHTML(zh, py)}</span><span class="en">${en}</span></th>`;
+const fmtT = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+function openRecords() {
+  const all = store.get('records', []);
+  const recs = Array.isArray(all) ? all.slice().reverse() : [];
+  const body = document.getElementById('recBody');
+  const perfect = recs.filter(r => r.perfect).length;
+  body.innerHTML = `<div class="recSum">` +
+    `<span class="chip"><span class="ruby">${rubyHTML('玩了', 'wán le')}</span><b>${recs.length}</b> rounds</span>` +
+    `<span class="chip"><span class="ruby">${rubyHTML('全对', 'quán duì')}</span><b>${perfect}</b> ✨ all correct</span>` +
+    `<span class="chip">${COIN_SVG}<b>${+store.get('coins', 0) || 0}</b> coins</span></div>` +
+    (recs.length ? `<table class="rec"><thead><tr>${TH('日期', 'rì qī', 'Date')}${TH('游戏', 'yóu xì', 'Game')}<th>Level</th>${TH('分数', 'fēn shù', 'Score')}${TH('时间', 'shí jiān', 'Time')}${TH('金币', 'jīn bì', 'Coins')}</tr></thead><tbody>` +
+      recs.slice(0, 100).map(r => {
+        const d = new Date(r.t);
+        return `<tr><td>${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}</td>` +
+          `<td class="g">${escH(r.title || r.game || '')}</td><td>${r.level ? 'Level ' + (+r.level) : ''}</td>` +
+          `<td>${r.total ? (+r.score) + ' / ' + (+r.total) : ''}${r.perfect ? ' ✨' : ''}</td><td>${fmtT(+r.sec || 0)}</td><td>+${+r.coins || 0}</td></tr>`;
+      }).join('') + `</tbody></table>`
+      : `<div class="recEmpty"><span class="ruby">${rubyHTML('还没有记录', 'hái méi yǒu jì lù')}</span><br>No records yet. Go play a game!</div>`);
+  recOverlay.hidden = false;
+  document.getElementById('recClose').focus();
+}
+document.getElementById('recClose').addEventListener('click', () => { recOverlay.hidden = true; });
+recOverlay.addEventListener('click', e => { if (e.target === recOverlay) recOverlay.hidden = true; });
+if (window.ShihReport) ShihReport.visit();
 
 
 // read Chinese out loud (follows the same sound on/off setting as the games)
 function sayZh(text, done) {
   let soundOn = true; try { soundOn = JSON.parse(localStorage.getItem('shih:sound') || 'true'); } catch (e) {}
-  if (!soundOn || !('speechSynthesis' in window)) { setTimeout(() => done && done(), 900); return; }
+  if (!soundOn || !('speechSynthesis' in window)) { setTimeout(() => done && done(), 600); return; }
   speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text); u.lang = 'zh-CN'; u.rate = 0.55;
+  const u = new SpeechSynthesisUtterance(text); u.lang = 'zh-CN'; u.rate = 0.9;
   const v = speechSynthesis.getVoices().find(v => /zh[-_]CN/i.test(v.lang)); if (v) u.voice = v;
   let called = false; const fin = () => { if (!called) { called = true; done && done(); } };
-  u.onend = fin; setTimeout(fin, 2200);
+  u.onend = fin; setTimeout(fin, 900);   // 不等太久：最多 0.9 秒就接下一句
   speechSynthesis.speak(u);
 }
 // Ms. Shih stands in front of the school and says 小朋友好！ Tap her to hear it.
@@ -777,13 +1044,116 @@ let npcHello = null;
   b.type = 'button'; b.className = 'npc';
   b.style.left = (168 / 1240 * 100) + '%'; b.style.top = (348 / 620 * 100) + '%';
   const hi = ['小朋友好！', 'xiǎo péng yǒu hǎo!', 'Hello, kids!'];
-  b.innerHTML = `<span class="say"><span class="ruby">${rubyHTML(hi[0], hi[1])}</span><span class="en">${hi[2]}</span></span>` + SHIH_AVATAR();
+  b.innerHTML = `<span class="say"><span class="ruby">${rubyHTML(hi[0], hi[1])}</span><span class="en">${hi[2]}</span></span>` + SHIH_AVATAR({ wave: false, hold: 'star' });
   b.setAttribute('aria-label', 'Ms. Shih says ' + hi[2]);
+  b.classList.add('quiet');   // 平常不显示泡泡
   npcHello = done => { b.classList.remove('quiet', 'talk'); void b.offsetWidth; b.classList.add('talk'); sayZh(hi[0], done); };
   npcHello.quiet = on => b.classList.toggle('quiet', on);
-  b.addEventListener('click', () => npcHello());
   map.insertBefore(b, map.querySelector('svg.island').nextSibling);
+  // 史老师：小人走到学校（点牌子或点老师都可以）→「老师好！」→「小朋友好！」→ 送一张金色星星贴纸
+  const teacher = { island: 'main', xy: [168, 348], line: hi, show: () => { b.classList.remove('quiet', 'talk'); void b.offsetWidth; b.classList.add('talk'); }, quiet: on => npcHello.quiet(on) };
+  window.TEACHER_MEET = { npc: teacher, node: 'school', kid: ['老师好！', 'lǎo shī hǎo!', 'Hello, teacher!'], gift: 'star', onArrive: true };
+  b.addEventListener('click', () => walkToMeet('main', 'school'));
 })();
+
+// ===================================================================
+// 地图上的其他大人：走过去会打招呼、送东西
+//   中秋节的奶奶：中秋节快乐！（送月饼，然后打开中秋节的选单）
+//   鬼屋旁边的邻居：给糖或捣蛋！／万圣节快乐！（送糖果）
+// ===================================================================
+function makeNpc(island, xy, svg, line) {
+  const map = document.getElementById('map-' + island);
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'npc';
+  b.style.left = (xy[0] / 1240 * 100) + '%'; b.style.top = (xy[1] / 620 * 100) + '%';
+  b.innerHTML = `<span class="say"><span class="ruby">${rubyHTML(line[0], line[1])}</span><span class="en">${line[2]}</span></span>` + svg;
+  b.setAttribute('aria-label', line[2]);
+  b.classList.add('quiet');
+  const N = {
+    el: b, island, xy,
+    line,
+    show() { b.classList.remove('quiet', 'talk'); void b.offsetWidth; b.classList.add('talk'); },
+    say(done) { this.show(); sayZh(line[0], () => { done && done(); }); },
+    quiet(on) { b.classList.toggle('quiet', on); }
+  };
+  map.insertBefore(b, map.querySelector('svg.island').nextSibling);
+  return N;
+}
+const GIFT = { candy: (window.VOCAB || {})['糖果'] || '', mooncake: (window.VOCAB || {})['月饼'] || '',
+  star: '<svg viewBox="0 0 60 60" aria-hidden="true"><circle cx="30" cy="30" r="26" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="3"/><path d="M30 9 L36 23 L51 24 L39 34 L43 49 L30 41 L17 49 L21 34 L9 24 L24 23 Z" fill="#F5C531" stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round"/></svg>' };   // 金色星星贴纸   // 跟游戏里的糖果、月饼同一张图
+// a little present flies from the grown-up's hands to the kid
+function giftFly(island, from, to, kind, done) {
+  if (REDUCE) { done && done(); return; }
+  const map = document.getElementById('map-' + island);
+  const g = document.createElement('div');
+  g.className = 'gift';
+  g.innerHTML = GIFT[kind];
+  g.style.left = (from[0] / 1240 * 100) + '%'; g.style.top = (from[1] / 620 * 100) + '%';
+  map.appendChild(g);
+  void g.offsetWidth;
+  g.style.left = (to[0] / 1240 * 100) + '%'; g.style.top = (to[1] / 620 * 100) + '%';
+  g.classList.add('fly');
+  setTimeout(() => { g.classList.add('got'); }, 320);
+  setTimeout(() => { g.remove(); done && done(); }, 520);
+}
+// the kid says the first line, the grown-up answers, then the present flies over
+// 对话一来一往：小朋友先说，0.6 秒后大人回答，同时送东西；不等语音念完（语音会排队接着念）
+let meeting = false;
+function meet(M, my, open) {
+  const N = M.npc;
+  if (!N) { open && open(); return; }
+  meeting = true;
+  walker.classList.toggle('left', N.xy[0] < WALK[N.island].nodes[M.node][0]);   // face the grown-up
+  walker.querySelectorAll('.say').forEach(x => x.remove());
+  const bub = document.createElement('span');
+  bub.className = 'say';
+  bub.innerHTML = `<span class="ruby">${rubyHTML(M.kid[0], M.kid[1])}</span><span class="en">${M.kid[2]}</span>`;
+  paintWalker('wave'); walker.appendChild(bub); walker.classList.add('talking');
+  say(M.kid[0], true);
+  const at = WALK[N.island].nodes[M.node];
+  setTimeout(() => {
+    bub.remove(); walker.classList.remove('talking'); paintWalker();
+    if (my !== trip) { meeting = false; return; }
+    N.show(); say(N.line[0], false);
+    const done = () => {
+      wave(); meeting = false;
+      if (my === trip && M.thenOpen && open) setTimeout(open, 250);
+      setTimeout(() => N.quiet(true), 1200);
+    };
+    if (M.gift) giftFly(N.island, [N.xy[0], N.xy[1] - 40], [at[0], at[1] - 40], M.gift, done); else done();
+  }, 650);
+}
+// 念出来：第一句先停掉其他声音，第二句排在后面接着念
+function say(text, first) {
+  let soundOn = true; try { soundOn = JSON.parse(localStorage.getItem('shih:sound') || 'true'); } catch (e) {}
+  if (!soundOn || !('speechSynthesis' in window)) return;
+  if (first) speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text); u.lang = 'zh-CN'; u.rate = 0.9;
+  const v = speechSynthesis.getVoices().find(v => /zh[-_]CN/i.test(v.lang)); if (v) u.voice = v;
+  speechSynthesis.speak(u);
+}
+const MEET = {};
+if (window.TEACHER_MEET) MEET['main:school'] = window.TEACHER_MEET;
+(function () {
+  if (!window.NPC_ART) return;
+  // 鬼屋旁边：邻居在门外发糖
+  const neighbor = makeNpc('holiday', [652, 300], NPC_ART.neighbor(), ['万圣节快乐！', 'wàn shèng jié kuài lè!', 'Happy Halloween!']);
+  MEET['holiday:treat'] = { npc: neighbor, node: 'treat', kid: ['给糖或捣蛋！', 'gěi táng huò dǎo dàn!', 'Trick or treat!'], gift: 'candy' };
+  // 点邻居：小人走过去要糖
+  neighbor.el.addEventListener('click', () => walkToMeet('holiday', 'treat'));
+  // 中秋节：奶奶在凉亭前面，拿着一盘月饼
+  const grandma = makeNpc('holiday', [770, 512], NPC_ART.grandma(), ['中秋节快乐！', 'zhōng qiū jié kuài lè!', 'Happy Moon Festival!']);
+  MEET['holiday:moon'] = { npc: grandma, node: 'moon', kid: ['中秋节快乐！', 'zhōng qiū jié kuài lè!', 'Happy Moon Festival!'], gift: 'mooncake' };
+  grandma.el.addEventListener('click', () => walkToMeet('holiday', 'moon'));
+})();
+// walk to a grown-up who has no sign (e.g. the neighbor), then say hello there
+function walkToMeet(island, node) {
+  if (meeting) return;   // 正在说话的时候，再点也不会重来
+  const W = WALK[island], my = ++trip;
+  if (anim || !pos || pos.island !== island) { stop(); placeAt(island, node); meet(MEET[island + ':' + node], my); return; }
+  if (pos.node === node) { meet(MEET[island + ':' + node], my); return; }
+  move(island, route(W, pos.node, node), () => { if (my !== trip) return; placeAt(island, node); meet(MEET[island + ':' + node], my); });
+}
 
 // #holiday opens the holiday island; #<place id> (e.g. #haunted-house) opens that place's game menu
 (function () {
@@ -791,6 +1161,8 @@ let npcHello = null;
   let start = h === 'holiday' ? 'holiday' : 'main', place = null;
   Object.entries(ISLANDS).forEach(([k, I]) => I.places.forEach(P => { if (P.id && P.id === h) { start = k; place = P; } }));
   showIsland(start, false);
+  let entered = false; try { entered = sessionStorage.getItem('shih:inIsland') === '1'; } catch (e) {}
+  if ((!h && !entered) || !myName()) showHome();
   // where the walker starts: the place in the link, or where it stopped last time, or the plaza / the dock
   if (place && WALK[start].places[place.zh]) placeAt(start, WALK[start].places[place.zh]);
   else if (pos && pos.island === start) placeAt(start, pos.node);

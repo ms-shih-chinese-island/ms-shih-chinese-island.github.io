@@ -350,7 +350,7 @@ Shih.loadUnit().then(UNIT => {
     if (s && s.dataset.answer === card.dataset.word) {
       card.classList.add('placed'); s.classList.add('done');
       s.innerHTML = ''; s.appendChild(card); s.appendChild(hintEl(card.dataset.word));
-      placed++; updateScore();
+      Shih.coin(1, s); placed++; updateScore();
     } else if (s) {
       card.classList.add('shake'); setTimeout(() => card.classList.remove('shake'), 400);
     }

@@ -133,17 +133,17 @@
     `<circle cx="50" cy="58" r="26" fill="${color}" ${sw(3)}/><circle cx="41" cy="55" r="3" fill="${INK}"/><circle cx="59" cy="55" r="3" fill="${INK}"/>` +
     `<circle cx="34" cy="64" r="4" fill="${CHEEK}" opacity=".8"/><circle cx="66" cy="64" r="4" fill="${CHEEK}" opacity=".8"/>` + nose);
   const ICONS = {
-    mooncake: () => box('#FFF1D6', mooncake(50, 52, 30)),
+    mooncake: () => window.VOCAB_BOX ? VOCAB_BOX('月饼', '#FFF1D6') : box('#FFF1D6', mooncake(50, 52, 30)),
     turkey: () => box('#FFF1D6', ['#D9603B', '#F2A65A', '#F5C531', '#F2A65A', '#D9603B'].map((c, i) => `<ellipse cx="50" cy="34" rx="9" ry="24" fill="${c}" ${sw(2.5)} transform="rotate(${-60 + i * 30} 50 58)"/>`).join('') +
       `<ellipse cx="50" cy="64" rx="20" ry="18" fill="#8A5A2B" ${sw(3)}/><circle cx="50" cy="44" r="10" fill="#A0703F" ${sw(2.5)}/><path d="M48 46 L56 48 L48 51 Z" fill="#F5C531" ${sw(1.5)}/><path d="M47 50 Q45 58 49 58" fill="#E63946" ${sw(1.5)}/><circle cx="47" cy="42" r="1.8" fill="${INK}"/>`),
-    candy: () => box('#FDEEF3', `<path d="M30 50 L12 36 L14 64 Z M70 50 L88 36 L86 64 Z" fill="#7FC4D8" ${sw(3)}/><ellipse cx="50" cy="50" rx="22" ry="17" fill="#EC8FB3" ${sw(3)}/><path d="M38 40 Q50 50 40 62 M52 34 Q64 48 54 66" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>`),
+    candy: () => window.VOCAB_BOX ? VOCAB_BOX('糖果', '#FDEEF3') : box('#FDEEF3', `<path d="M30 50 L12 36 L14 64 Z M70 50 L88 36 L86 64 Z" fill="#7FC4D8" ${sw(3)}/><ellipse cx="50" cy="50" rx="22" ry="17" fill="#EC8FB3" ${sw(3)}/><path d="M38 40 Q50 50 40 62 M52 34 Q64 48 54 66" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>`),
     lookmoon: () => box('#2E3A66', `<circle cx="66" cy="32" r="18" fill="#FFE27A" ${sw(3)}/><circle cx="24" cy="20" r="1.8" fill="#FFF6D6"/><circle cx="44" cy="12" r="1.8" fill="#FFF6D6"/><circle cx="88" cy="62" r="1.8" fill="#FFF6D6"/>` +
       `<path d="M14 100 Q16 78 34 78 Q52 78 54 100 Z" fill="#7FC4D8" ${sw(3)}/>` + head(34, 66, 14, '#2E2838', true) + `<path d="M40 52 L52 42" stroke="#FFF6D6" stroke-width="2" stroke-dasharray="2 4"/>`),
     lantern: () => box('#2E3A66', `<path d="M20 14 Q50 8 66 22" fill="none" stroke="#8A5A2B" stroke-width="4" stroke-linecap="round"/>` + `<circle cx="56" cy="60" r="30" fill="#F5C531" opacity=".25"/>` + lantern(56, 58, .95) +
       `<path d="M66 22 L56 18" stroke="#8A5A2B" stroke-width="3"/>`),
     reunion: () => box('#FFF1D6', head(24, 46, 12, '#2E2838') + head(42, 36, 12, '#8A5A2B') + head(60, 36, 11, '#2E2838') + head(78, 46, 12, '#B7BCC4') +
       `<ellipse cx="50" cy="72" rx="40" ry="16" fill="#C98A4A" ${sw(3)}/>` + mooncake(36, 70, 8) + mooncake(62, 70, 8)),
-    carve: () => box('#EFEAF8', `<ellipse cx="50" cy="58" rx="32" ry="26" fill="#F28C3A" ${sw(3)}/><path d="M50 32 L53 20" ${sw(4)}/><path d="M36 50 l6 -8 l6 8 Z M52 50 l6 -8 l6 8 Z" fill="${INK}"/><path d="M34 62 Q50 76 66 62 Q50 68 34 62 Z" fill="${INK}"/>`),
+    carve: () => window.VOCAB_BOX ? VOCAB_BOX('南瓜灯', '#EFEAF8') : box('#EFEAF8', `<ellipse cx="50" cy="58" rx="32" ry="26" fill="#F28C3A" ${sw(3)}/><path d="M50 32 L53 20" ${sw(4)}/><path d="M36 50 l6 -8 l6 8 Z M52 50 l6 -8 l6 8 Z" fill="${INK}"/><path d="M34 62 Q50 76 66 62 Q50 68 34 62 Z" fill="${INK}"/>`),
     trickortreat: () => box('#EFEAF8', `<path d="M30 40 L70 40 L74 88 L26 88 Z" fill="#C98A4A" ${sw(3)}/><path d="M30 40 L34 46 L40 40 L46 46 L52 40 L58 46 L64 40 L70 46" fill="none" ${sw(2)}/>` +
       `<circle cx="40" cy="34" r="8" fill="#EC8FB3" ${sw(2.5)}/><circle cx="56" cy="30" r="8" fill="#7FC4D8" ${sw(2.5)}/><circle cx="64" cy="38" r="6" fill="#F5C531" ${sw(2.5)}/><text x="50" y="74" text-anchor="middle" font-family="Arial" font-weight="700" font-size="18" fill="${INK}">?</text>`),
     cal815: () => calendar('#E63946', '8 / 15', `<circle cx="50" cy="76" r="8" fill="#FFE27A" ${sw(2)}/>`),

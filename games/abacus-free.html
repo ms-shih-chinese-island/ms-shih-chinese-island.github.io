@@ -17,13 +17,19 @@ body.game { background: #FFF8E1; }
 .readout .num { font: 700 64px/1.1 var(--f-latin); }
 .readout .ruby .py { font-size: 19px; } .readout .ruby .zh { font-size: 44px; }
 .readout .hiddenNote { font-size: 20px; color: var(--muted); align-self: center; }
-.abBox { width: 100%; max-width: 860px; }
+.abBox { width: 100%; max-width: min(860px, calc((100vh - 250px) * 1.55)); }
 .btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 .big { display: flex; flex-direction: column; align-items: center; cursor: pointer; font: 700 17px var(--f-latin); color: var(--ink);
   border: 3px solid var(--ink); border-radius: 16px; padding: 6px 26px 8px; background: var(--card); box-shadow: 0 4px 0 var(--ink); }
 .big .ruby .py { font-size: 14px; } .big .ruby .zh { font-size: 28px; }
 .big[aria-pressed="true"] { background: #FFF1C7; }
 .big:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--ink); }
+/* 宽而矮的屏幕（Chromebook）：数字和按钮在左边，算盘在右边 */
+@media (min-width: 1000px) and (max-height: 900px) {
+  .stage { max-width: 1250px; display: grid; grid-template-columns: minmax(300px, 380px) auto; grid-template-areas: "readout ab" "btns ab"; align-items: start; justify-content: center; column-gap: 24px; }
+  .readout { grid-area: readout; } .btns { grid-area: btns; }
+  .abBox { grid-area: ab; width: calc((100vh - 175px) * 1.55); max-width: 860px; }
+}
 </style>
 </head>
 <body class="game">

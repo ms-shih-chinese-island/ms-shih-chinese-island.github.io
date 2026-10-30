@@ -25,6 +25,13 @@ body.game { background: #EFEAF8; }
 .guest .dropSlot { width: 100%; }
 .guest .enName { font-size: 17px; font-weight: 700; color: var(--night-ink); margin-top: -4px; }
 .guest.done { border-color: var(--me-ink); background: var(--me-soft); }
+/* 比较矮的屏幕（Chromebook）：十个小朋友排成一排 */
+@media (min-width: 900px) and (max-height: 720px) {
+  .banner { padding: 18px 10px 6px; margin-bottom: 8px; } .banner .ruby .py { font-size: 14px; } .banner .ruby .zh { font-size: 26px; } .banner .en { font-size: 14px; }
+  .party { grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 8px; margin-bottom: 8px; }
+  .guest { padding: 4px; gap: 3px; } .guest .art { width: 76px; height: 76px; } .guest .enName { font-size: 14px; }
+  .guest .dropSlot { min-height: 56px; }
+}
 </style>
 </head>
 <body class="game">
@@ -126,7 +133,7 @@ Promise.all([Shih.loadUnit(), Shih.loadArt()]).then(([UNIT, ART]) => {
         if (done === total) {
           const ms = timer.stop();
           winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
-          setTimeout(() => { winMsg.hidden = false; }, 900);
+          setTimeout(() => { winMsg.hidden = false; }, 400);
         }
         return true;
       }

@@ -216,6 +216,7 @@
     const tryDrop = (card, slot) => {
       if (!slot) return;
       if (!opts.accept(card, slot)) { card.classList.add('shake'); setTimeout(() => card.classList.remove('shake'), 400); }
+      else if (slot.classList.contains('filled') && !opts.noCoin) S.coin(1, slot);
     };
     function down(e) {
       const card = e.currentTarget;
@@ -263,13 +264,106 @@
     };
   };
 
+
+  // ---- 金币：记在这台电脑上（localStorage 'shih:coins'），更新网站也不会不见 ----
+  //   答对一题 / 配对一组 / 填对一格：+1
+  //   一回合做完：+5；整回合都没有错：再 +5
+  //   老师：按住金币 3 秒可以归零
+  // 自己画的金币（emoji 的金币在 Chromebook 上看起来是银色的）
+  S.coinSVG = '<svg class="coinIc" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17" fill="#F5C531" stroke="#2B2B2B" stroke-width="3"/><circle cx="20" cy="20" r="11.5" fill="none" stroke="#D99A1E" stroke-width="2.5"/><path d="M20 12.5 L22.2 17.4 L27.5 17.9 L23.5 21.4 L24.7 26.6 L20 23.9 L15.3 26.6 L16.5 21.4 L12.5 17.9 L17.8 17.4 Z" fill="#FFF3C2" stroke="#D99A1E" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+  S.coins = () => +S.get('coins', 0) || 0;
+  let coinPill = null, missed = false, roundStart = Date.now(), coinsAtStart = +S.get('coins', 0) || 0;
+  function paintCoins(bump) {
+    if (!coinPill) return;
+    coinPill.querySelector('b').textContent = S.coins();
+    if (bump) { coinPill.classList.remove('bump'); void coinPill.offsetWidth; coinPill.classList.add('bump'); }
+  }
+  // 一个小金币从 el 飞到上面的金币
+  function flyCoin(el) {
+    if (!coinPill || !el || !el.getBoundingClientRect) return;
+    const a = el.getBoundingClientRect(), b = coinPill.getBoundingClientRect();
+    if (!a.width && !a.height) return;
+    const c = document.createElement('span');
+    c.className = 'flyCoin'; c.innerHTML = S.coinSVG;
+    c.style.left = (a.left + a.width / 2) + 'px'; c.style.top = (a.top + a.height / 2) + 'px';
+    document.body.appendChild(c);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      c.style.left = (b.left + 18) + 'px'; c.style.top = (b.top + b.height / 2) + 'px'; c.style.transform = 'translate(-50%, -50%) scale(.6)';
+    }));
+    setTimeout(() => c.remove(), 650);
+  }
+  S.coin = function (n, el) {
+    S.set('coins', S.coins() + (n || 1));
+    if (el) { flyCoin(el); setTimeout(() => paintCoins(true), 550); } else paintCoins(true);
+  };
+  // 答错了（这一回合就不是「全对」）
+  S.miss = () => { missed = true; };
+  function setupCoins() {
+    const controls = document.querySelector('.gameHead .controls');
+    if (!controls || coinPill || !document.getElementById('score')) return;   // 没有分数的页面（自由拨）不放金币
+    coinPill = document.createElement('span');
+    coinPill.className = 'pill coinPill';
+    coinPill.title = 'Coins';
+    coinPill.innerHTML = S.coinSVG + ' <b></b>';
+    controls.insertBefore(coinPill, controls.firstChild);
+    paintCoins(false);
+    // 老师：按住 3 秒归零
+    let t = 0;
+    const down = () => { t = setTimeout(() => { S.set('coins', 0); paintCoins(true); }, 3000); };
+    const up = () => clearTimeout(t);
+    coinPill.addEventListener('pointerdown', down);
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => coinPill.addEventListener(ev, up));
+    // 答错：有东西摇一摇（shake / wrong）就算错
+    new MutationObserver(ms => ms.forEach(m => {
+      const c = m.target.classList;
+      if (c && (c.contains('shake') || c.contains('wrong'))) missed = true;
+    })).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+    // 一回合做完：「太棒了」出现的时候给奖励
+    const win = document.getElementById('winMsg') || document.getElementById('win');
+    if (win) {
+      let wasHidden = win.hidden;
+      new MutationObserver(() => {
+        if (wasHidden && !win.hidden) {
+          const bonus = 5 + (missed ? 0 : 5);
+          S.coin(bonus);
+          let tag = win.querySelector('.coinBonus');
+          if (!tag) { tag = document.createElement('span'); tag.className = 'coinBonus'; (win.firstElementChild || win).appendChild(tag); }
+          tag.innerHTML = ` +${bonus} ` + S.coinSVG + (missed ? '' : ' ✨');
+          record();
+        }
+        wasHidden = win.hidden;
+      }).observe(win, { attributes: true, attributeFilter: ['hidden'] });
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setupCoins); else setupCoins();
+
+  // ---- 我的记录：玩完一回合，记在这台电脑上（最多留 300 笔），也送一份到老师的试算表 ----
+  function record() {
+    const game = location.pathname.split('/').pop().replace(/\.html$/, '');
+    const m = ((document.getElementById('score') || {}).textContent || '').match(/(\d+)\s*\/\s*(\d+)/);
+    const lv = document.querySelector('.level[aria-pressed="true"]');
+    const titleEl = document.querySelector('.gameTitle .zh') ? [...document.querySelectorAll('.gameTitle .ruby .zh')].map(x => x.textContent).join('') : '';
+    const row = {
+      game, unit: S.unitId(),
+      level: lv ? +lv.dataset.level || 0 : 0,
+      score: m ? +m[1] : 0, total: m ? +m[2] : 0,
+      sec: Math.max(0, Math.min(7200, Math.round((Date.now() - roundStart) / 1000))),
+      perfect: !missed,
+      coins: Math.max(0, S.coins() - coinsAtStart)
+    };
+    const list = S.get('records', []);
+    list.push(Object.assign({ t: Date.now(), title: titleEl || document.title }, row));
+    S.set('records', list.slice(-300));
+    if (window.ShihReport) window.ShihReport.round(row);
+  }
+
   // ---- 开始画面：游戏区先模糊，按 Start 才开始 ----
   S.startCover = function (area, onStart) {
     const cover = document.createElement('div');
     cover.className = 'startCover';
     cover.innerHTML = `<button type="button" class="startBtn"><span class="ruby">${S.ruby('开始', 'kāi shǐ')}</span><span>Start</span></button>`;
     area.appendChild(cover);
-    cover.querySelector('button').addEventListener('click', () => { area.classList.remove('waiting'); cover.hidden = true; onStart(); });
+    cover.querySelector('button').addEventListener('click', () => { area.classList.remove('waiting'); cover.hidden = true; missed = false; roundStart = Date.now(); coinsAtStart = S.coins(); onStart(); });
     return function wait() { area.classList.add('waiting'); cover.hidden = false; };
   };
 

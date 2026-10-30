@@ -202,7 +202,7 @@ Shih.loadUnit().then(UNIT => {
         if (busy) return;
         if (n !== q.n) { b.classList.remove('wrong'); void b.offsetWidth; b.classList.add('wrong'); return; }
         busy = true;
-        b.classList.add('right');
+        b.classList.add('right'); Shih.coin(1, b);
         Shih.speak(N.zh(n));
         const blank = document.getElementById('blank');
         if (blank) { blank.classList.add('got'); blank.innerHTML = N.ruby(n); }
@@ -250,10 +250,10 @@ Shih.loadUnit().then(UNIT => {
     if (qi === qs.length) {
       const ms = timer.stop();
       winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
-      setTimeout(() => { winMsg.hidden = false; }, 700);
+      setTimeout(() => { winMsg.hidden = false; }, 400);
       return;
     }
-    setTimeout(show, 1200);
+    setTimeout(show, 800);
   }
   function update() { scoreEl.textContent = `${qi} / ${qs.length}`; }
 

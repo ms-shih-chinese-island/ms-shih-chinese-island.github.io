@@ -4,7 +4,7 @@
    - 在地点（places）里加一个 { zh, py, en, x, y, color, games: [...] }
    - games 里每个游戏是：{ zh, py, en, note, href }
      href 写「玩法 + 单元资料夹」，例如：
-       'games/match.html?unit=family'   家人配对
+       'games/match.html?unit=family'   家人找一找
        'games/tree.html?unit=family'    家族树
        'games/board.html?unit=family'   大富翁
    - 每座岛有自己的地图。每个地点有一块牌子，x / y 是牌子在地图上的位置
@@ -21,22 +21,27 @@ window.ISLANDS = {
     places: [
       { id: 'family', zh: '家', py: 'jiā', en: 'Family', x: 765, y: 92, color: 'dad',
         games: [
+          { zh: '家人找一找', py: 'jiā rén zhǎo yi zhǎo', en: 'Family Find', note: 'Match Chinese and English, 4 levels', href: 'games/match.html?unit=family' },
           { zh: '家族树', py: 'jiā zú shù', en: 'Family Tree', note: 'Drag the words onto the tree, 4 levels', href: 'games/tree.html?unit=family' },
-          { zh: '家人配对', py: 'jiā rén pèi duì', en: 'Family Matching', note: 'Match Chinese and English, 4 levels', href: 'games/match.html?unit=family' },
           { zh: '家庭大富翁', py: 'jiā tíng dà fù wēng', en: 'Family Board Game', note: 'Roll the dice and ask 你有……吗？', href: 'games/board.html?unit=family' }
         ] },
       { id: 'school', zh: '学校', py: 'xué xiào', en: 'School', x: 265, y: 296, color: 'mom',
         games: [
-          { zh: '认字配对', py: 'rèn zì pèi duì', en: 'Pinyin Match', note: 'School words, 3 levels', href: 'games/match.html?unit=school' },
+          { zh: '认字对对碰', py: 'rèn zì duì duì pèng', en: 'Word Pairs', note: 'School words, 3 levels', href: 'games/match.html?unit=school' },
           { zh: '对话框', py: 'duì huà kuàng', en: 'Chat Bubbles', note: 'Fill in the chat, 3 levels', href: 'games/chat.html?unit=school' },
           { zh: '自我介绍', py: 'zì wǒ jiè shào', en: 'About Me', note: 'Read the card, build the sentences', href: 'games/intro.html?unit=school' }
+        ] },
+      { id: 'playground', zh: '操场', py: 'cāo chǎng', en: 'Playground', x: 420, y: 588, color: 'me',
+        games: [
+          { zh: '好朋友', py: 'hǎo péng yǒu', en: 'Best Friends', note: 'Look at the picture, finish the sentences', href: 'games/friends.html?unit=school' }
         ] },
       { zh: '卫生间', py: 'wèi shēng jiān', en: 'Restroom', x: 470, y: 140, labelOnly: true },
       { zh: '饮水机', py: 'yǐn shuǐ jī', en: 'Water Fountain', x: 414, y: 384, labelOnly: true },
       { id: 'hello', zh: '你好', py: 'nǐ hǎo', en: 'Hello', x: 193, y: 548, color: 'sea',
         games: [
-          { zh: '认字配对', py: 'rèn zì pèi duì', en: 'Pinyin Match', note: 'Greetings and feelings, 3 levels', href: 'games/match.html?unit=hello' },
-          { zh: '你好吗？', py: 'nǐ hǎo ma?', en: 'How Are You?', note: 'Look at the kid and answer, 3 levels', href: 'games/feel.html?unit=hello' }
+          { zh: '认字手牵手', py: 'rèn zì shǒu qiān shǒu', en: 'Hand in Hand', note: 'Greetings and feelings, 3 levels', href: 'games/match.html?unit=hello' },
+          { zh: '你好吗？', py: 'nǐ hǎo ma?', en: 'How Are You?', note: 'Look at the kid and answer, 3 levels', href: 'games/feel.html?unit=hello' },
+          { zh: '拼音小侦探', py: 'pīn yīn xiǎo zhēn tàn', en: 'Pinyin Detective', note: 'Look at the word, pick the right pinyin', href: 'games/detective.html?unit=hello' }
         ] },
       { id: 'numbers', zh: '数字', py: 'shù zì', en: 'Numbers', x: 872, y: 520, color: 'sun',
         games: [
@@ -57,7 +62,7 @@ window.ISLANDS = {
           { zh: '化妆舞会', py: 'huà zhuāng wǔ huì', en: 'Costume Party', note: '我要当＿＿ Drag each name to the costume', href: 'games/dressup.html?unit=halloween' },
           { zh: '我怕／我不怕', py: 'wǒ pà / wǒ bú pà', en: "I'm afraid / I'm not afraid", note: 'Build the sentence', href: 'games/afraid.html?unit=halloween' }
         ] },
-      { id: 'moon', zh: '中秋节', py: 'zhōng qiū jié', en: 'Moon Festival', x: 1010, y: 470, color: 'sun',
+      { id: 'moon', zh: '中秋节', py: 'zhōng qiū jié', en: 'Moon Festival', x: 950, y: 480, color: 'sun',
         games: [
           { zh: '四格故事', py: 'sì gé gù shì', en: 'Story Panels', note: 'Put the story in order, then fill in the bubbles', href: 'games/story.html?unit=moon' },
           { zh: '中秋小知识', py: 'zhōng qiū xiǎo zhī shi', en: 'Moon Festival Quiz', note: 'Read the question, pick the answer', href: 'games/quiz.html?unit=moon' }

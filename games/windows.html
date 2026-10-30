@@ -47,6 +47,11 @@ body.game { background: #EFEAF8; }
 .ans.right { background: var(--me-done); border-color: var(--me-ink); box-shadow: 0 4px 0 var(--me-ink); }
 .ans.wrong { animation: shake .35s; border-color: var(--bad); }
 .idle { text-align: center; color: var(--muted); font-size: 18px; margin: auto 0; }
+/* 比较矮的屏幕（Chromebook）：房子照画面的高度缩放 */
+@media (min-width: 900px) and (max-height: 720px) {
+  .house { max-width: min(560px, calc((100vh - 235px) * 440 / 420)); }
+  .panel { min-height: 0; padding: 12px; gap: 10px; }
+}
 </style>
 </head>
 <body class="game">
@@ -189,18 +194,18 @@ Promise.all([Shih.loadUnit(), Shih.loadArt()]).then(([UNIT, ART]) => {
     b.addEventListener('click', () => {
       if (!active) return;
       if (!correct) { b.classList.remove('wrong'); void b.offsetWidth; b.classList.add('wrong'); return; }
-      b.classList.add('right'); onRight();
+      b.classList.add('right'); Shih.coin(1, b); onRight();
       const w = active; w.done = true; w.el.classList.remove('active');
       // close the window again after a moment, so only one window is open at a time
-      setTimeout(() => { w.el.classList.remove('open'); w.el.classList.add('done'); w.el.textContent = '✓'; w.el.setAttribute('aria-label', 'Window done'); }, 900);
+      setTimeout(() => { w.el.classList.remove('open'); w.el.classList.add('done'); w.el.textContent = '✓'; w.el.setAttribute('aria-label', 'Window done'); }, 600);
       done++; update();
       answers.querySelectorAll('.ans').forEach(x => x.disabled = true);
       active = null;
       if (done === wins.length) {
         const ms = timer.stop();
         winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
-        setTimeout(() => { winMsg.hidden = false; idle(); }, 900);
-      } else setTimeout(idle, 1100);
+        setTimeout(() => { winMsg.hidden = false; idle(); }, 400);
+      } else setTimeout(idle, 700);
     });
     return b;
   }

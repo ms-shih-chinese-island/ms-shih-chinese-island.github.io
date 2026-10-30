@@ -20,17 +20,43 @@ body.game { background: #E6F4F8; }
 .fact { display: flex; align-items: center; gap: 10px; background: #F3FAFC; border: 2px solid #BFE3EE; border-radius: 12px; padding: 6px 10px; font: 700 18px var(--f-latin); }
 .fact .ppl { font-size: 15px; letter-spacing: -2px; white-space: nowrap; }
 .fact .ic { font-size: 22px; width: 28px; text-align: center; }
+.fact .ic.adj { width: 34px; height: 34px; } .fact .ic.adj svg { width: 100%; height: 100%; display: block; }
 .fact .lab { color: var(--muted); font-weight: 400; font-size: 15px; margin-left: auto; }
 .fact .mini { width: 38px; height: 38px; } .fact .mini svg { width: 100%; height: 100%; }
 .lines { background: var(--card); border: 3px solid var(--ink); border-radius: 22px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
 .line { display: flex; flex-direction: column; gap: 0; }
 .line .s { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 4px; }
-.line .s .ruby .py { font-size: 14px; } .line .s .ruby .zh { font-size: 28px; }
+.line .s .ruby .py { font-size: 12px; } .line .s .ruby .zh { font-size: 24px; }
 .line .en { font-size: 14px; color: var(--muted); }
-.line .dropSlot { min-width: 96px; min-height: 58px; border-color: #7FC4D8; background: #F3FAFC; }
+.line .dropSlot { min-width: 64px; min-height: 52px; padding: 2px 6px; border-color: #7FC4D8; background: #F3FAFC; }
 .line .dropSlot.filled { border-color: var(--me); background: var(--me-done); }
-.nameTxt { font: 700 26px var(--f-latin); padding: 0 4px; }
+.nameTxt { font: 700 22px var(--f-latin); padding: 0 4px; }
+.line .s .gap { width: 10px; }
+.line .s { row-gap: 6px; }
 .bank .wcard .zh { font-size: 26px; }
+/* 宽而矮的屏幕（Chromebook）：资料卡｜句子｜字卡 三栏 */
+@media (min-width: 1200px) and (max-height: 900px) {
+  .stage { max-width: 1400px; grid-template-columns: 250px minmax(0, 1fr); }
+  .stage > div:last-child { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 12px; align-items: start; }
+  .stage > div:last-child .bank { margin-top: 0 !important; }
+}
+/* 比较矮的屏幕（Chromebook）：资料卡和句子都排紧一点 */
+@media (max-height: 900px) {
+  .card { padding: 8px; gap: 4px; } .card .pic { width: 96px; } .card .full { font-size: 20px; }
+  .facts { gap: 3px; } .fact { padding: 2px 8px; font-size: 15px; } .fact .lab { font-size: 13px; } .fact .ic.adj { width: 26px; height: 26px; } .fact .mini { width: 28px; height: 28px; }
+  .lines { padding: 8px 12px; gap: 4px; } .line .dropSlot { min-height: 46px; } .line .en { font-size: 12px; }
+}
+/* 字卡小一点，排成三行就放得下 */
+.bank { display: block; }
+.bank .cards { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; margin: 0 auto; }
+.bank .pad { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; padding-bottom: 8px; margin-bottom: 8px; border-bottom: 2px dashed var(--line); }
+.bank .wcard.digit { min-width: 44px; background: #E3F0FB; }
+.line .dropSlot.partial { border-style: solid; background: #fff; }
+.bank { gap: 7px; padding: 10px; }
+.bank .wcard { min-width: 0; min-height: 0; padding: 3px 9px 5px; border-radius: 10px; }
+.bank .wcard .zh { font-size: 22px; } .bank .wcard .py { font-size: 12px; }
+.bank .nameTxt { font-size: 20px; padding: 6px 2px; }
+@media (orientation: landscape) and (max-height: 720px) { .bank { gap: 5px; padding: 6px; } .bank .wcard { padding: 2px 6px 3px; } .bank .wcard .zh { font-size: 18px; } .bank .wcard .py { font-size: 10px; } .bank .nameTxt { font-size: 16px; padding: 4px 1px; } }
 </style>
 </head>
 <body class="game">
@@ -61,6 +87,7 @@ body.game { background: #E6F4F8; }
 
 <script src="../shared/common.js"></script>
 <script src="../shared/kids.js"></script>
+<script src="../shared/adj.js"></script>
 <script>
 Shih.islandBar();
 Shih.loadUnit().then(UNIT => {
@@ -80,8 +107,15 @@ Shih.loadUnit().then(UNIT => {
   const NUM = { 3: ['三', 'sān'], 4: ['四', 'sì'], 5: ['五', 'wǔ'], 6: ['六', 'liù'], 7: ['七', 'qī'], 8: ['八', 'bā'], 9: ['九', 'jiǔ'], 10: ['十', 'shí'] };
 
   // 字卡：{ id, zh, py } 或英文名字 { id, name }
-  const numCard = n => ({ id: 'n' + n, zh: NUM[n][0], py: NUM[n][1] });
+  const numCard = n => { const z = zhNum(n); return { id: 'n' + n, zh: z[0], py: z[1], num: true }; };   // 1 到 31 都可以；用一到十的数字卡拼出来
   const nameCard = s => ({ id: 'w' + s, name: s });
+  // 生日：几月几日（数字 1 到 31 的中文和拼音）
+  const D1 = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九'], P1 = ['', 'yī', 'èr', 'sān', 'sì', 'wǔ', 'liù', 'qī', 'bā', 'jiǔ'];
+  const zhNum = n => n < 10 ? [D1[n], P1[n]] : [(n >= 20 ? D1[Math.floor(n / 10)] : '') + '十' + D1[n % 10], ((n >= 20 ? P1[Math.floor(n / 10)] + ' ' : '') + 'shí' + (n % 10 ? ' ' + P1[n % 10] : ''))];
+  const MONTH = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  // 我学习＿＿：中文（没有干扰卡）
+  const SUBJ = { zh: { id: 's中文', zh: '中文', py: 'zhōng wén' }, en: { id: 's英文', zh: '英文', py: 'yīng wén' } };
   const HAIR = { true: { id: 'long', zh: '长', py: 'cháng' }, false: { id: 'short', zh: '短', py: 'duǎn' } };
 
   let order = shuffle(ART.people), oi = 0, total = 0, done = 0;
@@ -91,6 +125,7 @@ Shih.loadUnit().then(UNIT => {
     const age = pick([7, 8, 9, 10]);
     const grade = age <= 8 ? 3 : age === 10 ? 4 : pick([3, 4]);
     const fam = pick([3, 4, 5, 6]);   // 家里 3 到 6 个人（年龄是 7 到 10，数字才不会重复）
+    const bm = 1 + Math.floor(Math.random() * 12), bd = 1 + Math.floor(Math.random() * DAYS[bm - 1]);
     const friend = pick(ART.people.filter(x => x !== p));
     const other = pick(ART.people.filter(x => x !== p && x !== friend));
     // 个性：从单元的形容词里挑一个（「漂亮」只给女生），再挑一个当错的卡
@@ -99,61 +134,97 @@ Shih.loadUnit().then(UNIT => {
     const adjCard = w => ({ id: 'a' + w.zh, zh: w.zh, py: w.py });
     // 每一句：前面的字、空格的答案、后面的字、英文（{x} 先是 ___，填对了才换成答案）
     const L = [
+      // 第一行：我叫＿＿。我姓＿＿。
       { pre: ['我叫', 'wǒ jiào'], ans: nameCard(p.first), post: ['。', ''], en: 'My name is {x}.', x: p.first },
-      { pre: ['我姓', 'wǒ xìng'], ans: nameCard(p.last), post: ['。', ''], en: 'My last name is {x}.', x: p.last },
+      { join: true, pre: ['我姓', 'wǒ xìng'], ans: nameCard(p.last), post: ['。', ''], en: 'My last name is {x}.', x: p.last },
+      // 第二行：我学习＿＿。我上＿＿年级。
+      { pre: ['我学习', 'wǒ xué xí'], ans: SUBJ.zh, post: ['。', ''], en: 'I study {x}.', x: 'Chinese' },
+      { join: true, pre: ['我上', 'wǒ shàng'], ans: numCard(grade), post: ['年级。', 'nián jí'], en: "I'm in grade {x}.", x: grade },
+      // 第三行：我＿＿岁。我的生日是＿＿月＿＿日。（数字用上面一到十的数字卡拼）
       { pre: ['我', 'wǒ'], ans: numCard(age), post: ['岁。', 'suì'], en: "I'm {x} years old.", x: age },
-      { pre: ['我上', 'wǒ shàng'], ans: numCard(grade), post: ['年级。', 'nián jí'], en: "I'm in grade {x}.", x: grade },
+      { join: true, pre: ['我的生日是', 'wǒ de shēng rì shì'], ans: numCard(bm), post: ['月', 'yuè'], en: 'My birthday is {x}', x: MONTH[bm - 1] },
+      { join: true, tight: true, pre: ['', ''], ans: numCard(bd), post: ['日。', 'rì'], en: '{x}.', x: bd },
+      // 第四行：我的家有＿＿个人。
       { pre: ['我的家有', 'wǒ de jiā yǒu'], ans: numCard(fam), post: ['个人。', 'gè rén'], en: 'There are {x} people in my family.', x: fam },
-      { pre: ['我有', 'wǒ yǒu'], ans: HAIR[p.long], post: ['发。', 'fà'], en: 'I have {x} hair.', x: p.long ? 'long' : 'short' },
-      { pre: ['我很', 'wǒ hěn'], ans: adjCard(adj), post: ['。', ''], en: "I'm {x}.", x: adj.en },
+      // 第五行：我有＿＿发。我很＿＿。
+      { pre: ['我有', 'wǒ yǒu'], ans: HAIR[p.long], post: ['发。', 'fǎ'], en: 'I have {x} hair.', x: p.long ? 'long' : 'short' },
+      { join: true, pre: ['我很', 'wǒ hěn'], ans: adjCard(adj), post: ['。', ''], en: "I'm {x}.", x: adj.en },
+      // 最后：我的好朋友叫＿＿。
       { pre: ['我的好朋友叫', 'wǒ de hǎo péng yǒu jiào'], ans: nameCard(friend.first), post: ['。', ''], en: 'My best friend is {x}.', x: friend.first }
     ];
     // 容易搞混的卡：别人的姓、别人的名字、差一的数字、相反的头发
-    const extra = [adjCard(adjWrong), nameCard(other.last), nameCard(other.first), HAIR[!p.long],
-      numCard(age === 10 ? 9 : age + 1), numCard(grade === 3 ? 4 : 3), numCard(fam === 6 ? 5 : fam + 1)];
+    const extra = [adjCard(adjWrong), nameCard(other.last), nameCard(other.first), HAIR[!p.long]];
     const seen = new Set(L.map(x => x.ans.id));
     const extras = extra.filter(x => !seen.has(x.id) && !seen.has(x.id) && seen.add(x.id));
-    return { p, grade, age, fam, friend, adj, L, extras };
+    return { p, grade, age, fam, friend, adj, L, extras, bm, bd };
   }
 
   function show(k) {
-    const { p, grade, age, fam, friend, adj, L, extras } = k;
+    const { p, grade, age, fam, friend, adj, L, extras, bm, bd } = k;
     cardEl.innerHTML = `<div class="pic">${ART.kid(p, 'good')}</div><span class="full">${Shih.esc(p.first)} ${Shih.esc(p.last)}</span>` +
       `<div class="facts">` +
-      `<div class="fact"><span class="ic">🎂</span>${age}<span class="lab">years old</span></div>` +
+      `<div class="fact"><span class="ic">📚</span>Chinese<span class="lab">I study…</span></div>` +
       `<div class="fact"><span class="ic">🏫</span>Grade ${grade}<span class="lab">grade</span></div>` +
+      `<div class="fact"><span class="ic">🎂</span>${age}<span class="lab">years old</span></div>` +
+      `<div class="fact"><span class="ic">🎈</span>${MONTH[bm - 1]} ${bd}<span class="lab">birthday</span></div>` +
       `<div class="fact"><span class="ic">🏠</span><span class="ppl">${'👤'.repeat(fam)}</span>${fam}<span class="lab">family</span></div>` +
       `<div class="fact"><span class="ic">💇</span>${p.long ? 'long hair' : 'short hair'}<span class="lab">hair</span></div>` +
-      `<div class="fact"><span class="ic">${adj.icon || '⭐'}</span>${Shih.esc(adj.en)}<span class="lab">I am…</span></div>` +
-      `<div class="fact"><span class="ic">❤️</span><span class="mini">${ART.kid(friend, 'good')}</span>${Shih.esc(friend.first)}<span class="lab">best friend</span></div>` +
+      `<div class="fact"><span class="ic adj">${(window.ADJ_ICON && ADJ_ICON(adj.zh)) || adj.icon || '⭐'}</span>${Shih.esc(adj.en)}<span class="lab">I am…</span></div>` +
+      `<div class="fact"><span class="ic adj">${window.FRIEND_ICON ? FRIEND_ICON() : '🧩'}</span><span class="mini">${ART.kid(friend, 'good')}</span>${Shih.esc(friend.first)}<span class="lab">best friend</span></div>` +
       `</div>`;
-    linesEl.innerHTML = L.map((x, i) =>
-      `<div class="line"><div class="s"><span class="ruby">${Shih.rubyText(x.pre[0], x.pre[1])}</span>` +
-      `<span class="dropSlot" data-i="${i}"></span>` +
-      `<span class="ruby">${Shih.rubyText(x.post[0], x.post[1])}</span></div><span class="en" data-en="${i}">${Shih.esc(x.en.replace('{x}', '___'))}</span></div>`).join('');
-    bank.innerHTML = '';
-    const cards = shuffle(L.map(x => x.ans).concat(extras)).map(c => {
+    // 有 join 的句子跟前一句放同一行
+    const rows = [];
+    L.forEach((x, i) => { if (x.join && rows.length) rows[rows.length - 1].push(i); else rows.push([i]); });
+    linesEl.innerHTML = rows.map(r =>
+      `<div class="line"><div class="s">` + r.map(i => { const x = L[i];
+        return (x.tight ? '' : '<span class="gap"></span>') + (x.pre[0] ? `<span class="ruby">${Shih.rubyText(x.pre[0], x.pre[1])}</span>` : '') + `<span class="dropSlot" data-i="${i}"></span><span class="ruby">${Shih.rubyText(x.post[0], x.post[1])}</span>`; }).join('').replace(/^<span class="gap"><\/span>/, '') +
+      `</div><span class="en">` + r.map(i => `<span data-en="${i}">${Shih.esc(L[i].en.replace('{x}', '___'))}</span>`).join(' ') + `</span></div>`).join('');
+    // 同一类的字卡排在一起（名字、数字、生日、头发、形容词），每一类里面的顺序是乱的
+    const ORDER = 'wndsha';
+    const kindOf = c => c.name ? 'w' : c.id === 'long' || c.id === 'short' ? 'h' : c.id[0];
+    // 上面一排：一到十的数字卡，可以一直重复用（二十一 = 二 + 十 + 一）
+    // 下面：其他的字卡，用过就没了
+    bank.innerHTML = '<div class="pad" id="pad"></div><div class="cards" id="cards"></div>';
+    const padBox = document.getElementById('pad'), cardsBox = document.getElementById('cards');
+    const make = (c, box, reuse) => {
       const el = document.createElement('div');
-      el.className = 'wcard'; el.dataset.id = c.id;
+      el.className = 'wcard' + (reuse ? ' digit' : ''); el.dataset.id = c.id;
+      if (reuse) el.dataset.digit = c.zh;
       el.innerHTML = c.name ? `<span class="nameTxt">${Shih.esc(c.name)}</span>` : `<span class="ruby">${Shih.ruby(c.zh, c.py)}</span>`;
-      bank.appendChild(el);
+      box.appendChild(el);
       return el;
-    });
+    };
+    const digits = Array.from({ length: 10 }, (_, k) => make({ id: 'k' + (k + 1), zh: zhNum(k + 1)[0], py: zhNum(k + 1)[1] }, padBox, true));
+    const sorted = shuffle(L.map(x => x.ans).filter(a => !a.num).concat(extras)).sort((a, b) => ORDER.indexOf(kindOf(a)) - ORDER.indexOf(kindOf(b)));
+    const cards = digits.concat(sorted.map(c => make(c, cardsBox, false)));
+    balance();
     const dnd = Shih.dragCards(cards, {
       slots: () => [...linesEl.querySelectorAll('.dropSlot:not(.filled)')],
       accept(card, slot) {
         const x = L[+slot.dataset.i];
-        if (card.dataset.id !== x.ans.id) return false;
-        card.classList.add('used');
+        if (x.ans.num) {
+          // 数字格：一张一张放进去，要照顺序（例如二十一：先二、再十、再一）
+          if (!card.dataset.digit) return false;
+          const next = (slot.dataset.cur || '') + card.dataset.digit;
+          if (!x.ans.zh.startsWith(next)) return false;
+          slot.dataset.cur = next;
+          const syl = x.ans.py.split(' ').slice(0, Array.from(next).length).join(' ');
+          slot.innerHTML = `<span class="ruby">${Shih.ruby(next, syl)}</span>`;
+          if (next !== x.ans.zh) { slot.classList.add('partial'); return true; }
+          slot.classList.remove('partial');
+        } else {
+          if (card.dataset.id !== x.ans.id) return false;
+          card.classList.add('used');
+          slot.innerHTML = card.innerHTML;
+        }
         slot.classList.add('filled');
-        slot.innerHTML = card.innerHTML;
         linesEl.querySelector(`[data-en="${slot.dataset.i}"]`).textContent = x.en.replace('{x}', x.x);   // 填对了才出现完整的英文
         if (x.ans.zh) Shih.speak(x.pre[0] + x.ans.zh + x.post[0]);   // 英文名字不念
         done++; update();
         if (done === total) {
           const ms = timer.stop();
           winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
-          setTimeout(() => { winMsg.hidden = false; }, 700);
+          setTimeout(() => { winMsg.hidden = false; }, 400);
         }
         return true;
       }
@@ -161,6 +232,23 @@ Shih.loadUnit().then(UNIT => {
     linesEl.querySelectorAll('.dropSlot').forEach(s => s.addEventListener('click', () => dnd.tapSlot(s)));
     total = L.length; done = 0; update();
   }
+  // 下面的字卡排成两行，每一行差不多一样长（不会最后一行空空的）
+  function balance() {
+    const box = document.getElementById('cards');
+    if (!box) return;
+    box.style.maxWidth = '';
+    const cs = [...box.children], full = box.clientWidth;
+    const ROWS = 2;   // 数字一排，其他的字卡两排
+    const rows = () => new Set(cs.map(c => c.offsetTop)).size;
+    if (rows() <= 1) return;
+    const total = cs.reduce((t, c) => t + c.offsetWidth + 7, 0);
+    let w = Math.ceil(total / ROWS);
+    box.style.maxWidth = w + 'px';
+    while (rows() > ROWS && w < full) { w += 12; box.style.maxWidth = w + 'px'; }
+  }
+  let balT = 0;
+  addEventListener('resize', () => { clearTimeout(balT); balT = setTimeout(balance, 150); });
+  if (document.fonts) document.fonts.ready.then(balance);
   function update() { scoreEl.textContent = `${done} / ${total}`; }
 
   const wait = Shih.startCover(document.getElementById('playArea'), () => { if (timerOn()) timer.start(); });

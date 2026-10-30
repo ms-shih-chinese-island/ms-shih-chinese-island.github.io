@@ -16,8 +16,9 @@
 window.UNIT = {};
 UNIT.levelIcon = 'bag';
 UNIT.matchMode = 'pinyin';     // 认字配对：拼音 + 英文 ↔ 中文字
-UNIT.matchTitle = { zh: '认字配对', py: 'rèn zì pèi duì', en: 'Pinyin Match' };
+UNIT.matchTitle = { zh: '认字对对碰', py: 'rèn zì duì duì pèng', en: 'Word Pairs' };
 UNIT.matchMax = 12;            // 每次最多配几组；字比较多的时候，每次随机挑
+UNIT.matchPics = true;         // 拼音那边放图（有图的字才有），可以用按钮关掉
 
 UNIT.levels = [
   { note: '' },
@@ -46,8 +47,8 @@ UNIT.words = [
   { zh: '我姓',     py: 'wǒ xìng',       en: 'my last name is',  side: 'mom', level: 3 },
   { zh: '好朋友',   py: 'hǎo péng yǒu',  en: 'best friend',      side: 'mom', level: 3 },
   { zh: '家',       py: 'jiā',           en: 'family, home',     side: 'mom', level: 3 },
-  { zh: '长发',     py: 'cháng fà',      en: 'long hair',        side: 'mom', level: 3 },
-  { zh: '短发',     py: 'duǎn fà',       en: 'short hair',       side: 'mom', level: 3 },
+  { zh: '长发',     py: 'cháng fǎ',      en: 'long hair',        side: 'mom', level: 3 },
+  { zh: '短发',     py: 'duǎn fǎ',       en: 'short hair',       side: 'mom', level: 3 },
   // 形容词（四年级）
   { zh: '聪明',     py: 'cōng míng',     en: 'smart',            side: 'mom', level: 3, adj: true, icon: '💡' },
   { zh: '勇敢',     py: 'yǒng gǎn',      en: 'brave',            side: 'mom', level: 3, adj: true, icon: '🦸' },
@@ -65,3 +66,15 @@ UNIT.chat = { title: { zh: '对话框', py: 'duì huà kuàng', en: 'Chat Bubble
 
 /* 自我介绍（四年级的 project） */
 UNIT.intro = { title: { zh: '自我介绍', py: 'zì wǒ jiè shào', en: 'About Me' } };
+
+/* 好朋友（操场）：看图，完成句子
+     我叫＿＿。我很＿＿。
+     我的好朋友叫＿＿。…很＿＿。
+   名字卡 = 2 张对的 + wrongNames 张别人的名字；形容词卡 = 2 张对的 + wrongAdj 张不对的（形容词就是上面 adj: true 的字）
+   漂亮只会给女生 */
+UNIT.friends = {
+  title: { zh: '好朋友', py: 'hǎo péng yǒu', en: 'Best Friends' },
+  rounds: 4,          // 一回合几题
+  wrongAdj: 3,        // 不对的形容词卡几张
+  wrongNames: 2       // 不对的名字卡几张（名字卡一共 = 2 张对的 + 这几张）
+};

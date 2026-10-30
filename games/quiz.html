@@ -52,6 +52,7 @@ body.game { background: #FFF6D6; }
 
 <script src="../shared/common.js"></script>
 <script src="../shared/shih.js"></script>
+<script src="../shared/vocab.js"></script>
 <script>
 Shih.islandBar();
 Promise.all([Shih.loadUnit(), Shih.loadArt()]).then(([UNIT, ART]) => {
@@ -89,7 +90,7 @@ Promise.all([Shih.loadUnit(), Shih.loadArt()]).then(([UNIT, ART]) => {
       const o = opts[+b.dataset.k];
       if (o !== right) { b.classList.add('wrong'); b.disabled = true; missed = true; return; }
       busy = true;
-      b.classList.add('right');
+      b.classList.add('right'); Shih.coin(1, b);
       quiz.querySelectorAll('.ans').forEach(x => { x.disabled = true; });
       if (o.zh) Shih.speak(o.zh);
       if (!missed) firstTry++;
@@ -99,8 +100,8 @@ Promise.all([Shih.loadUnit(), Shih.loadArt()]).then(([UNIT, ART]) => {
         const ms = timer.stop();
         winScore.textContent = `${firstTry} / ${Q.questions.length} on the first try.`;
         winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
-        setTimeout(() => { winMsg.hidden = false; }, 900);
-      } else setTimeout(show, 1500);
+        setTimeout(() => { winMsg.hidden = false; }, 400);
+      } else setTimeout(show, 900);
     }));
   }
 

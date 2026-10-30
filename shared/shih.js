@@ -19,8 +19,11 @@ window.SHIH_AVATAR = function (opts) {
     `<path d="M${sx} ${sy} L${hx} ${hy}" stroke="${INK}" stroke-width="15" stroke-linecap="round"/>` +
     `<path d="M${sx} ${sy} L${hx} ${hy}" stroke="${SKIN}" stroke-width="9" stroke-linecap="round"/>` +
     `<circle cx="${hx}" cy="${hy}" r="8" fill="${SKIN}" ${sw(3)}/>`;
-  g += arm(122, 142, 136, 170);
-  if (wave) {
+  const hold = opts.hold;   // 'star'：两手在前面拿着一张金色星星贴纸（跟岛上其他大人一样的姿势）
+  if (hold) g += arm(78, 144, 86, 172) + arm(122, 144, 114, 172);
+  else g += arm(122, 142, 136, 170);
+  if (hold) {}
+  else if (wave) {
     g += arm(78, 144, 44, 118);
     g += `<path d="M28 104 Q23 112 27 120 M20 100 Q13 112 19 124" fill="none" stroke="${INK}" stroke-width="2.5" stroke-linecap="round" opacity=".55"/>`;
   } else g += arm(78, 142, 64, 170);
@@ -28,6 +31,12 @@ window.SHIH_AVATAR = function (opts) {
   g += `<rect x="92" y="112" width="16" height="16" fill="${SKIN}" ${sw(3)}/>`;
   g += `<path d="M72 140 Q74 126 90 124 L110 124 Q126 126 128 140 L128 184 Q100 190 72 184 Z" fill="${TEE}" ${sw()}/>`;
   g += `<path d="M90 124 Q100 132 110 124" fill="none" stroke="${TEE2}" stroke-width="3"/>`;
+  if (hold) {
+    // 袖子、手，和手上的星星贴纸
+    g += `<path d="M80 146 L86 168 M120 146 L114 168" stroke="${INK}" stroke-width="15" stroke-linecap="round"/><path d="M80 146 L86 168 M120 146 L114 168" stroke="${TEE}" stroke-width="9" stroke-linecap="round"/>`;
+    g += `<circle cx="86" cy="172" r="8" fill="${SKIN}" ${sw(3)}/><circle cx="114" cy="172" r="8" fill="${SKIN}" ${sw(3)}/>`;
+    g += `<circle cx="100" cy="166" r="18" fill="#FFFFFF" ${sw(3)}/><path d="M100 152 L104 161 L114 162 L106 168 L109 178 L100 172 L91 178 L94 168 L86 162 L96 161 Z" fill="#F5C531" ${sw(2.5)}/>`;
+  }
   // neck and head: a round face
   g += `<circle cx="100" cy="80" r="42" fill="${SKIN}" ${sw()}/>`;
   // face: simple, like the island kids

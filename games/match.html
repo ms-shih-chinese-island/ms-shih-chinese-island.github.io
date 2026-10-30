@@ -12,26 +12,25 @@
 /* 配对玩法：中文在左、英文在右，点一个再点它的配对。用法：match.html?unit=family
    单元里写 UNIT.matchMode = 'pinyin' 的话，就变成「认字配对」：右边是拼音 + 英文，左边的中文没有拼音 */
 :root { --en: #5B9BD5; --en-deep: #3B78B5; --en-soft: #E3F0FB; --zh: #E9B949; --zh-deep: #C4932A; --zh-soft: #FFF6D6; }
-.board { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.board { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; max-width: 1200px; margin: 0 auto; }
 .col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.grid { display: grid; grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr)); gap: 8px; }
-.board.c2 .tile { font-size: 20px; } .board.c2 .tile .zh { font-size: 28px; }
-.board.c3 .tile { font-size: 17px; line-height: 1.15; padding: 4px 8px; height: 68px; min-height: 0; } .board.c3 .tile .zh { font-size: 25px; } .board.c3 .tile .py { font-size: 15px; }
-.board.c3 .tile.done::after { width: 22px; height: 22px; font-size: 13px; line-height: 22px; right: 5px; top: 5px; transform: none; }
+/* 方形的格子：每边最多 4 × 3 格（以后可以在格子里放图） */
+.grid { display: grid; grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); gap: 8px; }
 .col h2 { margin: 0 auto; height: 34px; line-height: 30px; padding: 0 18px; border-radius: 999px; font-size: 17px; letter-spacing: .06em; text-align: center; border: 2px solid; }
 .col.en h2 { background: var(--en-soft); border-color: var(--en); color: var(--en-deep); text-transform: uppercase; }
 .col.zh h2 { background: var(--zh-soft); border-color: var(--zh); color: var(--zh-deep); font-family: var(--f-zh); }
 .tile {
-  position: relative; width: 100%; min-height: 66px; height: 74px; border-radius: 14px; border: 3px solid var(--ink); background: var(--card);
-  box-shadow: 0 3px 0 var(--ink); cursor: pointer; padding: 6px 12px;
-  display: flex; align-items: center; justify-content: center; text-align: center;
-  font: 700 24px var(--f-latin); color: var(--ink); touch-action: manipulation;
-  transition: transform .08s, background .15s;
+  position: relative; width: 100%; aspect-ratio: 1 / 1; min-height: 0; border-radius: 14px; border: 3px solid var(--ink); background: var(--card);
+  box-shadow: 0 3px 0 var(--ink); cursor: pointer; padding: 6px;
+  display: flex; flex-direction: column; gap: 2px; align-items: center; justify-content: center; text-align: center;
+  font: 700 clamp(13px, 1.6vw, 20px) var(--f-latin); line-height: 1.15; color: var(--ink); touch-action: manipulation;
+  transition: transform .08s, background .15s; overflow: hidden; overflow-wrap: anywhere;
 }
 .tile:active { transform: translateY(2px); }
 .tile[data-side="L"] { background: var(--en-soft); border-color: var(--en); box-shadow: 0 4px 0 var(--en-deep); }
 .tile[data-side="R"] { background: var(--zh-soft); border-color: var(--zh); box-shadow: 0 4px 0 var(--zh-deep); }
-.tile .py { font-size: 17px; font-weight: 400; } .tile .zh { font-size: 30px; }
+.tile .py { font-size: .8em; font-weight: 400; } .tile .zh { font-size: 1.6em; }
+.tile .ruby { flex-wrap: wrap; justify-content: center; }
 .tile.picked { border-color: var(--pick); background: var(--pick-soft); box-shadow: 0 4px 0 var(--pick); outline: 3px solid var(--pick); outline-offset: 2px; }
 .tile.done { cursor: default; box-shadow: none; transform: none; color: var(--ink); }
 .tile.done.g-dad { border-color: var(--dad); background: var(--dad-done); }
@@ -39,18 +38,21 @@
 .tile.done.g-me { border-color: var(--me); background: var(--me-done); }
 .tile.done.g-night { border-color: var(--night); background: var(--night-done); }
 .tile.done.g-sea { border-color: #7FC4D8; background: #D6EEF5; }
-.tile .key { font: 700 26px var(--f-latin); color: var(--sea-ink); }
-.tile .enLine { font-size: 15px; font-weight: 400; color: var(--muted); }
-.pinyinMode .tile[data-side="L"] { flex-direction: column; gap: 0; line-height: 1.15; }
-.pinyinMode .tile { height: auto; min-height: 74px; }
-.pinyinMode .tile.done .ruby { gap: 1px; } .pinyinMode .tile.done .ruby .zh { font-size: 22px; } .pinyinMode .tile.done .ruby .py { font-size: 11px; }
-.pinyinMode .tile.done::after { width: 20px; height: 20px; font-size: 12px; line-height: 20px; right: 4px; top: 4px; transform: none; }
-.board.c3 .tile .key { font-size: 21px; } .board.c3 .tile .enLine { font-size: 13px; }
-.tile.done::after { content: "✓"; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; border-radius: 50%; background: #FFFFFF; color: var(--ink); font: 700 18px/30px var(--f-latin); }
+.tile .key { font: 700 1.3em var(--f-latin); color: var(--sea-ink); }
+.tile .enLine { font-size: .75em; font-weight: 400; color: var(--muted); }
+.tile .tpic { height: 2.9em; flex: none; display: flex; } .tile .tpic svg { height: 100%; width: auto; }
+.tile .tpic[hidden] { display: none; }
+.tile.done::after { content: "✓"; position: absolute; right: 5px; top: 5px; width: 22px; height: 22px; border-radius: 50%; background: #FFFFFF; color: var(--ink); font: 700 13px/22px var(--f-latin); }
 .tile.wrong { animation: shake .35s; border-color: var(--bad); }
 /* 配对成功：先变色，过一下就淡出，留下空格，其他格子不动 */
 .tile.gone { opacity: 0; visibility: hidden; transition: opacity .1s, visibility 0s .1s; }
-@media (max-width: 640px) { .board { gap: 10px; } .tile { font-size: 18px; } .tile .zh { font-size: 26px; } .tile .py { font-size: 14px; } }
+@media (max-width: 640px) { .board { gap: 10px; } .grid { gap: 6px; } }
+/* 手机横着拿：格子不要太高，整个版面放得进画面 */
+@media (orientation: landscape) and (max-height: 720px) { .board { max-width: calc((100vh - 40px) * 2.6); } }
+/* 比较矮的屏幕（Chromebook）：格子照画面的高度缩小 */
+@media (min-width: 900px) and (max-height: 720px) {
+  .board { max-width: calc((100vh - 240px) * 2.6); }
+}
 </style>
 </head>
 <body class="game">
@@ -61,6 +63,7 @@
       <span class="pill" id="timer">0:00</span>
       <button class="ctl" id="timerBtn" type="button"></button>
       <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="picBtn" type="button" hidden></button>
       <button class="ctl" id="enBtn" type="button" hidden></button>
       <button class="ctl" id="resetBtn" type="button">Mix up again</button>
     </div>
@@ -79,6 +82,8 @@
   </div>
 
 <script src="../shared/common.js"></script>
+<script src="../shared/kids.js"></script>
+<script src="../shared/adj.js"></script>
 <script>
 Shih.islandBar();
 Shih.loadUnit().then(UNIT => {
@@ -95,19 +100,39 @@ Shih.loadUnit().then(UNIT => {
   const winEl = document.getElementById('win'), winTime = document.getElementById('winTime');
   const timer = Shih.timer(timerEl);
   const PINYIN = UNIT.matchMode === 'pinyin';
-  let showEn = () => true;
+  let showEn = () => true, showPic = () => false, kidPic = null;
+  const refit = () => { if (typeof fitTiles === 'function') requestAnimationFrame(fitTiles); };
   if (PINYIN) {
     boardEl.classList.add('pinyinMode');
     document.getElementById('leftHead').textContent = 'Pinyin';
     document.getElementById('help').textContent = 'Tap the Chinese, then its pinyin.';
     const enBtn = document.getElementById('enBtn'); enBtn.hidden = false;
-    showEn = Shih.toggle(enBtn, 'matchEnglish', 'English on', 'English off', true, on => boardEl.querySelectorAll('.enLine').forEach(e => { e.hidden = !on; }));
+    showEn = Shih.toggle(enBtn, 'matchEnglish', 'English on', 'English off', true, on => { boardEl.querySelectorAll('.enLine').forEach(e => { e.hidden = !on; }); refit(); });
+    // 图：有图的字才有（心情的小朋友、早上／下午、形容词图示），可以关掉
+    if (UNIT.matchPics) {
+      const picBtn = document.getElementById('picBtn'); picBtn.hidden = false;
+      showPic = Shih.toggle(picBtn, 'matchPictures', '🖼 Pictures on', '🖼 Pictures off', true, on => { boardEl.querySelectorAll('.tpic').forEach(e => { e.hidden = !on; }); refit(); });
+    }
   }
   const timerOn = Shih.toggle(document.getElementById('timerBtn'), 'timer', '⏱ Timer on', '⏱ Timer off', true, on => { timerEl.hidden = !on; });
   Shih.soundButton(document.getElementById('soundBtn'));
 
   let level = Shih.startLevel('matchLevel', LEVELS.length);
   let PAIRS = [], picked = { L: null, R: null }, matched = 0;
+
+  // 每一回合最多几组（单元可以用 UNIT.matchMax 改）
+  const MAX = UNIT.matchMax || 12;
+  // 抽字：越新的字越容易抽到（这一级的新字 3 倍、上一级 2 倍、更早的 1 倍）。每次重抽都重新随机
+  function draw(pool, n, lv) {
+    const bag = pool.map(w => ({ w, wt: (w.level || 1) === lv ? 3 : (w.level || 1) === lv - 1 ? 2 : 1 }));
+    const out = [];
+    while (out.length < n && bag.length) {
+      let r = Math.random() * bag.reduce((t, x) => t + x.wt, 0), k = 0;
+      while (r >= bag[k].wt) { r -= bag[k].wt; k++; }
+      out.push(bag.splice(k, 1)[0].w);
+    }
+    return out;
+  }
 
   const paintLevels = Shih.levelButtons(document.getElementById('levels'), LEVELS, level,
     lv => WORDS.filter(w => (w.level || 1) <= lv).length,
@@ -120,6 +145,17 @@ Shih.loadUnit().then(UNIT => {
     if (/cousin/.test(t)) t = t.replace(/^(older|younger)\s+/, '$1<br>');
     return t.replace(/\s*\(/, '<br>(');
   }
+  // 这个字的图（没有图就不放）
+  function picOf(w) {
+    if (!UNIT.matchPics) return '';
+    let g = '';
+    if (w.feel && window.ART && ART.kid) g = ART.kid(kidPic, w.feel);
+    else if (w.zh === '早上好' && window.ART) g = ART.time('morning');
+    else if (w.zh === '下午好' && window.ART) g = ART.time('afternoon');
+    else if (w.zh === '你好！' && window.ART) g = ART.kid(kidPic, 'wave');
+    else if (w.adj && window.ADJ_ICON) g = ADJ_ICON(w.zh);
+    return g ? `<span class="tpic"${showPic() ? '' : ' hidden'}>${g}</span>` : '';
+  }
   function tile(side, i) {
     const w = PAIRS[i];
     const b = document.createElement('button');
@@ -128,7 +164,7 @@ Shih.loadUnit().then(UNIT => {
     b.dataset.side = side; b.dataset.i = i;
     if (PINYIN) {
       // 认字配对：有 key 的只配会变的那个字（拼音 w.key ↔ 中文 w.keyZh），中文那边不放拼音
-      if (side === 'L') b.innerHTML = `<span class="key">${Shih.esc(w.key || w.py)}</span><span class="enLine"${showEn() ? '' : ' hidden'}>${Shih.esc(w.keyEn || w.en)}</span>`;
+      if (side === 'L') b.innerHTML = picOf(w) + `<span class="key">${Shih.esc(w.key || w.py)}</span><span class="enLine"${showEn() ? '' : ' hidden'}>${Shih.esc(w.keyEn || w.en)}</span>`;
       else b.innerHTML = `<span class="zh" style="font-family:var(--f-zh)">${Shih.esc(w.keyZh || w.zh)}</span>`;
     } else if (side === 'L') b.innerHTML = enHTML(w.en); else b.innerHTML = `<span class="ruby">${Shih.ruby(w.zh, w.py)}</span>`;
     // 认字配对时，配对成功才念（不然听声音就能配）
@@ -139,11 +175,9 @@ Shih.loadUnit().then(UNIT => {
   const wait = Shih.startCover(document.getElementById('playArea'), () => { if (timerOn()) timer.start(); });
 
   function setup() {
-    PAIRS = WORDS.filter(w => (w.level || 1) <= level);
-    // 单元可以设 UNIT.matchMax：字太多时，每次随机挑这么多组来配
-    if (UNIT.matchMax && PAIRS.length > UNIT.matchMax) PAIRS = shuffle(PAIRS).slice(0, UNIT.matchMax);
-    const cols = PAIRS.length <= 6 ? 1 : PAIRS.length <= 12 ? 2 : 3;
-    boardEl.classList.remove('c1', 'c2', 'c3'); boardEl.classList.add('c' + cols);
+    PAIRS = draw(WORDS.filter(w => (w.level || 1) <= level), MAX, level);
+    if (window.ART && ART.people) kidPic = ART.people[Math.floor(Math.random() * ART.people.length)];   // 这一回合的心情图用同一个小朋友
+    const cols = PAIRS.length <= 6 ? 3 : 4;
     boardEl.style.setProperty('--cols', cols);
     paintLevels(level);
     left.innerHTML = ''; right.innerHTML = '';
@@ -151,8 +185,21 @@ Shih.loadUnit().then(UNIT => {
     shuffle(PAIRS.map((_, i) => i)).forEach(i => right.appendChild(tile('R', i)));
     picked = { L: null, R: null }; matched = 0;
     timer.reset(); winEl.hidden = true; update();
+    fitTiles();
     wait();
   }
+  // 字太长的格子，字体自动缩小，不会超出格子
+  function fitTiles() {
+    boardEl.querySelectorAll('.tile').forEach(t => {
+      t.style.fontSize = '';
+      let size = parseFloat(getComputedStyle(t).fontSize);
+      const inner = () => [...t.children].reduce((h, c) => h + c.offsetHeight, 0) + 12;
+      while (size > 9 && (inner() > t.clientHeight || t.scrollWidth > t.clientWidth)) { size -= 1; t.style.fontSize = size + 'px'; }
+    });
+  }
+  let fitT = 0;
+  addEventListener('resize', () => { clearTimeout(fitT); fitT = setTimeout(fitTiles, 150); });
+  if (document.fonts) document.fonts.ready.then(fitTiles);
   function update() { scoreEl.textContent = `${matched} / ${PAIRS.length}`; }
 
   function pick(b) {
@@ -168,7 +215,7 @@ Shih.loadUnit().then(UNIT => {
         [a, c].forEach(t => { t.classList.remove('picked'); t.classList.add('done'); t.disabled = true; });
         setTimeout(() => [a, c].forEach(t => t.classList.add('gone')), 200);
         if (PINYIN) { const w = PAIRS[+c.dataset.i]; Shih.speak(w.keyZh || w.zh); }   // 配对成功就念，不另外显示拼音
-        matched++; update();
+        Shih.coin(1, c); matched++; update();
         if (matched === PAIRS.length) {
           const ms = timer.stop();
           winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';

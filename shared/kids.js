@@ -47,7 +47,7 @@
   };
 
   const INK = '#2B2B2B', CHEEK = '#F4A7B9';
-  const SKIN = { light: '#FBDCC8', asian: '#F6D9B5', tan: '#C98E62' };
+  const SKIN = { light: '#FBDCC8', asian: '#F6D9B5', tan: '#C98E62', dark: '#8D5A3B' };
   const HAIR = { black: '#2E2A2A', brown: '#7A4B2A', blonde: '#E8C25A', red: '#C0602E', dark: '#4A3424' };
   const sw = 'stroke="' + INK + '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"';
 
@@ -151,7 +151,10 @@
       `<rect x="63" y="84" width="14" height="19" fill="${skin}" ${sw}/>` +
       `<circle cx="42" cy="64" r="6" fill="${skin}" ${sw}/><circle cx="98" cy="64" r="6" fill="${skin}" ${sw}/>` +
       `<circle cx="70" cy="62" r="28" fill="${skin}" ${sw}/>` + coldTint +
-      hairFront(p.hair, hc) + face(state) + tummy + props(state, skin) +
+      hairFront(p.hair, hc) + face(state) +
+      (p.lashes ? `<path d="M55 61 L52 58 M85 61 L88 58" ${sw}/>` : '') +   // 女生：小睫毛（自己做的角色才有）
+      (p.glasses ? `<g fill="none" ${sw}><circle cx="60" cy="64" r="8"/><circle cx="80" cy="64" r="8"/><path d="M68 64 L72 64 M52 63 L43 60 M88 63 L97 60"/></g>` : '') +
+      tummy + props(state, skin) +
       `</svg>`;
   }
 

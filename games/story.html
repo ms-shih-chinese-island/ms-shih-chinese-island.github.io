@@ -113,7 +113,7 @@ Promise.all([Shih.loadUnit(), Shih.loadArt()]).then(([UNIT, ART]) => {
         slot.classList.add('filled');
         slot.insertAdjacentHTML('beforeend', ART.panel(+slot.dataset.n));
         done++; update();
-        if (!slots.querySelector('.dropSlot:not(.filled)')) setTimeout(stepLines, 1000);
+        if (!slots.querySelector('.dropSlot:not(.filled)')) setTimeout(stepLines, 600);
         return true;
       }
     });
@@ -152,7 +152,7 @@ Promise.all([Shih.loadUnit(), Shih.loadArt()]).then(([UNIT, ART]) => {
         if (!story.querySelector('.dropSlot:not(.filled)')) {
           const ms = timer.stop();
           winTime.textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
-          setTimeout(() => { winMsg.hidden = false; winMsg.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 700);
+          setTimeout(() => { winMsg.hidden = false; winMsg.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 400);
         }
         return true;
       }

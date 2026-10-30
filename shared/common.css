@@ -139,3 +139,36 @@ svg.abacus .ab-en { font: 700 14px var(--f-latin); fill: var(--muted); }
 .op { display: inline-flex; align-items: center; justify-content: center; width: 1.25em; height: 1.25em; border-radius: 50%;
   font: 700 1em/1 var(--f-latin); color: #fff; flex: none; }
 .op.plus { background: #2F7A4D; } .op.minus { background: #D9572B; }
+
+/* 手机横着拿（画面很矮）：上面的标题和按钮缩小，留多一点空间给游戏 */
+@media (orientation: landscape) and (max-height: 720px) {
+  .islandBarWrap { padding-top: 4px; padding-bottom: 4px; margin-bottom: 6px; }
+  .islandBar .ruby { display: none; }
+  .islandBar .en { font-size: 13px; }
+  .gameHead { gap: 6px; margin-bottom: 6px; align-items: center; }
+  .gameTitle { gap: 8px; }
+  .gameTitle .ruby .py { font-size: 12px; } .gameTitle .ruby .zh { font-size: 24px; }
+  .gameTitle .en { font-size: 15px; padding-bottom: 2px; }
+  .controls { gap: 5px; }
+  .pill { font-size: 15px; padding: 3px 10px; }
+  button.ctl { font-size: 14px; padding: 5px 10px; border-radius: 10px; }
+  .placeBtn { font-size: 13px; padding: 2px 10px 4px; }
+  .placeBtn .ruby .py { font-size: 9px; } .placeBtn .ruby .zh { font-size: 15px; } .placeBtn .en { font-size: 13px; }
+  .levels { gap: 6px; margin-bottom: 6px; }
+  .level { padding: 3px 10px 3px 6px; font-size: 14px; }
+  .level svg { height: 40px; width: 22px; }
+  .level .lv-text small { font-size: 11px; }
+  .help { font-size: 14px; margin-bottom: 6px; }
+  .startCover { padding-top: 12px; }
+  .startBtn { padding: 8px 30px 10px; }
+  .startBtn .ruby .py { font-size: 15px; } .startBtn .ruby .zh { font-size: 34px; }
+}
+
+/* 金币 */
+.coinPill { display: inline-flex; align-items: center; gap: 2px; border-color: #E9B949; background: #FFF6D6; color: #8A5A2B; user-select: none; touch-action: none; }
+.coinPill.bump { animation: coinBump .35s ease-out; }
+@keyframes coinBump { 50% { transform: scale(1.25); } }
+.coinIc { width: 1.15em; height: 1.15em; display: inline-block; vertical-align: -0.2em; }
+.flyCoin .coinIc { width: 30px; height: 30px; }
+.flyCoin { position: fixed; z-index: 80; font-size: 26px; pointer-events: none; transform: translate(-50%, -50%); transition: left .5s ease-in, top .5s ease-in, transform .5s; }
+.coinBonus { color: #8A5A2B; white-space: nowrap; }
