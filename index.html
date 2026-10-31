@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="shared/gate.js"></script>
-<title>Ms. Shih's Island of Chinese Games</title>
+<title>Ms. Shih's Chinese Island</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
 <style>
@@ -34,6 +34,9 @@ body {
   padding: 16px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px));
 }
 .wrap { max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+/* 最下面：著作权和联络信箱 */
+.siteFoot { text-align: center; font-size: 14px; color: var(--muted); padding-top: 4px; }
+.siteFoot a { color: inherit; }
 .ruby { display: inline-flex; gap: 3px; align-items: flex-end; }
 .ruby > span { display: flex; flex-direction: column; align-items: center; }
 .ruby .py { line-height: 1.1; white-space: nowrap; }
@@ -302,7 +305,7 @@ table.rec tr:nth-child(even) td { background: #F6FAFB; }
   <header>
     <div class="brand">
       <span class="ruby" id="brandRuby"></span>
-      <span class="en" id="brandEn">Ms. Shih's Island of Chinese Games</span>
+      <span class="en" id="brandEn">Ms. Shih's Chinese Island</span>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       <span class="coins" id="coins" title="Coins"><svg class="coinIc" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17" fill="#F5C531" stroke="#2B2B2B" stroke-width="3"/><circle cx="20" cy="20" r="11.5" fill="none" stroke="#D99A1E" stroke-width="2.5"/><path d="M20 12.5 L22.2 17.4 L27.5 17.9 L23.5 21.4 L24.7 26.6 L20 23.9 L15.3 26.6 L16.5 21.4 L12.5 17.9 L17.8 17.4 Z" fill="#FFF3C2" stroke="#D99A1E" stroke-width="1.5" stroke-linejoin="round"/></svg> <b id="coinNum">0</b></span>
@@ -543,11 +546,12 @@ table.rec tr:nth-child(even) td { background: #F6FAFB; }
 </div>
 
   <div class="list" id="list" hidden></div>
+  <footer class="siteFoot">© 2026 Ms. Shih · <a href="mailto:msshih.chineseisland@gmail.com">msshih.chineseisland@gmail.com</a></footer>
 </div>
 
 <div id="home" hidden>
   <div class="homeCard" role="dialog" aria-modal="true" aria-label="Main menu">
-    <div class="homeTitle"><span class="ruby" id="homeBrand"></span><span class="en">Ms. Shih's Island of Chinese Games</span></div>
+    <div class="homeTitle"><span class="ruby" id="homeBrand"></span><span class="en">Ms. Shih's Chinese Island</span></div>
     <div class="stage" id="homeStage"></div>
     <div id="homeRight"></div>
   </div>

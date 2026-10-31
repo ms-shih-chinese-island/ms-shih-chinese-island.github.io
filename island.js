@@ -17,7 +17,7 @@
    ===================================================================== */
 window.ISLANDS = {
   main: {
-    zh: '史老师的中文游戏岛', py: 'shǐ lǎo shī de zhōng wén yóu xì dǎo', en: "Ms. Shih's Island of Chinese Games", width: 1240,
+    zh: '史老师的中文岛', py: 'shǐ lǎo shī de zhōng wén dǎo', en: "Ms. Shih's Chinese Island", width: 1240,
     places: [
       { id: 'family', zh: '家', py: 'jiā', en: 'Family', x: 875, y: 132, color: 'dad',
         games: [

@@ -1,6 +1,8 @@
-# 史老师的中文游戏岛 Ms. Shih's Island of Chinese Games
+# 史老师的中文岛 Ms. Shih's Chinese Island
 
-网址：https://szufanshih.github.io/
+网址：https://ms-shih-chinese-island.github.io/
+
+联络：msshih.chineseisland@gmail.com　© 2026 Ms. Shih
 
 ## 资料夹是什么
 
