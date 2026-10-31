@@ -61,7 +61,7 @@ window.ISLANDS = {
     places: [
       { id: 'haunted-house', zh: '鬼屋', py: 'guǐ wū', en: 'Haunted House', x: 540, y: 110, color: 'night',
         games: [
-          { zh: '鬼屋窗户', py: 'guǐ wū chuāng hu', en: 'Haunted House Windows', note: '鬼屋里有什么？ Open a window and answer', href: 'games/windows.html?unit=halloween' },
+          { zh: '鬼屋窗户', py: 'guǐ wū chuāng hù', en: 'Haunted House Windows', note: '鬼屋里有什么？ Open a window and answer', href: 'games/windows.html?unit=halloween' },
           { zh: '我看到', py: 'wǒ kàn dào', en: 'I See', note: '你看到什么？ Drag the word into the sentence', href: 'games/spy.html?unit=halloween' },
           { zh: '化妆舞会', py: 'huà zhuāng wǔ huì', en: 'Costume Party', note: '我要当＿＿ Drag each name to the costume', href: 'games/dressup.html?unit=halloween' },
           { zh: '我怕／我不怕', py: 'wǒ pà / wǒ bú pà', en: "I'm afraid / I'm not afraid", note: 'Build the sentence', href: 'games/afraid.html?unit=halloween' }
@@ -69,7 +69,7 @@ window.ISLANDS = {
       { id: 'moon', zh: '中秋节', py: 'zhōng qiū jié', en: 'Moon Festival', x: 950, y: 480, color: 'sun',
         games: [
           { zh: '四格故事', py: 'sì gé gù shì', en: 'Story Panels', note: 'Put the story in order, then fill in the bubbles', href: 'games/story.html?unit=moon' },
-          { zh: '中秋小知识', py: 'zhōng qiū xiǎo zhī shi', en: 'Moon Festival Quiz', note: 'Read the question, pick the answer', href: 'games/quiz.html?unit=moon' }
+          { zh: '中秋小知识', py: 'zhōng qiū xiǎo zhī shì', en: 'Moon Festival Quiz', note: 'Read the question, pick the answer', href: 'games/quiz.html?unit=moon' }
         ] },
       { zh: '感恩节市场', py: 'gǎn ēn jié shì chǎng', en: 'Thanksgiving Market', x: 950, y: 170, color: 'dad', games: [] }
     ]

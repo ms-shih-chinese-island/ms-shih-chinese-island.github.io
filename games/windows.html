@@ -130,7 +130,7 @@ Promise.all([Shih.loadUnit(), Shih.loadArt()]).then(([UNIT, ART]) => {
 
   function idle() {
     active = null;
-    bubble.innerHTML = say(level && C.yesNoLevels.includes(level) ? { zh: '点一扇窗户。', py: 'diǎn yí shàn chuāng hu.', en: 'Tap a window.' } : C.openQ);
+    bubble.innerHTML = say(level && C.yesNoLevels.includes(level) ? { zh: '点一扇窗户。', py: 'diǎn yí shàn chuāng hù.', en: 'Tap a window.' } : C.openQ);
     pic.innerHTML = '';
     answers.className = 'answers';
     answers.innerHTML = `<p class="idle">Tap a window to open it.</p>`;

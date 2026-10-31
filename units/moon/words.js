@@ -38,7 +38,7 @@ UNIT.story = {
    题目照顺序出（后羿射下几个太阳要在后羿射下什么之后）
 */
 UNIT.quiz = {
-  title: { zh: '中秋小知识', py: 'zhōng qiū xiǎo zhī shi', en: 'Moon Festival Quiz' },
+  title: { zh: '中秋小知识', py: 'zhōng qiū xiǎo zhī shì', en: 'Moon Festival Quiz' },
   questions: [
     { q: 'What do people eat at the Moon Festival?',
       a: { pic: 'mooncake', zh: '吃月饼', py: 'chī yuè bǐng' },

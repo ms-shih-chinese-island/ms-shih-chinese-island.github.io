@@ -72,7 +72,7 @@ UNIT.levelIcon = 'ghost';      // 难度用几只鬼
 
 /* 1. 鬼屋窗户 */
 UNIT.windows = {
-  title: { zh: '鬼屋窗户', py: 'guǐ wū chuāng hu', en: 'Haunted House Windows' },
+  title: { zh: '鬼屋窗户', py: 'guǐ wū chuāng hù', en: 'Haunted House Windows' },
   count: 7,                     // 几扇窗户
   yesNoLevels: [1],             // 这些等级问是非题：鬼屋里有＿＿？是／不是
   // 是非题
