@@ -172,7 +172,7 @@
       const n = countOf ? countOf(k + 1) : null;
       const nC = window.ShihCoins ? ShihCoins.of(S.gameId(), S.unitId(), k + 1) : k + 1;   // 难度一律用金币表示（不给金币的就不放图）
       if (nC) b.dataset.coins = nC;
-      b.innerHTML = (nC ? `<span class="lvCoins" style="width:${nC === 4 ? 44 : Math.min(nC, 3) * 22}px" aria-label="${nC} coins">${S.coinSVG.repeat(nC)}</span>` : '') + `<span class="lv-text">Level ${k + 1}<small>${S.esc([L.note, n ? n + ' words' : ''].filter(Boolean).join(' · '))}</small></span>`;
+      b.innerHTML = (nC ? `<span class="lvCoins" style="width:${nC === 4 ? 44 : Math.min(nC, 3) * 22}px" aria-label="${nC} coins">${S.coinSVG.repeat(nC)}</span>` : '') + `<span class="lv-text">Level ${k + 1}${L.note ? `<small>${S.esc(L.note)}</small>` : ''}</span>`;
       b.addEventListener('click', () => onPick(k + 1));
       box.appendChild(b);
       return b;

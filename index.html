@@ -1026,12 +1026,10 @@ function paintHome() {
   homeRight.innerHTML = `<div class="homeBtns">` +
     hbtn('go', '🏝', '开始', 'kāi shǐ', 'Start') +
     hbtn('who', portrait(who()), '我的角色', 'wǒ de jué sè', 'My character') +
-    hbtn('rec', '⭐', '我的记录', 'wǒ de jì lù', 'My records') +
-    hbtn('all', '☰', '全部游戏', 'quán bù yóu xì', 'All games') + `</div>`;
+    hbtn('rec', '⭐', '我的记录', 'wǒ de jì lù', 'My records') + `</div>`;
   homeRight.querySelector('.go').addEventListener('click', () => hideHome());
   homeRight.querySelector('.who').addEventListener('click', openMaker);
   homeRight.querySelector('.rec').addEventListener('click', openRecords);
-  homeRight.querySelector('.all').addEventListener('click', () => { hideHome(); if (list.hidden) listBtn.click(); });
   homeRight.querySelector('.go').focus();
 }
 function showHome() { home.hidden = false; paintHome(); }
@@ -1069,7 +1067,7 @@ if (window.ShihReport) ShihReport.visit();
 
 // ---- 快闪活动：试算表选「开」，广场上才会冒出帐篷，「全部游戏」最上面也会出现 ----
 const FLASH = { zh: '快闪活动', py: 'kuài shǎn huó dòng', en: 'Pop-up Event', color: 'sun', x: 712, y: 536,
-  games: [{ zh: '抢答大挑战', py: 'qiǎng dá dà tiǎo zhàn', en: 'Jeopardy', note: 'Teams take turns. Pick a box, answer the question!', href: 'games/jeopardy.html' }] };
+  games: [{ zh: '抢答大挑战', py: 'qiǎng dá dà tiǎo zhàn', en: 'Jeopardy', note: 'Teams take turns. Pick a box and answer the question to win the points!', href: 'games/jeopardy.html' }] };
 if (window.ShihFlash) ShihFlash.isOn().then(on => {
   if (!on) return;
   document.getElementById('flashTent').style.display = '';

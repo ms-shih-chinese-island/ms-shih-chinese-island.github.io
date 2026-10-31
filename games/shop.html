@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>快手买一买 Quick Shopper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 快手买一买：东西从上面掉下来，下面的输送带从右往左送字卡，配对成功就买到一样。时间内把购物清单买齐就有金币。
+   字卡和东西各走各的（顺序打乱），可是输送带上的每张字卡，上面一定有一样同名的东西正在掉。
+   用法：shop.html?unit=thanksgiving（规则、生字、秒数都在 units/thanksgiving/words.js） */
+body.game { background: #FFF6E5; }
+/* 整个游戏区不要太宽：东西掉的范围窄一点，比较好点 */
+.shop { display: flex; flex-direction: column; gap: 10px; max-width: 760px; margin: 0 auto; }
+
+/* 购物清单 */
+.listBar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--card); border: 3px solid var(--ink); border-radius: 18px; padding: 8px 14px; }
+.listBar .head { display: flex; flex-direction: column; align-items: center; padding-right: 6px; }
+.listBar .head .ruby .py { font-size: 14px; } .listBar .head .ruby .zh { font-size: 24px; }
+.listBar .head .en { font-size: 13px; color: var(--muted); font-weight: 700; }
+.needs { display: flex; gap: 10px; flex-wrap: wrap; flex: 1; }
+.need { display: flex; align-items: center; gap: 8px; padding: 4px 12px 4px 6px; border: 2px solid var(--line); border-radius: 14px; background: #FFFBF2; transition: background .2s, border-color .2s; }
+.need svg { width: 52px; height: 52px; flex: none; }
+.need .boxes { display: flex; gap: 5px; }
+.need .box { width: 22px; height: 22px; border: 2.5px solid var(--ink); border-radius: 6px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; font: 700 15px/1 var(--f-latin); }
+.need .box.got { background: var(--me); }
+.need .box.got::after { content: "✓"; }
+.need.full { border-color: var(--me-ink); background: var(--me-done); }
+.need.bump { animation: bump .35s; }
+@keyframes bump { 50% { transform: scale(1.08); } }
+
+/* 掉东西的地方 */
+.field { position: relative; height: clamp(220px, 46vh, 430px); border: 4px solid var(--ink); border-radius: 20px; overflow: hidden; background: #FFF1D6; touch-action: manipulation; }
+.field svg.bg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.item {
+  position: absolute; top: 0; width: 15%; min-width: 60px; max-width: 108px; aspect-ratio: 1 / 1; padding: 4px;
+  background: none; border: 3px solid transparent; border-radius: 50%; cursor: pointer; will-change: transform;
+}
+.item svg { width: 100%; height: 100%; display: block; pointer-events: none; }
+.item.picked { border-color: var(--pick); background: rgba(255,255,255,.85); box-shadow: 0 0 0 4px rgba(122,91,199,.35); }
+.item.got { transition: opacity .3s, scale .3s; opacity: 0; scale: 1.4; pointer-events: none; }
+.item.landed { transition: opacity .35s; opacity: 0; pointer-events: none; }
+
+/* 下面的输送带：字卡从右边进来，一直往左走 */
+.tray {
+  position: relative; height: 104px; overflow: hidden; border: 4px solid var(--ink); border-radius: 18px;
+  background: repeating-linear-gradient(90deg, #6E726E 0 38px, #5E625E 38px 42px);
+  animation: belt 1.2s linear infinite paused;
+}
+.tray.run { animation-play-state: running; }
+@keyframes belt { to { background-position: -42px 0; } }
+.tcard {
+  position: absolute; left: 0; top: 10px; width: 15%; min-width: 82px; max-width: 116px; will-change: transform;
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 76px; padding: 4px 2px; border-radius: 12px; background: var(--card); color: var(--ink);
+  border: 3px solid var(--ink); box-shadow: 0 3px 0 var(--ink); cursor: pointer; font: inherit;
+}
+.tcard .ruby { gap: 2px; }
+.tcard .py { font-size: clamp(11px, 1.3vw, 15px); } .tcard .zh { font-size: clamp(18px, 2.4vw, 28px); }
+.tcard.picked { outline: 4px solid #F5C531; outline-offset: 1px; background: var(--pick-soft); }
+.tcard.gone { transition: opacity .25s; opacity: 0; pointer-events: none; }
+/* 配错：摇一摇（不用 shake 这个名字：配错不会扣掉金币） */
+.nope { animation: nope .35s; }
+.tcard.nope { border-color: var(--bad); }
+@keyframes nope { 0%,100% { translate: 0 } 25% { translate: -7px 0 } 75% { translate: 7px 0 } }
+
+.clock.low { color: var(--bad); border-color: var(--bad); }
+.endMsg { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; text-align: center; font-size: 22px; font-weight: 700; color: var(--dad-ink); background: var(--dad-soft); border: 2px solid var(--dad); border-radius: 14px; padding: 10px; margin-bottom: 10px; }
+.endMsg .ruby .py { font-size: 15px; } .endMsg .zh { font-size: 30px; }
+.endMsg button.ctl { border-color: var(--dad-ink); color: var(--dad-ink); }
+.win .ruby .py { font-size: 15px; }
+.win .en { font-size: 18px; }
+
+/* 手机横着拿 */
+@media (orientation: landscape) and (max-height: 720px) {
+  .field { height: clamp(160px, 40vh, 300px); }
+  .need svg { width: 38px; height: 38px; }
+  .need .box { width: 18px; height: 18px; font-size: 12px; }
+  .tray { height: 78px; }
+  .tcard { height: 58px; top: 6px; }
+}
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill clock" id="clock">0:30</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> <span class="en" id="winEn"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="endMsg" id="endMsg" hidden><span><span class="ruby" id="endRuby"></span> <span id="endEn"></span></span><button class="ctl" id="again2Btn" type="button">Try again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="shop">
+        <div class="listBar">
+          <div class="head"><span class="ruby" id="listRuby"></span><span class="en" id="listEn"></span></div>
+          <div class="needs" id="needs"></div>
+        </div>
+        <div class="field" id="field">
+          <svg class="bg" viewBox="0 0 1000 400" preserveAspectRatio="none" aria-hidden="true">
+            <rect width="1000" height="400" fill="#FFF1D6"/>
+            <g stroke="#2B2B2B" stroke-width="3">
+              <path d="M0 0 L1000 0 L1000 26 L0 26 Z" fill="#D9603B"/>
+            </g>
+            <g id="awning"></g>
+            <rect x="0" y="352" width="1000" height="48" fill="#C98A4A"/>
+            <path d="M0 352 L1000 352" stroke="#2B2B2B" stroke-width="4"/>
+            <path d="M0 372 L1000 372 M120 352 L120 400 M330 352 L330 400 M560 352 L560 400 M790 352 L790 400" stroke="#A86E36" stroke-width="3"/>
+          </svg>
+        </div>
+        <div class="tray" id="tray"></div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script>
+Shih.islandBar();
+Promise.all([Shih.loadUnit(), Shih.loadArt()]).then(([UNIT, ART]) => {
+  const C = UNIT.shop;
+  const LEVELS = UNIT.levels || [{ note: '' }];
+  const $ = id => document.getElementById(id);
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('listRuby').innerHTML = Shih.ruby(C.list.zh, C.list.py);
+  $('listEn').textContent = C.list.en;
+  $('winRuby').innerHTML = Shih.rubyText(C.done.zh, C.done.py);
+  $('winEn').textContent = C.done.en;
+  $('endRuby').innerHTML = Shih.ruby('时间到', 'shí jiān dào');
+  Shih.soundButton($('soundBtn'));
+
+  // 遮阳棚：红白条纹的波浪边
+  const aw = $('awning');
+  let a = '';
+  for (let x = 0, k = 0; x < 1000; x += 50, k++) a += `<path d="M${x} 24 L${x + 50} 24 L${x + 50} 30 Q${x + 25} 62 ${x} 30 Z" fill="${k % 2 ? '#FFFFFF' : '#D9603B'}" stroke="#2B2B2B" stroke-width="3"/>`;
+  aw.innerHTML = a;
+
+  const field = $('field'), tray = $('tray'), needsEl = $('needs');
+  const scoreEl = $('score'), clockEl = $('clock'), winMsg = $('winMsg'), endMsg = $('endMsg');
+  const has = w => ART && ART.items[w.zh];
+  const pool = lv => UNIT.words.filter(w => (w.level || 1) <= lv && has(w));
+  const exact = lv => UNIT.words.filter(w => (w.level || 1) === lv && has(w));
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const pickOne = a => a[Math.floor(Math.random() * a.length)];
+  const fmt = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+
+  let level = Shih.startLevel('shopLevel', LEVELS.length);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level,
+    lv => pool(lv).length, lv => { level = lv; Shih.set('shopLevel', lv); setup(); });
+
+  let need = [], items = [], cards = [], picked = null, playing = false, raf = 0, startT = 0, nextSpawn = 0, nextCard = 0, lastLanes = [];
+  const wait = Shih.startCover($('playArea'), start);
+
+  // ---- 购物清单：这一级的字随机挑 4 样，数量照 C.lists ----
+  function makeList() {
+    const counts = shuffle(C.lists[level - 1] || C.lists[C.lists.length - 1]);
+    const words = shuffle(pool(level)).slice(0, counts.length);
+    need = words.map((w, i) => ({ w, n: counts[i], got: 0 }));
+    needsEl.innerHTML = '';
+    need.forEach(N => {
+      const d = document.createElement('div');
+      d.className = 'need';
+      d.setAttribute('aria-label', `${N.w.en} × ${N.n}`);
+      d.innerHTML = ART.items[N.w.zh] + `<span class="boxes">${'<span class="box"></span>'.repeat(N.n)}</span>`;
+      needsEl.appendChild(d);
+      N.el = d;
+    });
+  }
+  const total = () => need.reduce((s, N) => s + N.n, 0);
+  const bought = () => need.reduce((s, N) => s + N.got, 0);
+  const paintScore = () => { scoreEl.textContent = `${bought()} / ${total()}`; };
+
+  // ---- 干扰品：Level 1 借下一级的东西（只掉图）；其他级用这一级不在清单上的字 ----
+  function noisePool() {
+    const from = C.noiseFrom && C.noiseFrom[level];
+    if (from) return { words: exact(from), card: false };
+    const onList = need.map(N => N.w.zh);
+    return { words: pool(level).filter(w => !onList.includes(w.zh)), card: true };
+  }
+
+  // ---- 掉一样东西 ----
+  function spawn(now) {
+    const NP = noisePool();
+    let w, card = true, noise = false;
+    if (NP.words.length && Math.random() < (C.noise || 0)) { w = pickOne(NP.words); card = NP.card; noise = true; }
+    else {
+      // 还没买够的东西优先（扣掉已经在掉的）
+      const left = need.filter(N => N.got + items.filter(it => !it.gone && it.w.zh === N.w.zh).length < N.n);
+      const open = need.filter(N => N.got < N.n);
+      w = pickOne(left.length ? left : open.length ? open : need).w;
+    }
+    // 位置：分成 5 条，避开刚刚用过的两条
+    const lanes = shuffle([0, 1, 2, 3, 4].filter(l => !lastLanes.includes(l)));
+    const lane = lanes[0];
+    lastLanes = [lane].concat(lastLanes).slice(0, 2);
+    const el = document.createElement('button');
+    el.type = 'button'; el.className = 'item';
+    el.setAttribute('aria-label', w.en);
+    el.innerHTML = ART.items[w.zh];
+    el.style.left = (3 + lane * 19) + '%';
+    field.appendChild(el);
+    const it = { w, el, born: now, noise, cardable: card, card: null, gone: false };
+    el.addEventListener('click', () => tapItem(it));
+    items.push(it);
+  }
+
+  // ---- 输送带：照自己的节奏送字卡 ----
+  // 每次从「正在掉、还没有字卡、还要一阵子才落地」的东西里随机挑一样，所以字卡的顺序跟东西的顺序对不上
+  function feedBelt(now) {
+    if (now < nextCard) return;
+    const W = tray.clientWidth;
+    const last = cards[cards.length - 1];
+    if (last && !last.gone) {                       // 跟前一张字卡要隔开，不会叠在一起
+      const x = W - (now - last.born) / (beltMs()) * (W + last.el.offsetWidth);
+      if (x > W - last.el.offsetWidth - 14) return;
+    }
+    const can = items.filter(it => !it.gone && it.cardable && !it.card && C.fall * 1000 - (now - it.born) > 2500);
+    if (!can.length) return;
+    const it = pickOne(can);
+    it.card = addCard(it.w, now);
+    nextCard = now + (C.cardEvery || C.every) * 1000 * (0.6 + Math.random() * 0.8);
+  }
+  const beltMs = () => (C.belt || C.fall) * 1000;
+
+  // 字卡：从输送带的右边进来，一直往左走
+  function addCard(w, now) {
+    const c = document.createElement('button');
+    c.type = 'button'; c.className = 'tcard';
+    c.innerHTML = `<span class="ruby">${Shih.ruby(w.zh, w.py)}</span>`;
+    c.style.transform = 'translateX(9999px)';
+    const card = { w, el: c, gone: false, born: now };
+    c.addEventListener('click', () => tapCard(card));
+    tray.appendChild(c);
+    cards.push(card);
+    return card;
+  }
+  function dropCard(card) {
+    card.gone = true;
+    card.el.classList.add('gone');
+    if (picked === card) picked = null;
+    setTimeout(() => card.el.remove(), 260);
+    cards = cards.filter(c => c !== card);
+  }
+  function dropItem(it, cls) {
+    it.gone = true;
+    it.el.classList.remove('picked');
+    it.el.classList.add(cls);
+    if (picked === it) picked = null;
+    setTimeout(() => it.el.remove(), 360);
+    items = items.filter(x => x !== it);
+  }
+
+  // ---- 点东西、点字卡：两个都点到就配对 ----
+  function select(x) {
+    if (picked) picked.el.classList.remove('picked');
+    picked = picked === x ? null : x;
+    if (picked) picked.el.classList.add('picked');
+  }
+  function tapItem(it) {
+    if (!playing || it.gone) return;
+    if (picked && picked.el.classList.contains('tcard')) match(it, picked); else select(it);
+  }
+  function tapCard(card) {
+    if (!playing || card.gone) return;
+    if (picked && picked.el.classList.contains('item')) match(picked, card); else select(card);
+  }
+  function match(it, card) {
+    const a = picked; picked = null; a.el.classList.remove('picked');
+    if (it.w.zh !== card.w.zh) {
+      [it.el, card.el].forEach(e => { e.classList.remove('nope'); void e.offsetWidth; e.classList.add('nope'); setTimeout(() => e.classList.remove('nope'), 400); });
+      return;
+    }
+    // 配对成功：东西和字卡一起消失
+    // 这张字卡如果不是这样东西自己的，换成那样东西的字卡留着（同一个字的字卡数量要跟掉着的东西一样）
+    // 这张字卡如果是别的同名东西的，就把这样东西自己的字卡换给它（每张字卡都有一样东西在掉）
+    const owner = items.find(x => x !== it && x.card === card);
+    if (owner) owner.card = it.card || null;
+    else if (it.card && it.card !== card) { const other = items.find(x => x !== it && !x.gone && x.cardable && !x.card && x.w.zh === it.w.zh); if (other) other.card = it.card; else dropCard(it.card); }
+    dropItem(it, 'got'); dropCard(card);
+    Shih.speak(it.w.zh);
+    const N = need.find(N => N.w.zh === it.w.zh);
+    if (N && N.got < N.n) {
+      N.got++;
+      const boxes = N.el.querySelectorAll('.box');
+      boxes[N.got - 1].classList.add('got');
+      if (N.got === N.n) N.el.classList.add('full');
+      N.el.classList.remove('bump'); void N.el.offsetWidth; N.el.classList.add('bump');
+      paintScore();
+      if (bought() === total()) finish(true);
+    }
+  }
+
+  // ---- 每一格画面 ----
+  function frame(now) {
+    if (!playing) return;
+    const left = Math.max(0, C.seconds - (now - startT) / 1000);
+    const s = Math.ceil(left);
+    clockEl.textContent = fmt(s);
+    clockEl.classList.toggle('low', s <= 5);
+    if (left <= 0) return finish(false);
+    if (now >= nextSpawn) { spawn(now); nextSpawn = now + C.every * 1000; }
+    feedBelt(now);
+    const H = field.clientHeight, ground = H * 352 / 400;
+    items.slice().forEach(it => {
+      if (it.gone) return;
+      const size = it.el.offsetHeight;
+      const p = (now - it.born) / (C.fall * 1000);
+      const y = -size + p * (ground - 2);          // 从画面上面外面开始，掉到地上
+      it.el.style.transform = `translateY(${y}px)`;
+      if (y + size >= ground) {
+        // 掉到地上：东西消失，它的字卡也拿走
+        if (it.card && !it.card.gone) dropCard(it.card);
+        dropItem(it, 'landed');
+      }
+    });
+    // 输送带：字卡从右往左走
+    const W = tray.clientWidth;
+    cards.slice().forEach(c => {
+      if (c.gone) return;
+      const cw = c.el.offsetWidth;
+      const p = (now - c.born) / beltMs();
+      const x = W - p * (W + cw);
+      c.el.style.transform = `translateX(${x}px)`;
+      if (x + cw <= 0) { items.forEach(it => { if (it.card === c) it.card = null; }); dropCard(c); }
+    });
+    raf = requestAnimationFrame(frame);
+  }
+
+  function clearAll() {
+    playing = false; cancelAnimationFrame(raf); picked = null;
+    items.forEach(it => it.el.remove()); items = [];
+    cards = []; tray.innerHTML = ''; tray.classList.remove('run');
+  }
+  function setup() {
+    paintLevels(level);
+    clearAll();
+    makeList(); paintScore();
+    clockEl.textContent = fmt(C.seconds); clockEl.classList.remove('low');
+    winMsg.hidden = true; endMsg.hidden = true;
+    wait();
+  }
+  function start() {
+    playing = true; lastLanes = [];
+    startT = performance.now(); nextSpawn = startT; nextCard = startT + 400; tray.classList.add('run');
+    raf = requestAnimationFrame(frame);
+  }
+  function finish(ok) {
+    if (!playing) return;
+    playing = false; cancelAnimationFrame(raf); tray.classList.remove('run');
+    setTimeout(() => {
+      clearAll();
+      if (ok) { winMsg.hidden = false; Shih.speak(C.done.zh); }
+      else { $('endEn').textContent = `Time's up! You bought ${bought()} of ${total()}. Try again!`; endMsg.hidden = false; }
+    }, ok ? 400 : 0);
+  }
+
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2Btn').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>
