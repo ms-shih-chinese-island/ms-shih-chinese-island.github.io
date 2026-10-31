@@ -86,7 +86,7 @@
    同一台电脑：两笔之间至少隔 5 秒，一天最多 200 笔。
    ===================================================================== */
 (function () {
-  const REPORT_URL = 'https://script.google.com/macros/s/AKfycbx21AtV2RhbjEqEk6YecGp2RzgJ8E3vbXcbOk7x2sfzcN-e2DANxgqfPQfsMELmoBVB/exec';
+  const REPORT_URL = 'https://script.google.com/macros/s/AKfycbx6dYuHysgRjq7enCJSOd8Q79mKm1l4j63_8OkqE9fqO5X7ANk7LyKPPbUjoB0BocO_/exec';
 
   const get = (k, d) => { try { const v = localStorage.getItem('shih:' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
   const set = (k, v) => { try { localStorage.setItem('shih:' + k, JSON.stringify(v)); } catch (e) {} };
