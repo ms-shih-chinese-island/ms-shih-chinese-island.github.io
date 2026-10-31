@@ -41,8 +41,8 @@
     const a = document.createElement('a');
     a.className = 'islandBar';
     a.href = '../';
-    a.innerHTML = `<span aria-hidden="true">🏝</span><span class="ruby">${S.ruby('史老师的中文游戏岛', 'shǐ lǎo shī de zhōng wén yóu xì dǎo')}</span>` +
-      `<span class="en">Ms. Shih's Island of Chinese Games</span><span class="back">← Back to the island</span>`;
+    a.innerHTML = `<span aria-hidden="true">🏝</span><span class="ruby">${S.ruby('史老师的中文岛', 'shǐ lǎo shī de zhōng wén dǎo')}</span>` +
+      `<span class="en">Ms. Shih's Chinese Island</span><span class="back">← Back to the island</span>`;
     const bar = document.createElement('div');
     bar.className = 'islandBarWrap';
     bar.appendChild(a);
