@@ -18,7 +18,7 @@ window.UNIT = {};
 /* 游戏名称 */
 UNIT.matchTitle = { zh: '万圣节配对', py: 'wàn shèng jié pèi duì', en: 'Halloween Matching' };
 
-/* 每一级冰淇淋的说明（按钮上的小字） */
+/* 每一级的说明（Level 按钮上的小字） */
 UNIT.levels = [
   { note: '' },
   { note: '' },

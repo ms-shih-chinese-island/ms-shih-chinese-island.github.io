@@ -1,6 +1,6 @@
 /* =====================================================================
    共用零件：所有游戏都用这一份
-   （拼音排版、岛的横条、读取单元生词、配音、计时器、冰淇淋难度、开始画面）
+   （拼音排版、岛的横条、读取单元生词、配音、计时器、金币、开始画面）
    一般不需要改这个档案。
    ===================================================================== */
 (function () {
@@ -138,14 +138,6 @@
     return T;
   };
 
-  // ---- 冰淇淋难度按钮 ----
-  const SCOOPS = ['#F7A8C4', '#A8E0C2', '#9B6B4E', '#FBE7A1', '#B9D3F5', '#F2B27A'];
-  S.iceCream = function (n) {
-    let g = '<path d="M7 34 L23 34 L15 55 Z" fill="#E8B46A" stroke="#8A5A2B" stroke-width="1.5" stroke-linejoin="round"/>' +
-            '<path d="M10 38 L19 45 M13 34 L21 41 M9 41 L16 50" stroke="#8A5A2B" stroke-width="1" fill="none"/>';
-    for (let k = 0; k < n; k++) g += `<circle cx="15" cy="${30 - k * 8.5}" r="8.5" fill="${SCOOPS[k % SCOOPS.length]}" stroke="#2B2B2B" stroke-width="1.5"/>`;
-    return `<svg viewBox="0 ${-6 - Math.max(0, n - 4) * 8.5} 30 ${62 + Math.max(0, n - 4) * 8.5}" aria-hidden="true">${g}</svg>`;
-  };
   // 几只鬼（鬼屋的难度）
   S.ghosts = function (n) {
     const one = (x, y) => `<g transform="translate(${x} ${y})"><path d="M0 22 L0 9 C0 -3 18 -3 18 9 L18 22 L14 19 L9 23 L4 19 Z" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="1.8" stroke-linejoin="round"/>` +

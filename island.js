@@ -21,8 +21,8 @@ window.ISLANDS = {
     places: [
       { id: 'family', zh: '家', py: 'jiā', en: 'Family', x: 875, y: 132, color: 'dad',
         games: [
-          { zh: '家人找一找', py: 'jiā rén zhǎo yi zhǎo', en: 'Family Find', note: 'Match Chinese and English, 4 levels', href: 'games/match.html?unit=family' },
-          { zh: '家族树', py: 'jiā zú shù', en: 'Family Tree', note: 'Drag the words onto the tree, 4 levels', href: 'games/tree.html?unit=family' },
+          { zh: '家人找一找', py: 'jiā rén zhǎo yi zhǎo', en: 'Family Find', note: 'Match Chinese and English, 3 levels', href: 'games/match.html?unit=family' },
+          { zh: '家族树', py: 'jiā zú shù', en: 'Family Tree', note: 'Drag the words onto the tree, 3 levels', href: 'games/tree.html?unit=family' },
           { zh: '家庭大富翁', py: 'jiā tíng dà fù wēng', en: 'Family Board Game', note: 'Roll the dice and ask 你有……吗？', href: 'games/board.html?unit=family' }
         ] },
       { id: 'school', zh: '学校', py: 'xué xiào', en: 'School', x: 410, y: 112, color: 'mom',

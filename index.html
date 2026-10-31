@@ -41,6 +41,8 @@ body {
 .ruby > span { display: flex; flex-direction: column; align-items: center; }
 .ruby .py { line-height: 1.1; white-space: nowrap; }
 .ruby .zh { font-family: var(--f-zh); font-weight: 700; line-height: 1.1; }
+/* 岛的名字：每个字一样宽，拼音比较长的字不会把字撑开 */
+#brandRuby, #homeBrand { display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
 
 header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .brand { display: flex; flex-direction: column; gap: 2px; }

@@ -32,7 +32,7 @@
       const a = [].concat(v);
       return [Math.min(...a), Math.max(...a)];
     },
-    // 一叠金币（Level 按钮上用，取代原本的冰淇淋）
+    // 一叠金币（Level 按钮上用）
     stack(n) {
       const g = Array.from({ length: n }, (_, i) => `<g transform="translate(16 ${54 - i * 17})"><ellipse cx="0" cy="3" rx="13" ry="6" fill="#D99A1E" stroke="#2B2B2B" stroke-width="2.5"/><ellipse cx="0" cy="0" rx="13" ry="6" fill="#F5C531" stroke="#2B2B2B" stroke-width="2.5"/><ellipse cx="0" cy="0" rx="7" ry="3" fill="none" stroke="#D99A1E" stroke-width="1.8"/></g>`).join('');
       return `<svg viewBox="0 0 32 66" aria-hidden="true">${g}</svg>`;
