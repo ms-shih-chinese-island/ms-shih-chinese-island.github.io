@@ -1,6 +1,7 @@
 /* =====================================================================
    感恩节的图：快手买一买里掉下来的东西（宽高 100）
    ART.items['火鸡'] … 名字要跟 words.js 的 zh 一模一样
+   ART.pic('南瓜糕')   市场算一算用：南瓜糕画成一整个派，其他的跟 items 一样
    画风：Q 版、平涂、粗黑线
    ===================================================================== */
 (function () {
@@ -105,5 +106,19 @@
       `<ellipse cx="80" cy="60" rx="5" ry="9" transform="rotate(30 80 60)" fill="#F5A04A"/>`)
   };
 
-  window.ART = { items };
+  // 一整个南瓜糕（市场算一算：数「几个南瓜糕」要用一整个，不是一片）
+  const whole = {
+    '南瓜糕': svg(
+      `<ellipse cx="50" cy="60" rx="42" ry="24" fill="#E3B26A" ${sw()}/>` +
+      `<path d="M8 56 L8 62 C8 76 92 76 92 62 L92 56" fill="#E3B26A" ${sw()}/>` +
+      `<ellipse cx="50" cy="56" rx="42" ry="24" fill="#E3B26A" ${sw()}/>` +
+      `<ellipse cx="50" cy="55" rx="34" ry="18" fill="#F28C3A" ${sw(3)}/>` +
+      Array.from({ length: 12 }, (_, i) => { const a = i * Math.PI / 6; return `<circle cx="${(50 + 38 * Math.cos(a)).toFixed(1)}" cy="${(56 + 21 * Math.sin(a)).toFixed(1)}" r="3" fill="#C98A4A"/>`; }).join('') +
+      `<path d="M36 50 C30 50 30 43 36 42 C36 36 46 34 48 40 C54 38 58 46 52 49 C54 53 50 55 46 53 C44 57 38 55 36 50 Z" fill="#FFFFFF" ${sw(2.5)}/>` +
+      `<path d="M62 60 L72 58 M58 64 L66 64" stroke="#E07A28" stroke-width="2.5" stroke-linecap="round"/>`)
+  };
+  // 画「几个」的时候用：有一整个的图就用一整个的，没有就用 items
+  const pic = zh => whole[zh] || items[zh];
+
+  window.ART = { items, whole, pic };
 })();

@@ -73,7 +73,8 @@ window.ISLANDS = {
         ] },
       { id: 'market', zh: '感恩节市场', py: 'gǎn ēn jié shì chǎng', en: 'Thanksgiving Market', x: 950, y: 170, color: 'dad',
         games: [
-          { zh: '快手买一买', py: 'kuài shǒu mǎi yi mǎi', en: 'Quick Shopper', note: 'Tap a falling food, then its word on the belt. Buy everything on your list!', href: 'games/shop.html?unit=thanksgiving' }
+          { zh: '快手买一买', py: 'kuài shǒu mǎi yi mǎi', en: 'Quick Shopper', note: 'Tap a falling food, then its word on the belt. Buy everything on your list!', href: 'games/shop.html?unit=thanksgiving' },
+          { zh: '市场算一算', py: 'shì chǎng suàn yi suàn', en: 'Market Math', note: 'Read the food words and do the math. Pick the right answer.', href: 'games/calc.html?unit=thanksgiving' }
         ] }
     ]
   }

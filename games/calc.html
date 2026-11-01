@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>市场算一算 Market Math</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 市场算一算：感恩节的食物＋数学。题目只有拼音和中文（英文只当说明），一定要读懂食物的字才答得出来。
+   题型：图形加减、你有几个？、价钱、是／不是、够不够钱。规则写在 units/thanksgiving/words.js 的 UNIT.calc。
+   用法：calc.html?unit=thanksgiving */
+body.game { background: #FFF6E5; }
+.card { max-width: 900px; margin: 0 auto; background: var(--card); border: 3px solid var(--ink); border-radius: 22px; padding: 18px 22px 22px; display: flex; flex-direction: column; gap: 22px; }
+/* 题目和选项中间隔开：留空间，再加一条虚线 */
+.answers { margin-top: 26px; padding-top: 32px; border-top: 2px dashed var(--line); }
+.top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.qnum { font-weight: 700; color: #8A5A2B; background: #FFF1C4; border: 2px solid #E9B949; border-radius: 999px; padding: 2px 12px; font-size: 16px; flex: none; }
+.hint { font: 700 18px var(--f-latin); color: var(--dad-ink); }
+
+/* 一句中文：拼音在上；$5、＋、＝ 这些符号跟中文字的底对齐 */
+.say { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center; gap: 4px 6px; }
+.say .ruby .py { font-size: 15px; } .say .ruby .zh { font-size: clamp(24px, 3.4vw, 34px); }
+.say .sym { font: 700 clamp(24px, 3.4vw, 34px) var(--f-latin); line-height: 1.1; padding: 0 2px; }
+.say .sym.en { font-size: clamp(18px, 2.2vw, 22px); color: var(--muted); padding-bottom: 4px; }
+.say .ask { color: var(--pick); }
+.say.small .ruby .zh, .say.small .sym { font-size: clamp(20px, 2.6vw, 26px); } .say.small .ruby .py { font-size: 13px; }
+.lines { display: flex; flex-direction: column; gap: 12px; }
+
+/* 价目表（只有字，没有图） */
+.prices { display: flex; flex-wrap: wrap; gap: 12px 28px; justify-content: center; margin-bottom: 10px; }
+/* 每个价钱是一张独立的价格牌，分得很清楚 */
+.prices .say { background: #FFFBF2; border: 2px solid #E3B26A; border-radius: 12px; padding: 4px 16px 6px; }
+.money { display: inline-block; background: #EAF6E8; border: 2px solid var(--me); border-radius: 12px; padding: 4px 12px; }
+
+/* 图形算式：一组一组的食物，中间是 ＋ － ＝ */
+/* 算式永远排成一行：东西多的时候图自动变小（--s 由程式算） */
+.eq { display: flex; flex-wrap: nowrap; align-items: center; justify-content: center; gap: 8px; }
+.grp { display: grid; grid-template-columns: repeat(var(--c, 3), var(--s, 54px)); gap: 3px; padding: 6px; background: #FFFBF2; border: 2px solid #E3B26A; border-radius: 14px; }
+.grp svg { width: var(--s, 54px); height: var(--s, 54px); display: block; }
+.basket svg { width: 54px; height: 54px; display: block; }
+.eqop { font: 700 40px var(--f-latin); color: var(--ink); }
+/* 混合图形加减：符号下面写英文，说明是加还是减 */
+.opbox { display: flex; flex-direction: column; align-items: center; line-height: 1; }
+.opbox .label { font: 700 15px var(--f-latin); color: var(--muted); margin-top: 2px; white-space: nowrap; }
+.card.roomy .answers { margin-top: 34px; }
+.eq .q { font: 700 44px var(--f-latin); color: var(--pick); }
+
+/* 篮子 */
+.basket { display: grid; grid-template-columns: repeat(6, 54px); gap: 6px; justify-content: center; margin: 0 auto; padding: 14px 18px 18px;
+  background: #FFF6E3; border: 4px solid #C98A4A; border-radius: 18px 18px 40px 40px; }   /* 浅色底，东西才好数 */
+
+.answers { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 14px; }
+.ans { font: inherit; color: inherit; cursor: pointer; background: #fff; border: 3px solid var(--ink); border-radius: 18px; box-shadow: 0 4px 0 var(--ink); padding: 10px 8px 12px;
+       display: flex; align-items: center; justify-content: center; min-height: 72px; transition: transform .1s; }
+.ans:hover { transform: translateY(-2px); }
+.ans .ruby .zh { font-size: clamp(22px, 3vw, 30px); } .ans .ruby .py { font-size: 15px; }
+.ans .num { font: 700 30px var(--f-latin); }
+.ans.right { background: var(--me-done); border-color: var(--me); box-shadow: 0 4px 0 var(--me); }
+.ans.wrong { opacity: .35; animation: shake .35s; cursor: default; }
+.ans:disabled { cursor: default; }
+.ans:disabled:hover { transform: none; }
+
+/* 比较矮的屏幕（Chromebook）：图小一点 */
+@media (max-height: 800px) {
+  .basket svg { width: 44px; height: 44px; }
+  .basket { grid-template-columns: repeat(6, 44px); padding: 10px 14px 14px; }
+  .card { gap: 16px; padding: 14px 18px 18px; } .ans { min-height: 60px; padding: 6px; }
+}
+@media (max-width: 640px) { .answers { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill" id="timer">0:00</span>
+      <button class="ctl" id="timerBtn" type="button"></button>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winScore"></span> <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="card" id="card"></div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/numbers.js"></script>
+<script>
+Shih.islandBar();
+Promise.all([Shih.loadUnit(), Shih.loadArt()]).then(([UNIT, ART]) => {
+  const C = UNIT.calc, N = window.ShihNum;
+  const LEVELS = UNIT.levels || [{ note: '' }];
+  const $ = id => document.getElementById(id);
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  const card = $('card'), scoreEl = $('score'), winMsg = $('winMsg');
+  const timerEl = $('timer'), timer = Shih.timer(timerEl);
+  const timerOn = Shih.toggle($('timerBtn'), 'timer', '⏱ Timer on', '⏱ Timer off', true, on => { timerEl.hidden = !on; });
+  Shih.soundButton($('soundBtn'));
+
+  const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+
+  let level = Shih.startLevel('calcLevel', LEVELS.length);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('calcLevel', lv); setup(); });
+  const L = () => C.levels[level - 1] || C.levels[C.levels.length - 1];
+
+  // ---- 字：会出「几个」的（量词是「个」）、只当干扰的 ----
+  const inLevel = w => (w.level || 1) <= level && ART.pic(w.zh);
+  const countable = () => UNIT.words.filter(w => inLevel(w) && w.mw === '个');
+  const decoys = () => UNIT.words.filter(w => inLevel(w) && w.mw && w.mw !== '个');
+
+  // ---- 中文：一句话 = 一串小块，每块是 [中文, 拼音]（拼音在上）或符号（$5、＋、＝、？） ----
+  // 数量是 2 的时候念「两」；「一个」的一念 yí（跟「不是」念 bú 一样，标变调）
+  const num = n => n === 2 ? [['两', 'liǎng']] : n === 1 ? [['一', 'yí']] : N.parts(n);
+  const ge = (n, w) => [...num(n), ['个', 'gè'], [w.zh, w.py]];       // 三个苹果
+  const T = (zh, py) => [[zh, py]];
+  function say(bits, cls = '') {
+    const html = bits.map(b => Array.isArray(b)
+      ? `<span class="ruby">${Shih.ruby(b[0], b[1])}</span>`
+      : `<span class="sym${b === '？' ? ' ask' : /[a-z]/.test(b) ? ' en' : ''}">${Shih.esc(b)}</span>`).join('');
+    return `<div class="say ${cls}">${html}</div>`;
+  }
+  const zhText = bits => bits.map(b => Array.isArray(b) ? b[0] : b).join('');
+  const usd = n => '$' + n;
+  const numRuby = n => n === 2 ? `<span class="ruby">${Shih.ruby('两', 'liǎng')}</span>` : `<span class="ruby">${Shih.ruby(N.zh(n), N.py(n))}</span>`;
+  const okNum = n => n >= 1 && n <= L().max && !(L().noTwo && n === 2);
+
+  // 三个不一样的数字选项（正确的 + 附近的两个）
+  // trap：另一样东西的数量。放进选项里，没读懂字、数错东西的学生会选到它
+  function nearNums(right, ok = okNum, trap) {
+    const out = new Set([right]);
+    if (trap != null && trap !== right && ok(trap)) out.add(trap);
+    for (const d of shuffle([-1, 1, -2, 2, 3, -3])) { if (out.size === 3) break; const v = right + d; if (ok(v)) out.add(v); }
+    for (let v = 1; out.size < 3; v++) if (ok(v)) out.add(v);
+    return shuffle([...out]);
+  }
+  const nearMoney = right => nearNums(right, v => v >= 1 && v <= 99);
+
+  // ---- 画图 ----
+  const icons = (w, n) => ART.pic(w.zh).repeat(n);
+  const grp = (w, n) => `<div class="grp" style="--c:${n}">${icons(w, n)}</div>`;   // 一组排成一排
+  // 篮子：要数的东西 n 个，另外两样东西的数量都跟 n 不一样（数错东西就会算错）
+  function basket(target, n) {
+    const others = shuffle(decoys().concat(countable().filter(w => w.zh !== target.zh))).slice(0, 2);
+    let things = Array(n).fill(target), trap = null;
+    others.forEach((o, i) => {
+      let c; do { c = rnd(1, 5); } while (c === n || (i === 0 && !okNum(c)));
+      if (i === 0) trap = c;
+      things = things.concat(Array(c).fill(o));
+    });
+    return { html: `<div class="basket">${shuffle(things).map(w => ART.pic(w.zh)).join('')}</div>`, trap };
+  }
+
+  // ---- 题型（每个函数回传一题：{ hint, body, opts:[{html, ok, speak}], cols } ） ----
+  const Q = {};
+
+  // 图形加减：同一种食物，答案选「几个＿＿」
+  Q.pic = function () {
+    const w = pick(countable()), other = pick(countable().filter(x => x.zh !== w.zh));
+    let terms, ans;
+    for (;;) {
+      const k = level === 1 ? 2 : level === 2 ? pick([2, 3]) : pick([3, 4]);
+      terms = [rnd(1, 5)];
+      for (let i = 1; i < k; i++) {
+        const minus = level > 1 && Math.random() < 0.4;
+        terms.push((minus ? -1 : 1) * rnd(1, minus ? 3 : 5));
+      }
+      let run = 0, bad = false;
+      terms.forEach(t => { run += t; if (run < 1) bad = true; });
+      ans = run;
+      if (!bad && okNum(ans) && terms.every(t => Math.abs(t) <= 6)) break;
+    }
+    const eq = terms.map((t, i) => (i ? `<span class="eqop">${t < 0 ? '－' : '＋'}</span>` : '') + grp(w, Math.abs(t))).join('') +
+      `<span class="eqop">＝</span><span class="q">？</span>`;
+    const wrongN = nearNums(ans).find(v => v !== ans);
+    const opts = shuffle([
+      { bits: ge(ans, w), ok: true },
+      { bits: ge(wrongN, w) },
+      { bits: ge(ans, other) }
+    ]);
+    return { hint: terms.some(t => t < 0) ? 'Add and take away. Pick the right answer.' : 'Add them up. Pick the right answer.',
+      body: `<div class="eq" data-icons="${terms.reduce((a, t) => a + Math.abs(t), 0)}" data-groups="${terms.length}">${eq}</div>`,
+      opts: opts.map(o => ({ html: say(o.bits), ok: !!o.ok, speak: zhText(o.bits) })) };
+  };
+
+  // 混合图形加减：每一组里混着好几种东西，题目问其中一种（Level 2 两组相加，Level 3 两组相减）
+  Q.mix = function () {
+    const minus = level >= 3;
+    const kinds = shuffle(countable()).slice(0, 3);
+    const w = kinds[0];
+    let a, b, ans, trap;
+    for (;;) {
+      a = {}; b = {};
+      kinds.forEach(k => {
+        if (minus) { a[k.zh] = rnd(1, 4); b[k.zh] = rnd(0, a[k.zh] - 1); }   // 拿走的每一种都比原来少
+        else { a[k.zh] = rnd(0, 3); b[k.zh] = rnd(0, 3); }
+      });
+      ans = minus ? a[w.zh] - b[w.zh] : a[w.zh] + b[w.zh];
+      const na = Object.values(a).reduce((x, y) => x + y, 0), nb = Object.values(b).reduce((x, y) => x + y, 0);
+      const other = minus ? a[kinds[1].zh] - b[kinds[1].zh] : a[kinds[1].zh] + b[kinds[1].zh];
+      trap = other;
+      if (okNum(ans) && na >= 2 && nb >= 1 && na <= 8 && nb <= 7 && a[w.zh] && b[w.zh] && other !== ans && okNum(other)) break;   // 问的东西两组都要有；另一样算出来要不一样
+    }
+    const mixed = g => shuffle(kinds.flatMap(k => Array(g[k.zh]).fill(k)));
+    const ga = mixed(a), gb = mixed(b);
+    const box = list => `<div class="grp" style="--c:${list.length}">${list.map(k => ART.pic(k.zh)).join('')}</div>`;
+    const op = minus ? '<span class="opbox"><span class="eqop">－</span><span class="label">take away</span></span>'
+                     : '<span class="opbox"><span class="eqop">＋</span><span class="label">add</span></span>';
+    return { roomy: true,
+      hint: minus ? 'Take the second group away from the first. Read the question to see what to count!'
+                  : 'Add the two groups. Read the question to see what to count!',
+      body: `<div class="eq" data-icons="${ga.length + gb.length}" data-groups="2">${box(ga)}${op}${box(gb)}<span class="eqop">＝</span><span class="q">？</span></div>` +
+        `<div class="lines">${say([...T('你', 'nǐ'), ...T('有', 'yǒu'), ...T('几', 'jǐ'), ...T('个', 'gè'), [w.zh, w.py], '？'])}` +
+        say([...T('我', 'wǒ'), ...T('有', 'yǒu'), '＿', ...T('个', 'gè'), [w.zh, w.py], '。']) + `</div>`,
+      opts: nearNums(ans, okNum, trap).map(v => ({ html: numRuby(v), ok: v === ans, speak: '我有' + (v === 2 ? '两' : N.zh(v)) + '个' + w.zh })) };
+  };
+
+  // 你有几个？（看篮子）
+  Q.count = function () {
+    const w = pick(countable());
+    let n; do { n = rnd(1, Math.min(L().max, 9)); } while (!okNum(n));
+    const bk = basket(w, n);
+    return { hint: 'Count them in the basket!',
+      body: bk.html + `<div class="lines">${say([...T('你', 'nǐ'), ...T('有', 'yǒu'), ...T('几', 'jǐ'), ...T('个', 'gè'), [w.zh, w.py], '？'])}` +
+        say([...T('我', 'wǒ'), ...T('有', 'yǒu'), '＿', ...T('个', 'gè'), [w.zh, w.py], '。']) + `</div>`,
+      opts: nearNums(n, okNum, bk.trap).map(v => ({ html: numRuby(v), ok: v === n, speak: '我有' + N.zh(v) + '个' + w.zh })) };
+  };
+
+  // 是／不是：看篮子
+  Q.countYN = function () {
+    const w = pick(countable());
+    let n; do { n = rnd(1, Math.min(L().max, 9)); } while (!okNum(n));
+    const truth = Math.random() < 0.5, bk = basket(w, n);
+    const shown = truth ? n : bk.trap;              // 错的时候，说的是另一样东西的数量
+    return { hint: 'Look at the basket. Is it right?',
+      body: bk.html + say([...T('我', 'wǒ'), ...T('有', 'yǒu'), ...ge(shown, w), '。']),
+      opts: yesNo(truth) };
+  };
+  function yesNo(truth) {
+    return [{ html: say(T('是', 'shì')), ok: truth, speak: '是' }, { html: say([...T('不', 'bú'), ...T('是', 'shì')]), ok: !truth, speak: '不是' }];
+  }
+
+  // 价钱：一个＋一个（Level 2）
+  Q.add = function () {
+    const [a, b] = shuffle(countable()).slice(0, 2), pa = rnd(1, 9), pb = rnd(1, 9);
+    return { hint: 'Use the prices. Pick the right answer.',
+      body: priceList([[a, pa], [b, pb]]) + say([...ge(1, a), '＋', ...ge(1, b), '＝', '？']),
+      opts: nearMoney(pa + pb).map(v => ({ html: `<span class="num">${usd(v)}</span>`, ok: v === pa + pb })) };
+  };
+  // 价钱：简单乘法（Level 2）
+  Q.times = function () {
+    const w = pick(countable()), p = pick([2, 5, 10]), n = pick([3, 4, 5]);
+    return { hint: 'Use the price. Pick the right answer.',
+      body: `<div class="lines">${say([...ge(1, w), '＝', usd(p)])}${say([...ge(n, w), '＝', '？'])}</div>`,
+      opts: nearMoney(p * n).map(v => ({ html: `<span class="num">${usd(v)}</span>`, ok: v === p * n })) };
+  };
+  // 是／不是：价钱（Level 2 用乘法，Level 3 用两个＋一个）
+  Q.priceYN = function () {
+    const truth = Math.random() < 0.5;
+    if (level < 3) {
+      const w = pick(countable()), p = pick([2, 5]), n = pick([3, 4, 5]);
+      const shown = truth ? p * n : pick([p * n + 1, p * n - 1, p * (n + 1)]);
+      return { hint: 'Is it right?', body: `<div class="lines">${say([...ge(1, w), '＝', usd(p)])}${say([...ge(n, w), '＝', usd(shown)])}</div>`, opts: yesNo(truth) };
+    }
+    const [a, b] = shuffle(countable()).slice(0, 2), pa = rnd(1, 5), pb = rnd(1, 5), right = 2 * pa + pb;
+    const shown = truth ? right : pick([right + 1, right - 1, pa + pb].filter(v => v !== right && v > 0));
+    return { hint: 'Use the prices. Is it right?',
+      body: priceList([[a, pa], [b, pb]]) + say([...ge(2, a), '＋', ...ge(1, b), '＝', usd(shown)]),
+      opts: yesNo(truth) };
+  };
+  // 价钱：两个＋一个（Level 3）
+  Q.add2 = function () {
+    const [a, b] = shuffle(countable()).slice(0, 2), pa = rnd(1, 5), pb = rnd(1, 5), right = 2 * pa + pb;
+    return { hint: 'Use the prices. Pick the right answer.',
+      body: priceList([[a, pa], [b, pb]]) + say([...ge(2, a), '＋', ...ge(1, b), '＝', '？']),
+      opts: nearMoney(right).map(v => ({ html: `<span class="num">${usd(v)}</span>`, ok: v === right })) };
+  };
+  // 够不够钱（Level 3，三题连着出：同样的钱、同样的价钱，买的东西不一样）
+  function enoughSet() {
+    const budget = L().budget || 10;
+    for (;;) {
+      const [a, b] = shuffle(countable()).slice(0, 2), pa = rnd(2, 5), pb = rnd(2, 5);
+      const asks = shuffle([[a, pa], [b, pb]].flatMap(([w, p]) => [2, 3, 4, 5].map(n => ({ w, p, n })))).slice(0, 3);
+      const yes = asks.filter(x => x.p * x.n <= budget).length;
+      if (yes === 0 || yes === 3) continue;          // 三题里一定有买得起、也有买不起的
+      return asks.map(x => ({
+        hint: 'Use the prices. Do I have enough?',
+        body: priceList([[a, pa], [b, pb]]) +
+          `<div class="lines">${say([...T('我', 'wǒ'), ...T('有', 'yǒu'), usd(budget), '。'])}` +
+          say(['Do I have enough to get', ...ge(x.n, x.w), '？']) + `</div>`,
+        opts: yesNo(x.p * x.n <= budget)
+      }));
+    }
+  }
+  function priceList(list) {
+    return `<div class="prices">${list.map(([w, p]) => say([...ge(1, w), '＝', usd(p)], 'small')).join('')}</div>`;
+  }
+
+  // ---- 一回合：每一级的题型混着出 ----
+  const TYPES = { 1: ['pic', 'count', 'countYN'], 2: ['pic', 'mix', 'add', 'times', 'priceYN'], 3: ['pic', 'mix', 'add2', 'priceYN'] };
+  function makeRound() {
+    const n = C.count || 8, kinds = TYPES[level];
+    let qs = [];
+    const extra = level === 3 ? enoughSet() : [];
+    const rest = n - extra.length;
+    let list = [];
+    while (list.length < rest) list = list.concat(shuffle(kinds));
+    list = shuffle(list.slice(0, rest));
+    qs = list.map(k => Q[k]());
+    if (extra.length) { const at = rnd(0, qs.length); qs.splice(at, 0, ...extra); }
+    return qs;
+  }
+
+  let qs = [], qi = 0, firstTry = 0, missed = false, busy = false;
+  const update = () => { scoreEl.textContent = `${firstTry} / ${qs.length}`; };
+
+  function show() {
+    const q = qs[qi];
+    missed = false; busy = false;
+    card.classList.toggle('roomy', !!q.roomy);
+    card.innerHTML = `<div class="top"><span class="qnum">${qi + 1} / ${qs.length}</span><span class="hint">${Shih.esc(q.hint)}</span></div>` +
+      q.body + `<div class="answers" style="--n:${q.opts.length}">` +
+      q.opts.map((o, k) => `<button type="button" class="ans" data-k="${k}">${o.html}</button>`).join('') + `</div>`;
+    fitEq();
+    card.querySelectorAll('.ans').forEach(b => b.addEventListener('click', () => {
+      if (busy || b.disabled) return;
+      const o = q.opts[+b.dataset.k];
+      if (!o.ok) { b.classList.add('wrong'); b.disabled = true; missed = true; return; }
+      busy = true;
+      b.classList.add('right');
+      card.querySelectorAll('.ans').forEach(x => { x.disabled = true; });
+      if (o.speak) Shih.speak(o.speak);
+      if (!missed) firstTry++;
+      update();
+      qi++;
+      if (qi === qs.length) {
+        const ms = timer.stop();
+        $('winScore').textContent = `${firstTry} / ${qs.length} on the first try.`;
+        $('winTime').textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
+        setTimeout(() => { winMsg.hidden = false; }, 400);
+      } else setTimeout(show, 900);
+    }));
+  }
+
+  // 图形算式排成一行：照卡片的宽度算每个图多大（最大 54、最小 24）
+  function fitEq() {
+    const eq = card.querySelector('.eq'); if (!eq) return;
+    const icons = +eq.dataset.icons, groups = +eq.dataset.groups;
+    const room = card.clientWidth - 50 - groups * 22 - groups * 52 - 50;   // 扣掉框、符号和问号
+    const s = Math.max(24, Math.min(54, Math.floor(room / icons) - 3));
+    eq.style.setProperty('--s', s + 'px');
+  }
+  addEventListener('resize', fitEq);
+  const wait = Shih.startCover($('playArea'), () => { if (timerOn()) timer.start(); });
+  function setup() {
+    paintLevels(level);
+    qs = makeRound(); qi = 0; firstTry = 0;
+    timer.reset(); winMsg.hidden = true; update();
+    show();
+    wait();
+  }
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 /* =====================================================================
    单元：感恩节 Thanksgiving（节日岛 → 感恩节市场）
    ---------------------------------------------------------------------
-   快手买一买 games/shop.html?unit=thanksgiving 读这一份。
+   快手买一买 games/shop.html?unit=thanksgiving、市场算一算 games/calc.html?unit=thanksgiving 读这一份。
    图在 units/thanksgiving/art.js（每个字一张图，名字要跟 zh 一模一样）。
    拼音照台湾的念法。
 
@@ -10,6 +10,7 @@
      py     拼音，字和字之间空一格
      en     英文（游戏里不显示，给老师看的）
      level  1 = 二年级、2 = 三年级、3 = 四年级，每一级都包含前面的字
+     mw     量词：'个' 的东西才会出「几个」的题目（市场算一算）；'' = 数不了（酱汁）
    加新字：复制一行改内容，再到 art.js 画一张同名的图。注意每行最后的逗号。
    ===================================================================== */
 window.UNIT = {};
@@ -24,20 +25,20 @@ UNIT.levels = [
 /* 生词库 */
 UNIT.words = [
   // ---- Level 1（二年级） ----
-  { zh: '火鸡',   py: 'huǒ jī',         en: 'turkey',          level: 1, trad: '火雞' },
-  { zh: '南瓜糕', py: 'nán guā gāo',    en: 'pumpkin pie',     level: 1 },
-  { zh: '玉米',   py: 'yù mǐ',          en: 'corn',            level: 1 },
-  { zh: '马铃薯', py: 'mǎ líng shǔ',    en: 'potato',          level: 1, trad: '馬鈴薯' },
+  { zh: '火鸡',   py: 'huǒ jī',         en: 'turkey',          level: 1, mw: '只', trad: '火雞' },
+  { zh: '南瓜糕', py: 'nán guā gāo',    en: 'pumpkin pie',     level: 1, mw: '个' },
+  { zh: '玉米',   py: 'yù mǐ',          en: 'corn',            level: 1, mw: '根' },
+  { zh: '马铃薯', py: 'mǎ líng shǔ',    en: 'potato',          level: 1, mw: '个', trad: '馬鈴薯' },
   // ---- Level 2（三年级） ----
-  { zh: '苹果',   py: 'píng guǒ',       en: 'apple',           level: 2, trad: '蘋果' },
-  { zh: '葡萄',   py: 'pú táo',         en: 'grapes',          level: 2 },
-  { zh: '梨子',   py: 'lí zi',          en: 'pear',            level: 2 },
-  { zh: '胡萝卜', py: 'hú luó bo',      en: 'carrot',          level: 2, trad: '胡蘿蔔' },
+  { zh: '苹果',   py: 'píng guǒ',       en: 'apple',           level: 2, mw: '个', trad: '蘋果' },
+  { zh: '葡萄',   py: 'pú táo',         en: 'grapes',          level: 2, mw: '串' },
+  { zh: '梨子',   py: 'lí zi',          en: 'pear',            level: 2, mw: '个' },
+  { zh: '胡萝卜', py: 'hú luó bo',      en: 'carrot',          level: 2, mw: '根', trad: '胡蘿蔔' },
   // ---- Level 3（四年级） ----
-  { zh: '火腿',   py: 'huǒ tuǐ',        en: 'ham',             level: 3 },
-  { zh: '肉汁',   py: 'ròu zhī',        en: 'gravy',           level: 3 },
-  { zh: '红莓酱', py: 'hóng méi jiàng', en: 'cranberry sauce', level: 3, trad: '紅莓醬' },
-  { zh: '番薯',   py: 'fān shǔ',        en: 'yam',             level: 3 }
+  { zh: '火腿',   py: 'huǒ tuǐ',        en: 'ham',             level: 3, mw: '只' },
+  { zh: '肉汁',   py: 'ròu zhī',        en: 'gravy',           level: 3, mw: '' },
+  { zh: '红莓酱', py: 'hóng méi jiàng', en: 'cranberry sauce', level: 3, mw: '', trad: '紅莓醬' },
+  { zh: '番薯',   py: 'fān shǔ',        en: 'yam',             level: 3, mw: '个' }
 ];
 
 /* ---------------- 快手买一买（感恩节采买） ----------------
@@ -70,4 +71,25 @@ UNIT.shop = {
     [2, 2, 2, 2]      // Level 3：共 8 个
   ],
   noiseFrom: { 1: 2 }
+};
+
+/* ---------------- 市场算一算（感恩节＋数学） ----------------
+   一回合 count 题，题型随机混着出；全对给金币。
+   只有量词是「个」的东西（mw: '个'）会出「几个」的题目；其他的（火鸡、玉米……）只出现在篮子里当干扰。
+   每一级的题型：
+     Level 1：图形加法（两个数）、你有几个？（数篮子）、是／不是（数篮子）
+     Level 2：图形加减（三个数或减法）、混合图形相加（两组混着好几种东西，问其中一种）、价钱（一个＋一个、简单乘法）、是／不是（价钱）
+     Level 3：图形加减（三、四个数）、混合图形相减、价钱（两个＋一个）、是／不是（价钱）、够不够钱（三题连着出）
+   max     图形和数篮子的答案最大到几
+   noTwo   答案不出现 2（二、三年级还没学「两」）
+   budget  够不够钱：「我有 $几」
+*/
+UNIT.calc = {
+  title: { zh: '市场算一算', py: 'shì chǎng suàn yi suàn', en: 'Market Math' },
+  count: 8,
+  levels: [
+    { max: 10, noTwo: true },
+    { max: 15, noTwo: true },
+    { max: 20, noTwo: false, budget: 10 }
+  ]
 };
