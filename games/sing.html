@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>唱一唱 Sing Along</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 唱一唱：放一支歌的影片，跟着唱。歌词已经在影片里。不给金币、不记成绩。
+   影片写在 units/<单元>/words.js 的 UNIT.sing。用法：sing.html?unit=family */
+body.game { background: #FFF6E5; }
+.stage { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.song { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.song .ruby .py { font-size: 16px; } .song .ruby .zh { font-size: 30px; }
+.song .en { font: 700 18px var(--f-latin); color: var(--muted); padding-bottom: 4px; }
+/* 影片：16:9，在 Chromebook 上整支看得到，不用往下滑 */
+video { display: block; width: min(100%, calc((100vh - 230px) * 16 / 9)); aspect-ratio: 16 / 9; background: #2B2B2B;
+        border: 4px solid var(--ink); border-radius: 18px; }
+.missing { display: none; font-size: 18px; color: var(--bad); text-align: center; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en">Sing Along</span></div>
+    <div class="controls"></div>
+  </div>
+  <div class="stage">
+    <div class="song"><span class="ruby" id="songRuby"></span><span class="en" id="songEn"></span></div>
+    <video id="video" controls playsinline preload="metadata"></video>
+    <p class="missing" id="missing">The video isn't here yet. Check that the file is in the unit folder with the right name.</p>
+  </div>
+
+<script src="../shared/common.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const S = UNIT.sing;
+  document.getElementById('titleRuby').innerHTML = Shih.ruby('唱一唱', 'chàng yi chàng');
+  document.getElementById('songRuby').innerHTML = Shih.ruby(S.song.zh, S.song.py);
+  document.getElementById('songEn').textContent = S.song.en;
+  document.title = `唱一唱 ${S.song.zh} Sing Along`;
+  const v = document.getElementById('video');
+  v.src = `../units/${Shih.unitId()}/${S.video}`;
+  v.addEventListener('error', () => { document.getElementById('missing').style.display = 'block'; });
+});
+</script>
+</body>
+</html>

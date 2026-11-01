@@ -23,7 +23,8 @@ window.ISLANDS = {
         games: [
           { zh: '家人找一找', py: 'jiā rén zhǎo yi zhǎo', en: 'Family Find', note: 'Tap a Chinese word, then tap its English match. Match all the pairs.', href: 'games/match.html?unit=family' },
           { zh: '家族树', py: 'jiā zú shù', en: 'Family Tree', note: 'Drag each word to the right place on the family tree. You can also tap a word, then tap a box.', href: 'games/tree.html?unit=family' },
-          { zh: '家庭大富翁', py: 'jiā tíng dà fù wēng', en: 'Family Board Game', note: 'Take turns rolling the dice and follow instructions on the board to get moving.', href: 'games/board.html?unit=family' }
+          { zh: '家庭大富翁', py: 'jiā tíng dà fù wēng', en: 'Family Board Game', note: 'Take turns rolling the dice and follow instructions on the board to get moving.', href: 'games/board.html?unit=family' },
+          { zh: '唱一唱', py: 'chàng yi chàng', en: 'Sing Along', note: 'Watch the video and sing along!', href: 'games/sing.html?unit=family' }
         ] },
       { id: 'school', zh: '学校', py: 'xué xiào', en: 'School', x: 410, y: 112, color: 'mom',
         games: [

@@ -119,3 +119,11 @@ UNIT.board =
   '叔叔 伯伯 奶奶 ' +
   '爷爷 堂哥 堂姐 堂弟 表哥 表姐 表妹 外公 ' +
   '外婆 舅舅 阿姨';
+
+/* ---------------- 唱一唱（games/sing.html?unit=family） ----------------
+   只放一支影片（歌词已经在影片里）。不给金币、不记成绩。
+   video：影片档放在这个资料夹（units/family/），档名照下面写，用英文。 */
+UNIT.sing = {
+  song:  { zh: '家人的称呼', py: 'jiā rén de chēng hū', en: 'Family Titles Chant' },
+  video: 'family-titles.mp4'
+};
