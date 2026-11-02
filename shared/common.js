@@ -200,10 +200,12 @@
     });
   };
 
-  // ---- 拖拉：卡片拖到格子里；也可以「点卡片，再点格子」 ----
+  // ---- 拖拉：卡片拖到格子里；也可以「点卡片，再点格子」或「点格子，再点卡片」 ----
   // opts: { slots: () => [slot elements], accept(card, slot) -> true/false, onTapCard(card) (optional) }
   S.dragCards = function (cards, opts) {
-    let drag = null, picked = null;
+    let drag = null, picked = null, armed = null;   // armed：先点的格子（亮起来，等学生点字卡）
+    const unarm = () => { if (armed) armed.classList.remove('armed'); armed = null; };
+    const armedOk = () => armed && armed.isConnected && opts.slots().includes(armed);
     const slotAt = (x, y) => {
       const el = document.elementFromPoint(x, y);
       const s = el && el.closest('.dropSlot');
@@ -248,6 +250,11 @@
         tryDrop(d.card, slotAt(e.clientX, e.clientY));
       } else if (opts.onTapCard) {
         opts.onTapCard(d.card);
+      } else if (armedOk()) {                    // 先点了格子：这张卡直接放进那一格
+        if (picked) { picked.classList.remove('picked'); picked = null; }
+        const slot = armed;
+        tryDrop(d.card, slot);
+        if (!opts.slots().includes(slot)) unarm();   // 放对了，格子满了就不亮了；放错的话格子继续亮着
       } else {                                   // tap: pick this card, then tap a slot
         if (picked) picked.classList.remove('picked');
         picked = picked === d.card ? null : d.card;
@@ -256,7 +263,12 @@
     }
     cards.forEach(c => c.addEventListener('pointerdown', down));
     return {
-      tapSlot(slot) { if (picked) { const c = picked; picked.classList.remove('picked'); picked = null; tryDrop(c, slot); } }
+      tapSlot(slot) {
+        if (picked) { const c = picked; picked.classList.remove('picked'); picked = null; unarm(); tryDrop(c, slot); return; }
+        if (opts.onTapCard || !opts.slots().includes(slot)) return;
+        if (armed === slot) { unarm(); return; }      // 再点一次同一格：取消
+        unarm(); armed = slot; slot.classList.add('armed');
+      }
     };
   };
 

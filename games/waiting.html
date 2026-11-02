@@ -9,7 +9,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
 <link rel="stylesheet" href="../shared/common.css">
 <style>
-/* 候诊室：一轮 2 个病人，每个人头上一个对话泡泡，用拆开的字卡帮他排好句子（拖进空格，或点卡片再点空格）。
+/* 候诊室：一张图一个病人（人数在 words.js 的 people），头上一个对话泡泡，用拆开的字卡帮他排好句子
+   （拖进空格、点卡片再点空格，或点空格再点卡片）。字卡里会多放几张长得像、位置靠近的部位当干扰。
    Level 1 这是／我的／鼻子（健康检查，每个小朋友指着一个地方）、Level 2 我的／肚子／疼（每个病人有一个地方疼）。
    小病人的画法在 shared/patient.js。用法：waiting.html?unit=body */
 body.game { background: #F2F8FB; }
@@ -23,6 +24,7 @@ body.game { background: #F2F8FB; }
 .patient { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .patient svg { height: clamp(140px, calc(100vh - 425px), 300px); width: auto; max-width: 100%; display: block; }
 .room { max-width: 860px; margin-left: auto; margin-right: auto; gap: 14px; }
+.room.solo { max-width: 460px; }
 .room.next { animation: nextIn .45s ease-out; } @keyframes nextIn { from { opacity: 0; transform: translateX(40px); } }
 .roundNo { text-align: center; font-weight: 700; color: var(--muted); margin: -4px 0 6px; }
 /* 对话泡泡：下面有一个小尾巴指着病人 */
@@ -86,7 +88,30 @@ Shih.loadUnit().then(UNIT => {
   const wait = Shih.startCover($('playArea'), () => {});
   let total = 0, done = 0;
 
-  // 这一轮的病人：部位都不一样；很像的一对（脚／脚趾头、手／手指、腿／膝盖）不会同时出现；脸上的部位最多一个
+  // 干扰卡：跟答案长得像、位置靠近、容易搞混的部位（没教到的会跳过，不够再随便补）
+  const LIKE = {
+    '手': ['手臂', '手指', '脚'], '脚': ['脚趾头', '腿', '手'], '手指': ['手', '脚趾头', '手臂'], '脚趾头': ['脚', '手指', '膝盖'],
+    '膝盖': ['腿', '脚', '肩膀'], '腿': ['膝盖', '脚', '手臂'], '手臂': ['手', '腿', '肩膀'], '肩膀': ['手臂', '脖子', '背'],
+    '脖子': ['肩膀', '头', '背'], '头': ['脸', '脖子', '耳朵'], '脸': ['头', '鼻子', '嘴巴'], '眼睛': ['耳朵', '鼻子', '嘴巴'],
+    '耳朵': ['眼睛', '鼻子', '头'], '鼻子': ['嘴巴', '眼睛', '脸'], '嘴巴': ['鼻子', '脸', '眼睛'], '肚子': ['背', '肩膀', '脖子'],
+    '背': ['肚子', '肩膀', '脖子']
+  };
+  function trapsFor(parts, n) {
+    const ok = UNIT.words.filter(w => (w.level || 1) <= level).map(w => w.zh).filter(z => !parts.includes(z));
+    const near = shuffle([...new Set(parts.flatMap(z => LIKE[z] || []))].filter(z => ok.includes(z)));
+    return near.concat(shuffle(ok.filter(z => !near.includes(z)))).slice(0, n);
+  }
+  // 一关的题目：一张图一个人时，8 张图的部位都不一样（Level 2 大约七成用三年级新字）
+  function pickRounds() {
+    if (C.people === 1) {
+      const n = C.rounds;
+      if (level === 1) return shuffle(at(1)).slice(0, n).map(z => [z]);
+      const k = Math.min(at(2).length, Math.round(n * (C.newShare || 0.7)));
+      return shuffle(shuffle(at(2)).slice(0, k).concat(shuffle(at(1)).slice(0, n - k))).map(z => [z]);
+    }
+    return Array.from({ length: C.rounds }, () => pickParts(C.people));
+  }
+  // 一张图好几个人时：部位都不一样；很像的一对（脚／脚趾头、手／手指、腿／膝盖）不会同时出现；脸上的部位最多一个
   const FACE = ['脸', '眼睛', '耳朵', '鼻子', '嘴巴'];
   const NEAR = { '腿': '膝盖', '膝盖': '腿' };
   const at = lv => UNIT.words.filter(w => (w.level || 1) === lv).map(w => w.zh);
@@ -117,8 +142,8 @@ Shih.loadUnit().then(UNIT => {
   function setup() {
     paintLevels(level);
     $('help').textContent = C.help[level - 1];
-    rounds = Array.from({ length: C.rounds }, () => pickParts(C.people));
-    total = C.people * C.rounds; done = 0; r = 0;
+    rounds = pickRounds();
+    total = rounds.reduce((s, p) => s + p.length, 0); done = 0; r = 0;
     $('winMsg').hidden = true; update();
     showRound(false);
     wait();
@@ -128,19 +153,20 @@ Shih.loadUnit().then(UNIT => {
     const room = $('room'), bank = $('bank');
     $('roundNo').textContent = `Round ${r + 1} of ${rounds.length}`;
     room.style.setProperty('--n', parts.length);
+    room.classList.toggle('solo', parts.length === 1);
     room.innerHTML = ''; bank.innerHTML = '';
     if (anim) { room.classList.remove('next'); void room.offsetWidth; room.classList.add('next'); }
     let dnd = null, left = parts.length;
     parts.forEach((z, k) => {
       const g = document.createElement('div');
       g.className = 'patient exam';
-      g.innerHTML = `<span class="roomSign" aria-label="Room ${k + 1}">${roomSign(k + 1)}</span><div class="bubble" data-k="${k}">` + piecesOf(z).map(x => `<span class="dropSlot" data-answer="${x}"></span>`).join('') + `<span class="punct">。</span></div>` +
+      g.innerHTML = (parts.length > 1 ? `<span class="roomSign" aria-label="Room ${k + 1}">${roomSign(k + 1)}</span>` : '') + `<div class="bubble" data-k="${k}">` + piecesOf(z).map(x => `<span class="dropSlot" data-answer="${x}"></span>`).join('') + `<span class="punct">。</span></div>` +
         `<svg viewBox="0 0 240 350" aria-hidden="true">${PT.svg({ zh: z, look: PT.look(), face: level === 1 ? 'good' : 'hurt', mark: level === 1 ? 'arrow' : 'pain' })}</svg>`;
       room.appendChild(g);
       g.querySelectorAll('.dropSlot').forEach(slot => slot.addEventListener('click', () => dnd && dnd.tapSlot(slot)));
     });
-    // 字卡：每个人的句子拆开，再加陷阱卡（图上没有的部位）
-    const traps = shuffle(UNIT.words.filter(w => (w.level || 1) <= level).map(w => w.zh).filter(z => !parts.includes(z))).slice(0, C.traps || 0);
+    // 字卡：每个人的句子拆开，再加干扰卡（图上没有、但很像的部位）
+    const traps = trapsFor(parts, C.traps || 0);
     const words = shuffle(parts.flatMap(piecesOf).concat(traps));
     const cards = words.map(z => {
       const c = document.createElement('div');

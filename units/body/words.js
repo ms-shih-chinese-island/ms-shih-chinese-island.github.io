@@ -74,11 +74,11 @@ UNIT.waiting = {
   title: { zh: '候诊室', py: 'hòu zhěn shì', en: 'Waiting Room' },
   newShare: 0.7,        // Level 2：身体部位大约七成用三年级新字
   help: [
-    "It's check-up day! Two kids are in Room 1 and Room 2. Help each one tell the doctor about one body part. Put the word cards in order.",
-    'Two patients are waiting in Room 1 and Room 2. Help each one tell the doctor where it hurts. Put the word cards in order.'
+    "It's check-up day! Help each kid tell the doctor about one body part. Put the word cards in order. Watch out: some cards don't belong!",
+    'Help each patient tell the doctor where it hurts. Put the word cards in order. Watch out: some cards don\'t belong!'
   ],
-  people: 2,
-  rounds: 8,
-  traps: 1,
+  people: 1,            // 一张图几个病人
+  rounds: 8,            // 一关几张图
+  traps: 3,             // 每张图多放几张干扰卡（长得像、位置靠近的部位，见 games/waiting.html 的 LIKE）
   done: { zh: '太棒了！', py: 'tài bàng le!' }
 };
