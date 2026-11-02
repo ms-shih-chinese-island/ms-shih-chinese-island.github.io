@@ -118,7 +118,7 @@ async function unitWords(id) {
   await loadScript(`../units/${id}/words.js?lib`);
   return ((window.UNIT && window.UNIT.words) || []).filter(w => w.match !== false && w.zh);
 }
-let HART = {}, MART = {};
+let HART = {}, MART = {}, TART = {};
 async function loadAll() {
   for (const c of LIBRARY.chapters) if (c.from) c.list = await unitWords(c.from); else c.list = c.words;
   // 形容词（聪明、勇敢……）是「家」那一课教的，书里放在「家」那一章
@@ -130,6 +130,7 @@ async function loadAll() {
   }
   window.ART = undefined; await loadScript('../units/halloween/art.js'); HART = window.ART || {};
   window.ART = undefined; await loadScript('../units/moon/art.js'); MART = window.ART || {};
+  window.ART = undefined; await loadScript('../units/thanksgiving/art.js'); TART = window.ART || {};
   window.ART = KIDS;
 }
 // ---- 每个字的小图（岛上本来就有的图才放） ----
@@ -139,6 +140,7 @@ function picOf(w) {
     if (window.ADJ_ICON && ADJ_ICON.list.includes(w.zh)) return ADJ_ICON(w.zh);
     if (window.VOCAB && VOCAB[w.zh]) return VOCAB_BOX(w.zh, '#FFF6D6');
     if (HART.items && HART.items[w.zh]) return HART.items[w.zh];
+    if (TART.items && TART.items[w.zh]) return TART.items[w.zh];
     if (w.feel && KIDS.kid) return KIDS.kid(PERSON(), w.feel);
     if (w.zh === '早上好' && KIDS.time) return KIDS.time('morning');
     if (w.zh === '下午好' && KIDS.time) return KIDS.time('afternoon');

@@ -54,14 +54,25 @@ header { display: flex; align-items: flex-end; justify-content: space-between; g
 }
 button:focus-visible, a:focus-visible { outline: 3px solid #1F5E73; outline-offset: 2px; }
 
-.map { position: relative; width: 100%; aspect-ratio: var(--ar, 1000 / 620); }
+.map { position: relative; width: calc(100% * var(--k, 1)); aspect-ratio: var(--ar, 1000 / 620); }
+/* 主岛比画面宽两倍：放在一个可以左右滑动的框里（--k = 地图是一个画面的几倍宽） */
+.scene { position: relative; }
+.mapScroll { overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; padding-bottom: 30px; margin-bottom: -30px; }   /* 下面留一点空，最下排的牌子才不会被切掉 */
+.mapScroll::-webkit-scrollbar { display: none; }   /* 不显示卷轴：用两边的箭头、拖曳、触控板滑动 */
+.mapScroll.dragging { cursor: grabbing; user-select: none; }
+.scrollHint { position: absolute; top: 50%; transform: translateY(-50%); z-index: 4; width: 48px; height: 64px; border-radius: 16px;
+  border: 3px solid var(--ink); background: rgba(255,255,255,.92); box-shadow: 0 4px 0 var(--ink); font-size: 24px; color: var(--ink); cursor: pointer; }
+.scrollHint.left { left: 6px; } .scrollHint.right { right: 6px; }
+.scrollHint.right:not([hidden]) { animation: nudge 1.4s ease-in-out infinite; }
+@keyframes nudge { 50% { transform: translate(5px, -50%); } }
+@media (prefers-reduced-motion: reduce) { .scrollHint.right { animation: none !important; } }
 /* 手机横着拿：地图照画面的高度缩放，整座岛都看得到 */
 @media (orientation: landscape) and (max-height: 720px) {
   body { padding-top: 8px; padding-bottom: 8px; }
   .wrap { gap: 6px; }
   .brand .en { font-size: 18px; } .brand .ruby .py { font-size: 11px; } .brand .ruby .zh { font-size: 18px; }
   .listBtn { font-size: 15px; padding: 6px 12px; }
-  .map { width: min(100%, calc((100vh - 84px) * var(--ar, 1000 / 620))); margin: 0 auto; }
+  .map { width: calc(var(--k, 1) * min(100%, calc((100vh - 84px) * 2))); margin: 0 auto; }
 }
 .goHoliday {
   position: absolute; transform: translate(-50%, -50%); cursor: pointer; font: inherit; color: var(--ink);
@@ -139,7 +150,7 @@ body.holiday { background: #CBC3E8; }
 .list .game > .go { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
 .list .soonline { color: var(--muted); font-size: 15px; margin: 0; }
 /* the little walker on the map */
-.walker { position: absolute; width: 5.4%; transform: translate(-50%, -96%); pointer-events: none; z-index: 1; }
+.walker { position: absolute; width: calc(5.4% / var(--k, 1)); transform: translate(-50%, -96%); pointer-events: none; z-index: 1; }
 .walker.left .flip { transform: scaleX(-1); }
 .walker .flip > svg { width: 100%; height: auto; display: block; overflow: visible; }
 .walker .legL, .walker .legR, .walker .armL, .walker .armR { transform-box: fill-box; transform-origin: 50% 0; }
@@ -197,7 +208,7 @@ body.holiday { background: #CBC3E8; }
 #whoBtn svg { width: 36px; height: 36px; }
 #whoBtn .ruby .py { font-size: 11px; } #whoBtn .ruby .zh { font-size: 18px; }
 /* Ms. Shih in front of the school, saying hello */
-.npc { position: absolute; width: 5.4%; transform: translate(-50%, -100%); z-index: 1; cursor: pointer; background: none; border: 0; padding: 0; }
+.npc { position: absolute; width: calc(5.4% / var(--k, 1)); transform: translate(-50%, -100%); z-index: 1; cursor: pointer; background: none; border: 0; padding: 0; }
 .npc svg { width: 100%; height: auto; display: block; }
 .npc .say { position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, -6px); background: #fff; border: 2.5px solid var(--ink); border-radius: 12px;
   padding: 2px 8px 4px; white-space: nowrap; display: flex; flex-direction: column; align-items: center; line-height: 1.1; box-shadow: 0 3px 0 var(--ink); }
@@ -214,7 +225,7 @@ body.holiday { background: #CBC3E8; }
 .walker .say .ruby { gap: 4px; }
 .walker.talking { z-index: 6; }
 .npc.quiet .say { visibility: hidden; }
-.gift { position: absolute; width: 3%; transform: translate(-50%, -50%); z-index: 3; pointer-events: none; transition: left .32s ease-in-out, top .32s cubic-bezier(.3, -.8, .7, 1), transform .2s, opacity .2s; }
+.gift { position: absolute; width: calc(3% / var(--k, 1)); transform: translate(-50%, -50%); z-index: 3; pointer-events: none; transition: left .32s ease-in-out, top .32s cubic-bezier(.3, -.8, .7, 1), transform .2s, opacity .2s; }
 .gift svg { width: 100%; height: auto; display: block; }
 .gift.got { transform: translate(-50%, -50%) scale(.3); opacity: 0; }
 .npc.talk svg { animation: npcHop .3s ease-out; }
@@ -317,16 +328,17 @@ table.rec tr:nth-child(even) td { background: #F6FAFB; }
   </header>
 
   <div class="scene" id="scene-main">
-  <div class="map" id="map-main" style="--ar: 1240 / 620">
-    <svg class="island" viewBox="0 0 1240 620" aria-hidden="true">
+  <div class="mapScroll" id="scroll-main">
+  <div class="map" id="map-main" style="--ar: 2480 / 620; --k: 2">
+    <svg class="island" viewBox="0 0 2480 620" aria-hidden="true">
       <!-- sea waves -->
       <g fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity=".7">
-        <path d="M20 40 q15 -10 30 0 t30 0"/><path d="M1060 60 q15 -10 30 0 t30 0"/><path d="M1150 200 q15 -10 30 0 t30 0"/>
-        <path d="M20 590 q15 -10 30 0 t30 0"/><path d="M1040 600 q15 -10 30 0 t30 0"/><path d="M1150 560 q15 -10 30 0 t30 0"/>
+        <path d="M20 40 q15 -10 30 0 t30 0"/><path d="M1010 22 q15 -10 30 0 t30 0"/><path d="M1880 26 q15 -10 30 0 t30 0"/><path d="M2380 60 q15 -10 30 0 t30 0"/>
+        <path d="M20 590 q15 -10 30 0 t30 0"/><path d="M1180 606 q15 -10 30 0 t30 0"/><path d="M2060 606 q15 -10 30 0 t30 0"/><path d="M2390 560 q15 -10 30 0 t30 0"/>
       </g>
-      <!-- big main island: sand ring + grass -->
-      <path d="M55 320 C40 170 170 60 360 45 C520 32 700 28 840 60 C990 95 1035 200 1020 320 C1005 450 930 560 760 590 C600 615 400 612 240 575 C110 545 65 450 55 320 Z" fill="#F3DDA6" stroke="#D9BE7E" stroke-width="4"/>
-      <path d="M92 320 C80 185 195 92 365 78 C520 66 695 62 828 92 C960 122 995 212 982 320 C968 435 900 530 750 556 C600 580 410 578 255 543 C140 517 102 435 92 320 Z" fill="#B5DB98"/>
+      <!-- big main island: sand ring + grass（左半边是原本的社区，右半边是城镇区） -->
+      <path d="M55 320 C40 170 170 60 360 45 C700 22 1200 30 1600 34 C1950 38 2200 60 2262 170 C2300 240 2300 420 2250 500 C2180 590 1950 606 1650 610 C1200 616 700 620 400 606 C200 594 65 450 55 320 Z" fill="#F3DDA6" stroke="#D9BE7E" stroke-width="4"/>
+      <path d="M92 320 C80 185 195 92 365 78 C700 56 1200 62 1600 66 C1930 70 2160 90 2224 185 C2258 250 2258 410 2214 482 C2150 560 1940 574 1648 578 C1200 584 700 588 410 574 C210 562 102 435 92 320 Z" fill="#B5DB98"/>
       <g id="roads-main"></g>
 
       <!-- school (top-left): red roof, clock tower, flag -->
@@ -352,15 +364,14 @@ table.rec tr:nth-child(even) td { background: #F6FAFB; }
         <path d="M424 252 L424 228 Q435 218 446 228 L446 252 Z" fill="#B4471C"/>
         <path d="M384 252 L486 252" stroke-width="4"/>
       </g>
-      <!-- shopping mall（原本饮水机的位置）：宽宽的楼、条纹遮阳棚、玻璃门、购物袋招牌；牌子在楼的下面 -->
+      <!-- supermarket（原本购物中心的位置）：绿色的招牌、玻璃窗、门口一台购物车 -->
       <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" transform="translate(-28 -22)">
         <rect x="318" y="404" width="132" height="60" fill="#FFFFFF"/>
-        <rect x="312" y="394" width="144" height="12" fill="#7A5BC7"/>
-        <path d="M318 406 L340 406 L340 414 Q329 422 318 414 Z M362 406 L384 406 L384 414 Q373 422 362 414 Z M406 406 L428 406 L428 414 Q417 422 406 414 Z" fill="#F5C531" stroke-width="2"/>
-        <path d="M340 406 L362 406 L362 414 Q351 422 340 414 Z M384 406 L406 406 L406 414 Q395 422 384 414 Z M428 406 L450 406 L450 414 Q439 422 428 414 Z" fill="#FFFFFF" stroke-width="2"/>
-        <rect x="326" y="426" width="30" height="22" fill="#BFE3EE"/><rect x="412" y="426" width="30" height="22" fill="#BFE3EE"/>
-        <rect x="366" y="428" width="36" height="36" fill="#BFE3EE"/><path d="M384 428 L384 464" stroke-width="2"/>
-        <path d="M374 372 L394 372 L398 394 L370 394 Z" fill="#EC8FB3"/><path d="M378 372 Q384 362 390 372" fill="none" stroke-width="2.5"/>
+        <rect x="312" y="390" width="144" height="16" fill="#45A852"/>
+        <rect x="326" y="416" width="44" height="30" fill="#BFE3EE"/><rect x="380" y="416" width="28" height="48" fill="#BFE3EE"/><path d="M394 416 L394 464" stroke-width="2"/>
+        <path d="M414 430 L420 430 L426 448 L444 448 L448 436 L423 436" fill="none" stroke-width="2.5"/>
+        <circle cx="429" cy="454" r="3" fill="#2B2B2B" stroke="none"/><circle cx="441" cy="454" r="3" fill="#2B2B2B" stroke="none"/>
+        <path d="M330 432 L366 432" stroke="#F28C28" stroke-width="5"/><path d="M330 440 L352 440" stroke="#E5483B" stroke-width="5"/>
         <path d="M312 464 L456 464" stroke-width="4"/>
       </g>
 
@@ -371,12 +382,15 @@ table.rec tr:nth-child(even) td { background: #F6FAFB; }
         <rect x="738" y="240" width="56" height="42" fill="#EEF7F1"/><path d="M731 242 L766 211 L801 242 Z" fill="#8CC7A0"/><rect x="758" y="257" width="16" height="25" fill="#2F7A4D"/>
       </g>
 
-      <!-- visitor center (bottom-left, by the shore): big i -->
+      <!-- hospital（原本旅客中心的位置）：白色的楼、红十字、蓝色的门 -->
       <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" transform="translate(-35 0)">
-        <rect x="150" y="440" width="86" height="56" fill="#E6F4F8"/>
-        <path d="M141 442 L193 412 L245 442 Z" fill="#7FC4D8"/>
-        <circle cx="193" cy="469" r="21" fill="#3B78B5"/>
-        <path d="M193 467 L193 479" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/><circle cx="193" cy="459" r="3.4" fill="#FFFFFF" stroke="none"/>
+        <rect x="140" y="436" width="106" height="60" fill="#FFFFFF"/>
+        <rect x="134" y="426" width="118" height="12" fill="#EC8FB3"/>
+        <rect x="174" y="398" width="38" height="30" fill="#FFFFFF"/>
+        <path d="M193 403 L193 423 M183 413 L203 413" stroke="#E5483B" stroke-width="6" stroke-linecap="butt"/>
+        <rect x="150" y="448" width="22" height="18" fill="#BFE3EE"/><rect x="214" y="448" width="22" height="18" fill="#BFE3EE"/>
+        <rect x="180" y="462" width="26" height="34" fill="#7FC4D8"/><path d="M193 462 L193 496" stroke-width="2"/>
+        <path d="M134 496 L252 496" stroke-width="4"/>
       </g>
 
       <!-- plaza (middle): round square with flags -->
@@ -428,6 +442,94 @@ table.rec tr:nth-child(even) td { background: #F6FAFB; }
         <path d="M985 472 L985 496"/><circle cx="985" cy="460" r="15" fill="#86BD72"/>
       </g>
 
+      <!-- ===================== 城镇区（往右滑） ===================== -->
+      <!-- shopping mall（从左边搬过来） -->
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" transform="translate(1086 -214)">
+        <rect x="318" y="404" width="132" height="60" fill="#FFFFFF"/>
+        <rect x="312" y="394" width="144" height="12" fill="#7A5BC7"/>
+        <path d="M318 406 L340 406 L340 414 Q329 422 318 414 Z M362 406 L384 406 L384 414 Q373 422 362 414 Z M406 406 L428 406 L428 414 Q417 422 406 414 Z" fill="#F5C531" stroke-width="2"/>
+        <path d="M340 406 L362 406 L362 414 Q351 422 340 414 Z M384 406 L406 406 L406 414 Q395 422 384 414 Z M428 406 L450 406 L450 414 Q439 422 428 414 Z" fill="#FFFFFF" stroke-width="2"/>
+        <rect x="326" y="426" width="30" height="22" fill="#BFE3EE"/><rect x="412" y="426" width="30" height="22" fill="#BFE3EE"/>
+        <rect x="366" y="428" width="36" height="36" fill="#BFE3EE"/><path d="M384 428 L384 464" stroke-width="2"/>
+        <path d="M374 372 L394 372 L398 394 L370 394 Z" fill="#EC8FB3"/><path d="M378 372 Q384 362 390 372" fill="none" stroke-width="2.5"/>
+        <path d="M312 464 L456 464" stroke-width="4"/>
+      </g>
+
+      <!-- pet shop：粉红色的店，招牌上有一个脚印 -->
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" transform="translate(-300 0)">
+        <rect x="1446" y="232" width="108" height="68" fill="#FDEEF3"/>
+        <path d="M1436 234 L1564 234 L1552 210 L1448 210 Z" fill="#EC8FB3"/>
+        <circle cx="1500" cy="190" r="16" fill="#FFFFFF"/>
+        <ellipse cx="1500" cy="195" rx="6" ry="5" fill="#8A5A2B" stroke="none"/><circle cx="1492" cy="186" r="2.6" fill="#8A5A2B" stroke="none"/><circle cx="1500" cy="183" r="2.6" fill="#8A5A2B" stroke="none"/><circle cx="1508" cy="186" r="2.6" fill="#8A5A2B" stroke="none"/>
+        <rect x="1456" y="246" width="34" height="28" fill="#BFE3EE"/><rect x="1504" y="256" width="28" height="44" fill="#B4471C"/>
+        <path d="M1436 300 L1564 300" stroke-width="4"/>
+      </g>
+      <!-- fire station：红色的楼、大车库门、上面一个钟 -->
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" transform="translate(-10 0)">
+        <rect x="1712" y="222" width="116" height="78" fill="#E5483B"/>
+        <path d="M1704 224 L1770 192 L1836 224 Z" fill="#B23B3B"/>
+        <circle cx="1770" cy="210" r="8" fill="#F5C531"/>
+        <path d="M1730 300 L1730 252 Q1770 236 1810 252 L1810 300 Z" fill="#FFFFFF"/>
+        <path d="M1730 266 L1810 266 M1730 280 L1810 280" stroke-width="2"/>
+        <path d="M1704 300 L1836 300" stroke-width="4"/>
+      </g>
+      <!-- visitor center（从左边搬过来，在码头旁边） -->
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" transform="translate(1867 -241)">
+        <rect x="150" y="440" width="86" height="56" fill="#E6F4F8"/>
+        <path d="M141 442 L193 412 L245 442 Z" fill="#7FC4D8"/>
+        <circle cx="193" cy="469" r="21" fill="#3B78B5"/>
+        <path d="M193 467 L193 479" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/><circle cx="193" cy="459" r="3.4" fill="#FFFFFF" stroke="none"/>
+      </g>
+
+      <!-- restaurant：橘色的店、一碗面和筷子的招牌 -->
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" transform="translate(-30 -24)">
+        <rect x="1306" y="430" width="108" height="64" fill="#FFF6E5"/>
+        <path d="M1296 432 L1424 432 L1412 408 L1308 408 Z" fill="#F28C28"/>
+        <path d="M1346 400 Q1360 414 1374 400 Z" fill="#FFFFFF"/><path d="M1352 384 L1364 398 M1360 382 L1370 398" stroke-width="2.5"/>
+        <rect x="1316" y="444" width="32" height="26" fill="#BFE3EE"/><rect x="1364" y="452" width="28" height="42" fill="#B4471C"/>
+        <path d="M1296 494 L1424 494" stroke-width="4"/>
+      </g>
+      <!-- police station：蓝色的楼、黄色的星星徽章 -->
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" transform="translate(-20 16)">
+        <rect x="1586" y="430" width="108" height="64" fill="#D6E4F5"/>
+        <rect x="1578" y="418" width="124" height="14" fill="#3B78D8"/>
+        <path d="M1640 384 L1645 396 L1658 397 L1648 405 L1651 418 L1640 411 L1629 418 L1632 405 L1622 397 L1635 396 Z" fill="#F5C531"/>
+        <rect x="1596" y="444" width="28" height="24" fill="#BFE3EE"/><rect x="1656" y="444" width="28" height="24" fill="#BFE3EE"/><rect x="1628" y="454" width="24" height="40" fill="#3B78D8"/>
+        <path d="M1578 494 L1702 494" stroke-width="4"/>
+      </g>
+      <!-- post office：绿色的屋顶、信封招牌、门口一个绿色邮筒 -->
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" transform="translate(-10 -39)">
+        <rect x="1866" y="430" width="108" height="64" fill="#FFFFFF"/>
+        <path d="M1856 432 L1920 404 L1984 432 Z" fill="#45A852"/>
+        <rect x="1906" y="440" width="28" height="20" fill="#FFF6D6"/><path d="M1906 440 L1920 452 L1934 440" fill="none" stroke-width="2"/>
+        <rect x="1876" y="464" width="24" height="30" fill="#2F7A4D"/><rect x="1942" y="458" width="24" height="20" fill="#BFE3EE"/>
+        <rect x="1988" y="462" width="16" height="32" rx="6" fill="#45A852"/><path d="M1991 472 L2001 472" stroke-width="2"/>
+        <path d="M1856 494 L1984 494" stroke-width="4"/>
+      </g>
+      <!-- town trees, bushes and street lamps（零零落落的，房子中间留空地） -->
+      <g stroke="#2B2B2B" stroke-width="3">
+        <path d="M1100 292 L1100 316"/><circle cx="1100" cy="280" r="17" fill="#86BD72"/>
+        <path d="M1330 244 L1330 268"/><circle cx="1330" cy="232" r="15" fill="#86BD72"/>
+        <path d="M1362 258 L1362 282"/><circle cx="1362" cy="246" r="13" fill="#86BD72"/>
+        <path d="M1596 244 L1596 268"/><circle cx="1596" cy="232" r="16" fill="#86BD72"/>
+        <path d="M1950 252 L1950 276"/><circle cx="1950" cy="240" r="17" fill="#86BD72"/>
+        <path d="M1462 490 L1462 514"/><circle cx="1462" cy="478" r="17" fill="#86BD72"/>
+        <path d="M1770 508 L1770 532"/><circle cx="1770" cy="496" r="15" fill="#86BD72"/>
+        <path d="M2068 492 L2068 516"/><circle cx="2068" cy="480" r="17" fill="#86BD72"/>
+        <path d="M2186 470 L2186 494"/><circle cx="2186" cy="458" r="15" fill="#86BD72"/>
+        <ellipse cx="1086" cy="470" rx="22" ry="13" fill="#86BD72"/>
+        <ellipse cx="1690" cy="268" rx="22" ry="13" fill="#86BD72"/>
+        <ellipse cx="2148" cy="300" rx="22" ry="13" fill="#86BD72"/>
+        <ellipse cx="1240" cy="520" rx="22" ry="13" fill="#86BD72"/>
+        <path d="M1528 414 L1528 464"/><rect x="1520" y="404" width="16" height="12" rx="4" fill="#FFF4C2"/>
+        <path d="M1778 414 L1778 464"/><rect x="1770" y="404" width="16" height="12" rx="4" fill="#FFF4C2"/>
+      </g>
+      <!-- dock（码头） -->
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round">
+        <rect x="2236" y="362" width="70" height="16" fill="#B98A5E"/><path d="M2250 378 L2250 392 M2292 378 L2292 392" stroke-width="4"/>
+      </g>
+
+      <g transform="translate(1250 0)">
       <!-- boat route to the holiday island -->
       <path d="M1010 360 C1040 400 1060 410 1085 400" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-dasharray="4 12" stroke-linecap="round"/>
       <g id="boat-main" stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round">
@@ -443,9 +545,12 @@ table.rec tr:nth-child(even) td { background: #F6FAFB; }
         <rect x="1120" y="326" width="9" height="11" fill="#F5C531"/><rect x="1135" y="326" width="9" height="11" fill="#F5C531"/>
         <ellipse cx="1182" cy="360" rx="16" ry="12" fill="#F28C3A"/><path d="M1182 348 L1184 341"/>
       </g>
+      </g>
     </svg>
-    <button class="goHoliday" id="goHoliday" type="button" style="left: 92.8%; top: 76%"><span class="ruby" id="goHolidayRuby"></span><span class="en">Holiday Island →</span></button>
+    <button class="goHoliday" id="goHoliday" type="button" style="left: 96.6%; top: 76%"><span class="ruby" id="goHolidayRuby"></span><span class="en">Holiday Island →</span></button>
   </div>
+  </div>
+  <button class="scrollHint left" id="hintL" type="button" aria-label="Look left" hidden>◀</button><button class="scrollHint right" id="hintR" type="button" aria-label="Look right" hidden>▶</button>
 </div>
 
 <div class="scene" id="scene-holiday" hidden>
@@ -592,6 +697,7 @@ table.rec tr:nth-child(even) td { background: #F6FAFB; }
 <script src="shared/vocab.js"></script>
 <script>
 const ISLANDS = window.ISLANDS;
+const MW = id => (ISLANDS[id] && ISLANDS[id].width) || 1240;      // 这座岛的地图有多宽（主岛 2480、节日岛 1240）
 const COLORS = {
   me: ['#8CC7A0', '#EEF7F1'], dad: ['#F2A65A', '#FFF6E5'], mom: ['#EC8FB3', '#FDEEF3'],
   sea: ['#7FC4D8', '#E6F4F8'], sun: ['#F5C531', '#FFF6D6'], night: ['#9B8BC4', '#EFEAF8']
@@ -678,6 +784,7 @@ function showIsland(id, animate) {
     if (k === id && animate) { void sc.offsetWidth; sc.classList.add('enter'); }
   });
   document.body.classList.toggle('holiday', id === 'holiday');
+  if (typeof centerOnWalker === 'function') requestAnimationFrame(centerOnWalker);
   try { history.replaceState(null, '', id === 'main' ? location.pathname : '#holiday'); } catch (e) {}
 }
 document.getElementById('goHoliday').addEventListener('click', () => sail('holiday'));
@@ -707,16 +814,24 @@ listBtn.addEventListener('click', () => {
 // ===================================================================
 const WALK = {
   main: {
+    // 左半边：原本的社区；右半边（x 1100 以后）：城镇区，最右边是码头
     nodes: {
       A: [300, 300], B: [440, 322], C: [560, 332], D: [690, 336], E: [820, 345], G: [955, 355], F: [290, 420],
-      school: [216, 350], schoolDoor: [265, 258], library: [525, 268], mall: [356, 450], P1: [670, 400], plaza: [700, 467], home: [735, 300],
-      visitor: [227, 505], bank: [800, 418], dock: [1002, 372], playground: [540, 548]
+      school: [216, 350], schoolDoor: [265, 258], library: [525, 268], market: [356, 450], P1: [670, 400], plaza: [700, 467], home: [735, 300],
+      hospital: [227, 505], bank: [800, 418], playground: [540, 548],
+      T1: [1085, 384], T2: [1200, 352], T3: [1330, 344], T4: [1470, 362], T5: [1620, 374], T6: [1762, 343], T7: [1910, 338], T8: [2060, 350], T9: [2166, 382],
+      F1: [1734, 324],
+      pet: [1200, 312], restaurant: [1330, 392], mall: [1470, 262], police: [1620, 432], fire: [1760, 312], post: [1910, 370], hello: [2060, 267],
+      dock: [2252, 372]
     },
     edges: [['school', 'A'], ['A', 'schoolDoor'], ['A', 'B'], ['B', 'library'], ['B', 'C'], ['C', 'P1'], ['P1', 'plaza'], ['C', 'D'], ['D', 'home'],
-            ['D', 'E'], ['E', 'bank'], ['E', 'G'], ['G', 'dock'], ['A', 'F'], ['F', 'visitor'], ['F', 'mall'], ['mall', 'playground']],
-    places: { '家': 'home', '学校': 'school', '图书馆': 'library', '购物中心': 'mall', '你好': 'visitor', '数字': 'bank', '公园': 'playground' },
+            ['D', 'E'], ['E', 'bank'], ['E', 'G'], ['A', 'F'], ['F', 'hospital'], ['F', 'market'], ['market', 'playground'],
+            ['G', 'T1'], ['T1', 'T2'], ['T2', 'T3'], ['T3', 'T4'], ['T4', 'T5'], ['T5', 'T6'], ['T6', 'T7'], ['T7', 'T8'], ['T8', 'T9'], ['T9', 'dock'],
+            ['T2', 'pet'], ['T3', 'restaurant'], ['T4', 'mall'], ['T5', 'police'], ['T6', 'F1'], ['F1', 'fire'], ['T5', 'F1'], ['T7', 'post'], ['T8', 'hello']],
+    places: { '家': 'home', '学校': 'school', '图书馆': 'library', '超市': 'market', '医院': 'hospital', '数字': 'bank', '公园': 'playground',
+              '购物中心': 'mall', '餐厅': 'restaurant', '宠物店': 'pet', '公安局': 'police', '消防局': 'fire', '邮政局': 'post', '你好': 'hello' },
     start: 'plaza', dock: 'dock',
-    boatOut: [[1002, 372], [1040, 406], [1084, 402]], boatIn: [[1084, 402], [1040, 406], [1002, 372]]
+    boatOut: [[2252, 372], [2290, 406], [2334, 402]], boatIn: [[2334, 402], [2290, 406], [2252, 372]]
   },
   holiday: {
     nodes: { dock: [410, 440], h1: [480, 398], haunted: [560, 352], h2: [720, 350], market: [880, 346], m1: [700, 430], moon: [690, 516], treat: [711, 298] },
@@ -786,8 +901,56 @@ let pos = store.get('walker', null);          // { island, node }
 function put(island, xy) {
   const map = document.getElementById('map-' + island);
   if (walker.parentNode !== map) map.insertBefore(walker, map.querySelector('svg.island').nextSibling);
-  walker.style.left = (xy[0] / 1240 * 100) + '%';
+  walker.style.left = (xy[0] / MW(island) * 100) + '%';
+  follow(island, xy, false);
   walker.style.top = (xy[1] / 620 * 100) + '%';
+}
+// 主岛比画面宽：小人走到画面边边，画面就跟着他移动
+const scroller = document.getElementById('scroll-main');
+function follow(island, xy, center) {
+  if (island !== 'main' || !scroller) return;
+  const w = document.getElementById('map-main').clientWidth, vw = scroller.clientWidth;
+  if (!w || !vw) return;
+  const x = xy[0] / MW('main') * w, sl = scroller.scrollLeft;
+  if (center) scroller.scrollLeft = x - vw / 2;
+  else if (x > sl + vw * .72) scroller.scrollLeft = x - vw * .72;
+  else if (x < sl + vw * .28) scroller.scrollLeft = x - vw * .28;
+}
+function centerOnWalker() { if (pos && pos.island === 'main') follow('main', WALK.main.nodes[pos.node] || WALK.main.nodes[WALK.main.start], true); paintHints(); }
+// 左右两边的箭头：提示「这边还有」，点了画面往那边滑
+const hintL = document.getElementById('hintL'), hintR = document.getElementById('hintR');
+function paintHints() {
+  if (!scroller || !hintL) return;
+  const max = scroller.scrollWidth - scroller.clientWidth;
+  const show = current === 'main' && list.hidden && max > 4;
+  hintL.hidden = !show || scroller.scrollLeft <= 4;
+  hintR.hidden = !show || scroller.scrollLeft >= max - 4;
+}
+if (scroller) {
+  scroller.addEventListener('scroll', paintHints, { passive: true });
+  addEventListener('resize', centerOnWalker);
+  hintL.addEventListener('click', () => scroller.scrollBy({ left: -scroller.clientWidth * .7, behavior: 'smooth' }));
+  hintR.addEventListener('click', () => scroller.scrollBy({ left: scroller.clientWidth * .7, behavior: 'smooth' }));
+  // 用滑鼠也可以按住地图拖着走（触控屏和触控板本来就能左右滑）
+  let drag = null;
+  scroller.addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'mouse' || e.button !== 0 || e.target.closest('button, a')) return;
+    drag = { x: e.clientX, sl: scroller.scrollLeft, moved: false };
+  });
+  addEventListener('pointermove', e => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x;
+    if (Math.abs(dx) > 4) { drag.moved = true; scroller.classList.add('dragging'); }
+    if (drag.moved) scroller.scrollLeft = drag.sl - dx;
+  });
+  addEventListener('pointerup', () => { drag = null; scroller.classList.remove('dragging'); });
+  // 滑鼠滚轮往下滚 = 地图往右
+  scroller.addEventListener('wheel', e => {
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    const max = scroller.scrollWidth - scroller.clientWidth;
+    if (max <= 0) return;
+    scroller.scrollLeft += e.deltaY; e.preventDefault();
+  }, { passive: false });
 }
 function placeAt(island, node) {
   const W = WALK[island];
@@ -795,6 +958,7 @@ function placeAt(island, node) {
   pos = { island, node };
   store.set('walker', pos);
   put(island, W.nodes[node]);
+  follow(island, W.nodes[node], true);
 }
 // shortest way along the roads
 function route(W, from, to) {
@@ -1067,7 +1231,7 @@ if (window.ShihFlash) ShihFlash.isOn().then(on => {
   const map = document.getElementById('map-main');
   const b = document.createElement('button');
   b.type = 'button'; b.className = 'spot flashSpot';
-  b.style.left = (FLASH.x / 1240 * 100) + '%'; b.style.top = (FLASH.y / 620 * 100) + '%';
+  b.style.left = (FLASH.x / MW('main') * 100) + '%'; b.style.top = (FLASH.y / 620 * 100) + '%';
   b.style.setProperty('--c', (COLORS[FLASH.color] || COLORS.me)[0]);
   b.innerHTML = `<span class="ruby">${rubyHTML(FLASH.zh, FLASH.py)}</span><span class="en">${FLASH.en}</span>`;
   b.setAttribute('aria-label', FLASH.zh + ' ' + FLASH.en);
@@ -1097,7 +1261,7 @@ let npcHello = null;
   const map = document.getElementById('map-main');
   const b = document.createElement('button');
   b.type = 'button'; b.className = 'npc';
-  b.style.left = (168 / 1240 * 100) + '%'; b.style.top = (348 / 620 * 100) + '%';
+  b.style.left = (168 / MW('main') * 100) + '%'; b.style.top = (348 / 620 * 100) + '%';
   const hi = ['小朋友好！', 'xiǎo péng yǒu hǎo!', 'Hello, kids!'];
   b.innerHTML = `<span class="say"><span class="ruby">${rubyHTML(hi[0], hi[1])}</span><span class="en">${hi[2]}</span></span>` + SHIH_AVATAR({ wave: false, hold: 'star' }) + '<span class="nameTag">Ms. Shih</span>';
   b.setAttribute('aria-label', 'Ms. Shih says ' + hi[2]);
@@ -1120,7 +1284,7 @@ function makeNpc(island, xy, svg, line) {
   const map = document.getElementById('map-' + island);
   const b = document.createElement('button');
   b.type = 'button'; b.className = 'npc';
-  b.style.left = (xy[0] / 1240 * 100) + '%'; b.style.top = (xy[1] / 620 * 100) + '%';
+  b.style.left = (xy[0] / MW(island) * 100) + '%'; b.style.top = (xy[1] / 620 * 100) + '%';
   b.innerHTML = `<span class="say"><span class="ruby">${rubyHTML(line[0], line[1])}</span><span class="en">${line[2]}</span></span>` + svg;
   b.setAttribute('aria-label', line[2]);
   b.classList.add('quiet');
@@ -1143,10 +1307,10 @@ function giftFly(island, from, to, kind, done) {
   const g = document.createElement('div');
   g.className = 'gift';
   g.innerHTML = GIFT[kind];
-  g.style.left = (from[0] / 1240 * 100) + '%'; g.style.top = (from[1] / 620 * 100) + '%';
+  g.style.left = (from[0] / MW(island) * 100) + '%'; g.style.top = (from[1] / 620 * 100) + '%';
   map.appendChild(g);
   void g.offsetWidth;
-  g.style.left = (to[0] / 1240 * 100) + '%'; g.style.top = (to[1] / 620 * 100) + '%';
+  g.style.left = (to[0] / MW(island) * 100) + '%'; g.style.top = (to[1] / 620 * 100) + '%';
   g.classList.add('fly');
   setTimeout(() => { g.classList.add('got'); }, 320);
   setTimeout(() => { g.remove(); done && done(); }, 520);

@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>看医生 See the Doctor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 看医生：身体部位。Level 1 这是我的＿＿、Level 2 我的＿＿疼。
+   题型混着出：看图选字、读了点（贴 OK 绷）、听了点（贴 OK 绷）。小病人的画法在 shared/patient.js。
+   用法：doctor.html?unit=body（字和题数都在 units/body/words.js） */
+body.game { background: #F2F8FB; }
+.room { display: flex; gap: 16px; align-items: stretch; justify-content: center; }
+.patient { flex: none; position: relative; background: #FFFFFF; border: 4px solid var(--ink); border-radius: 22px; padding: 6px; }
+.patient svg { display: block; height: calc(100vh - 230px); min-height: 300px; max-height: 470px; width: auto; touch-action: manipulation; }
+.patient.tapping svg { cursor: pointer; }
+.patient.wrong { animation: nope .4s; }
+@keyframes nope { 0%,100% { translate: 0 } 25% { translate: -7px 0 } 75% { translate: 7px 0 } }
+.ask { flex: 1; max-width: 560px; display: flex; flex-direction: column; justify-content: center; gap: 14px; }
+.qhint { font-size: 18px; font-weight: 700; color: var(--muted); }
+.sentence { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px; background: var(--card); border: 3px solid var(--ink); border-radius: 18px; padding: 12px 16px; min-height: 84px; }
+.sentence .ruby .py { font-size: 15px; } .sentence .ruby .zh { font-size: 34px; }
+.blank { display: inline-flex; align-items: flex-end; justify-content: center; min-width: 76px; min-height: 58px; border-bottom: 4px solid var(--pick); padding: 0 6px; }
+.blank.ok { border-color: var(--me-ink); background: var(--me-done); border-radius: 8px 8px 0 0; }
+.opts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.opt { font: inherit; cursor: pointer; background: var(--card); color: var(--ink); border: 3px solid var(--ink); border-radius: 14px; box-shadow: 0 3px 0 var(--ink);
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px 10px; min-height: 68px; }
+.opt .py { font-size: 15px; } .opt .zh { font-size: 30px; }
+.opt:disabled { opacity: .35; cursor: default; }
+.opt.nope { animation: nope .4s; border-color: var(--bad); }
+.say { align-self: flex-start; font-size: 30px; line-height: 1; padding: 10px 22px; border: 3px solid var(--ink); border-radius: 16px; background: var(--sea); cursor: pointer; box-shadow: 0 4px 0 var(--ink); }
+.say.on { animation: sayOn .5s; } @keyframes sayOn { 50% { background: #FFE066; } }
+.bandage { align-self: flex-start; display: inline-flex; align-items: center; gap: 10px; font: 700 18px var(--f-latin); padding: 8px 16px; border: 3px dashed var(--ink); border-radius: 16px; background: #FFFBF2; cursor: grab; touch-action: none; user-select: none; }
+.bandage svg { width: 64px; height: 30px; }
+.bandage.dragging { position: fixed; z-index: 50; cursor: grabbing; pointer-events: none; border: 0; background: none; padding: 0; transform: translate(-50%, -50%); }
+.bandage.dragging span { display: none; }
+.bandage.dragging svg { width: 72px; height: 34px; filter: drop-shadow(0 6px 8px rgba(43,43,43,.3)); }
+.clock.low { color: var(--bad); }
+.win .ruby .py { font-size: 15px; }
+@media (orientation: landscape) and (max-height: 720px) {
+  .patient svg { height: calc(100vh - 175px); }
+  .sentence .ruby .zh { font-size: 28px; } .opt .zh { font-size: 26px; }
+  .opt { min-height: 58px; }
+}
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 8</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="room">
+        <div class="patient" id="patient"><svg id="kid" viewBox="0 0 240 350" aria-label="Patient"></svg></div>
+        <div class="ask" id="ask"></div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/kids.js"></script>
+<script src="../shared/patient.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.doctor, PT = ShihPatient;
+  const $ = id => document.getElementById(id);
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.rubyText(C.done.zh, C.done.py);
+  Shih.soundButton($('soundBtn'));
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const W = Shih.wordMap(UNIT);
+  const words = lv => UNIT.words.filter(w => (w.level || 1) <= lv);
+  const okWith = (z, x) => x !== z && PT.PAIR[z] !== x;
+  const fill = (tpl, w) => ({ zh: tpl.zh.replace('{x}', w.zh), py: tpl.py.replace('{x}', w.py) });
+  const BANDAGE = '<svg viewBox="0 0 64 30" aria-hidden="true"><g transform="rotate(-12 32 15)"><rect x="4" y="7" width="56" height="17" rx="8" fill="#D99A5E" stroke="#2B2B2B" stroke-width="2.5"/><rect x="24" y="10" width="16" height="11" fill="#B87A3F"/><circle cx="12" cy="15" r="1.6" fill="#8A5A2B"/><circle cx="52" cy="15" r="1.6" fill="#8A5A2B"/></g></svg>';
+
+  let level = Shih.startLevel('doctorLevel', UNIT.levels.length);
+  const paintLevels = Shih.levelButtons($('levels'), UNIT.levels, level, null, lv => { level = lv; Shih.set('doctorLevel', lv); setup(); });
+  const wait = Shih.startCover($('playArea'), () => show());
+  let qs = [], qi = 0, busy = false;
+  const tplOf = () => level === 1 ? C.say1 : C.say2;
+
+  function makeQs() {
+    const K = C.kinds[level - 1], pool = words(level).map(w => w.zh), used = [], list = [];
+    const newOnes = UNIT.words.filter(w => (w.level || 1) === 2).map(w => w.zh);
+    const fresh = c => { const f = shuffle(c.filter(z => !used.includes(z))); const z = f[0] || pick(c); used.push(z); return z; };
+    // Level 2：每一种题目里，大约七成用三年级的新字
+    const plan = (n, cands) => {
+      const nNew = level >= 2 ? Math.round(n * (C.newShare || 0.7)) : 0;
+      return shuffle(Array.from({ length: n }, (_, i) => i < nNew ? cands.filter(z => newOnes.includes(z)) : cands.filter(z => level < 2 || !newOnes.includes(z))));
+    };
+    plan(K.pick, pool).forEach(c => {
+      const z = fresh(c);
+      list.push({ kind: 'pick', zh: z, opts: shuffle([z, ...shuffle(pool.filter(x => okWith(z, x))).slice(0, 3)]), look: PT.look() });
+    });
+    ['read', 'listen'].forEach(kind => plan(K[kind], pool.filter(z => PT.CAN_TAP.includes(z))).forEach(c => list.push({ kind, zh: fresh(c), look: PT.look() })));
+    return shuffle(list);
+  }
+
+  const kidSvg = $('kid'), ask = $('ask'), patient = $('patient');
+  // 画小病人：pick 题有记号（箭头／疼）；read、listen 题先不画记号，点对了才画
+  function drawKid(q, withMark) {
+    kidSvg.innerHTML = PT.svg({ zh: q.zh, look: q.look, side: q.side, face: level === 1 ? 'good' : 'hurt', mark: withMark ? (level === 1 ? 'arrow' : 'pain') : null });
+  }
+  const sentenceHTML = (zh, py) => `<span class="ruby">${Shih.rubyText(zh, py)}</span>`;
+  function sentenceWithBlank(tpl) {
+    const [a, b] = tpl.zh.split('{x}'), [pa, pb] = tpl.py.split('{x}');
+    return `${a ? sentenceHTML(a, pa) : ''}<span class="blank" id="blank"></span>${sentenceHTML(b, pb)}`;
+  }
+
+  function show() {
+    busy = false;
+    const q = qs[qi];
+    $('score').textContent = `${qi} / ${qs.length}`;
+    patient.classList.remove('tapping');
+    if (q.kind === 'pick') {
+      const spec = { zh: q.zh, look: q.look, face: level === 1 ? 'good' : 'hurt', mark: level === 1 ? 'arrow' : 'pain' };
+      kidSvg.innerHTML = PT.svg(spec); q.side = spec.side;
+      ask.innerHTML = `<div class="qhint">${level === 1 ? 'Look at the arrow. Pick the word.' : 'Where does it hurt? Pick the word.'}</div>` +
+        `<div class="sentence">${sentenceWithBlank(tplOf())}</div><div class="opts">` +
+        q.opts.map(z => `<button type="button" class="opt" data-z="${z}"><span class="ruby">${Shih.ruby(z, W[z].py)}</span></button>`).join('') + '</div>';
+      ask.querySelectorAll('.opt').forEach(b => b.addEventListener('click', () => answerPick(q, b)));
+      return;
+    }
+    // read／listen
+    drawKid(q, false);
+    const s = fill(tplOf(), W[q.zh]);
+    q.say = s.zh;
+    const doWhat = level === 1 ? 'Tap that part on the kid.' : 'Put the bandage where it hurts.';
+    ask.innerHTML = `<div class="qhint">${q.kind === 'listen' ? 'Listen (tap 🔊 to hear it again). ' + doWhat : 'Read the sentence. ' + doWhat}</div>` +
+      (q.kind === 'listen' ? `<button type="button" class="say" id="sayBtn" aria-label="Listen again">🔊</button>` : `<div class="sentence">${sentenceHTML(s.zh, s.py)}</div>`) +
+      (level >= 2 ? `<div class="bandage" id="bandage">${BANDAGE}<span>Drag me!</span></div>` : '');
+    patient.classList.add('tapping');
+    if (q.kind === 'listen') {
+      const b = $('sayBtn');
+      const play = () => { b.classList.remove('on'); void b.offsetWidth; b.classList.add('on'); Shih.speak(q.say); };
+      b.addEventListener('click', play);
+      setTimeout(play, 300);
+    }
+    if (level >= 2) dragBandage($('bandage'));
+  }
+  function next() {
+    qi++;
+    if (qi >= qs.length) { $('score').textContent = `${qs.length} / ${qs.length}`; $('winMsg').hidden = false; Shih.speak(C.done.zh); return; }
+    show();
+  }
+  function shakeEl(el) { el.classList.remove('nope'); void el.offsetWidth; el.classList.add('nope'); setTimeout(() => el.classList.remove('nope'), 450); }
+
+  // ---- 看图选字 ----
+  function answerPick(q, b) {
+    if (busy) return;
+    if (b.dataset.z !== q.zh) { Shih.miss(); shakeEl(b); b.disabled = true; return; }
+    busy = true;
+    const bl = $('blank');
+    bl.classList.add('ok'); bl.innerHTML = `<span class="ruby">${Shih.ruby(q.zh, W[q.zh].py)}</span>`;
+    ask.querySelectorAll('.opt').forEach(o => o.disabled = true);
+    Shih.speak(fill(tplOf(), W[q.zh]).zh);
+    setTimeout(next, 1300);
+  }
+
+  // ---- 点出来／贴 OK 绷：点（或把 OK 绷放）在小病人身上 ----
+  function tryAt(clientX, clientY) {
+    const q = qs[qi];
+    if (!q || q.kind === 'pick' || busy) return false;
+    const r = kidSvg.getBoundingClientRect();
+    if (clientX < r.left || clientX > r.right || clientY < r.top || clientY > r.bottom) return false;
+    const pt = new DOMPoint(clientX, clientY).matrixTransform(kidSvg.getScreenCTM().inverse());
+    if (PT.tapHits(q.zh, [pt.x, pt.y], level)) {
+      busy = true;
+      const P = PT.PARTS[q.zh];
+      q.side = P.at.map((a, i) => ({ i, d: Math.hypot(a[0] - pt.x, a[1] - pt.y) })).sort((a, b) => a.d - b.d)[0].i;
+      kidSvg.innerHTML = PT.svg({ zh: q.zh, look: q.look, side: q.side, face: level === 1 ? 'good' : 'hurt', mark: level === 1 ? 'arrow' : 'pain' });
+      patient.classList.remove('tapping');
+      const bd = $('bandage'); if (bd) bd.style.visibility = 'hidden';
+      Shih.speak(q.say);
+      setTimeout(next, 1300);
+    } else {
+      Shih.miss();
+      patient.classList.remove('wrong'); void patient.offsetWidth; patient.classList.add('wrong');
+      setTimeout(() => patient.classList.remove('wrong'), 450);
+    }
+    return true;
+  }
+  kidSvg.addEventListener('click', e => tryAt(e.clientX, e.clientY));
+  // OK 绷：按住拖到小病人身上放开（直接点小病人也可以）
+  function dragBandage(el) {
+    let d = null;
+    el.addEventListener('pointerdown', e => {
+      if (busy) return;
+      e.preventDefault();
+      const r = el.getBoundingClientRect();
+      d = { id: e.pointerId, ph: document.createElement('div') };
+      d.ph.style.width = r.width + 'px'; d.ph.style.height = r.height + 'px';
+      el.after(d.ph);
+      el.classList.add('dragging');
+      el.style.left = e.clientX + 'px'; el.style.top = e.clientY + 'px';     // OK 绷的中间跟着手指（滑鼠）走
+    });
+    addEventListener('pointermove', e => { if (d && e.pointerId === d.id) { el.style.left = e.clientX + 'px'; el.style.top = e.clientY + 'px'; } });
+    const up = e => {
+      if (!d || e.pointerId !== d.id) return;
+      const ph = d.ph; d = null;
+      el.classList.remove('dragging'); el.style.left = el.style.top = ''; ph.remove();
+      tryAt(e.clientX, e.clientY);      // OK 绷的中间放在哪里，就算贴在哪里
+    };
+    addEventListener('pointerup', up); addEventListener('pointercancel', up);
+  }
+
+  function setup() {
+    paintLevels(level);
+    $('help').textContent = C.help[level - 1];
+    qs = makeQs(); qi = 0;
+    $('winMsg').hidden = true;
+    $('score').textContent = `0 / ${qs.length}`;
+    drawKid(qs[0], false); ask.innerHTML = '';
+    wait();
+  }
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  setup();
+  // 给测试用
+  window.__doc = { get q() { return qs[qi]; }, PARTS: PT.PARTS, get qs() { return qs; },
+    show(spec) { kidSvg.innerHTML = PT.svg({ zh: spec.zh, look: PT.look(), face: spec.face || 'hurt', mark: spec.mark || 'pain' }); } };
+});
+</script>
+</body>
+</html>

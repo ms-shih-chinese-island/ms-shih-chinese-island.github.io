@@ -1,0 +1,84 @@
+/* =====================================================================
+   单元：身体 Body（主岛 → 医院 → 看医生）
+   ---------------------------------------------------------------------
+   看医生 games/doctor.html?unit=body、候诊室 games/waiting.html?unit=body 读这一份。拼音照台湾的念法。
+   只有两级：Level 1 = 二年级（这是我的＿＿）、Level 2 = 三、四年级（我的＿＿疼）。
+
+   身体部位（words）每个一行：
+     zh / py / en   中文、拼音、英文（英文给老师看的）
+     level          1 = 二年级、2 = 三年级（每一级都包含前面的字）
+   注意每行最后的逗号。
+   ===================================================================== */
+window.UNIT = {};
+
+/* 每一级的说明（Level 按钮上的小字）：两级就好，四年级没有新的身体部位，玩 Level 2 */
+UNIT.levels = [
+  { note: '这是我的＿＿。' },
+  { note: '我的＿＿疼。' }
+];
+
+/* 身体部位 */
+UNIT.words = [
+  // ---- Level 1（二年级） ----
+  { zh: '头',     py: 'tóu',         en: 'head',      level: 1 },
+  { zh: '肩膀',   py: 'jiān bǎng',   en: 'shoulder',  level: 1 },
+  { zh: '膝盖',   py: 'xī gài',      en: 'knee',      level: 1, trad: '膝蓋' },
+  { zh: '脚',     py: 'jiǎo',        en: 'foot',      level: 1, trad: '腳' },
+  { zh: '眼睛',   py: 'yǎn jīng',    en: 'eye',       level: 1 },
+  { zh: '耳朵',   py: 'ěr duǒ',      en: 'ear',       level: 1 },
+  { zh: '嘴巴',   py: 'zuǐ ba',      en: 'mouth',     level: 1 },
+  { zh: '鼻子',   py: 'bí zi',       en: 'nose',      level: 1 },
+  { zh: '手',     py: 'shǒu',        en: 'hand',      level: 1 },
+  // ---- Level 2（三年级）：再加这些 ----
+  { zh: '脸',     py: 'liǎn',        en: 'face',      level: 2, trad: '臉' },
+  { zh: '脖子',   py: 'bó zi',       en: 'neck',      level: 2 },
+  { zh: '手臂',   py: 'shǒu bì',     en: 'arm',       level: 2 },
+  { zh: '肚子',   py: 'dù zi',       en: 'belly',     level: 2 },
+  { zh: '腿',     py: 'tuǐ',         en: 'leg',       level: 2 },
+  { zh: '背',     py: 'bèi',         en: 'back',      level: 2 },
+  { zh: '手指',   py: 'shǒu zhǐ',    en: 'finger',    level: 2 },
+  { zh: '脚趾头', py: 'jiǎo zhǐ tóu', en: 'toe',      level: 2, trad: '腳趾頭' }
+];
+
+/* ---------------- 看医生 ----------------
+   一个大大的小病人。一关 8 题，全对才有金币（Level 1／2 给 1／2 颗）。题型混着出：
+     pick    看图选字：箭头（Level 1）或疼的地方（Level 2），从 4 个字里选对的放进句子
+     read    读句子：Level 1 点出那个地方；Level 2 把 OK 绷贴到疼的地方
+     listen  听句子（🔊，不写出来）：一样点出来／贴 OK 绷
+   手指、脚趾头、背只出 pick（其他题型的图会直接告诉答案）。
+*/
+UNIT.doctor = {
+  title: { zh: '看医生', py: 'kàn yī shēng', en: 'See the Doctor' },
+  newShare: 0.7,        // Level 2 的题目里，三年级新字大约占多少（0.7 = 七成）
+  help: [
+    "It's check-up day! Look at the arrow and pick the word. Or read (or listen to) the sentence and tap that part on the kid.",
+    'Look where it hurts and pick the word. Or read (or listen to) the sentence and put the bandage where it hurts.'
+  ],
+  kinds: [
+    { pick: 3, read: 3, listen: 2 },
+    { pick: 3, read: 3, listen: 2 }
+  ],
+  say1: { zh: '这是我的{x}。', py: 'zhè shì wǒ de {x}.' },
+  say2: { zh: '我的{x}疼。', py: 'wǒ de {x} téng.' },
+  done: { zh: '太棒了！', py: 'tài bàng le!' }
+};
+
+/* ---------------- 候诊室 ----------------
+   一轮 2 个病人，每个人头上一个对话泡泡，泡泡里有空格。学生用拆开的字卡，帮每个人排好句子。
+     Level 1：这是／我的／鼻子 → 这是我的鼻子。（健康检查，每个小朋友指着一个地方）
+     Level 2：我的／肚子／疼   → 我的肚子疼。  （每个病人有一个地方疼）
+   两个人的「这是」「我的」「疼」是一样的卡，差别在身体部位；另外多 1 张陷阱卡（图上没有的部位）。
+   people  每一轮几个人      rounds  一关几轮      traps  几张陷阱卡
+*/
+UNIT.waiting = {
+  title: { zh: '候诊室', py: 'hòu zhěn shì', en: 'Waiting Room' },
+  newShare: 0.7,        // Level 2：身体部位大约七成用三年级新字
+  help: [
+    "It's check-up day! Two kids are in Room 1 and Room 2. Help each one tell the doctor about one body part. Put the word cards in order.",
+    'Two patients are waiting in Room 1 and Room 2. Help each one tell the doctor where it hurts. Put the word cards in order.'
+  ],
+  people: 2,
+  rounds: 8,
+  traps: 1,
+  done: { zh: '太棒了！', py: 'tài bàng le!' }
+};

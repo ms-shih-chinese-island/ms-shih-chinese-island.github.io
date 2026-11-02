@@ -8,7 +8,7 @@
        'games/tree.html?unit=family'    家族树
        'games/board.html?unit=family'   大富翁
    - 每座岛有自己的地图。每个地点有一块牌子，x / y 是牌子在地图上的位置
-     （两座岛的地图都是宽 1240、高 620）。
+     （主岛的地图宽 2480、高 620，可以左右滑动：左半边是原本的社区，右半边是城镇区；节日岛宽 1240）。
    - 点牌子会跳出这个地点的游戏选单（games）。
      还没有游戏的地点，牌子是虚线、写 Coming soon，点了不会有反应。
    - id：有游戏的地点要有一个英文 id（小写、用 - 连接），游戏里的「回到地点」按钮会用到。
@@ -17,7 +17,7 @@
    ===================================================================== */
 window.ISLANDS = {
   main: {
-    zh: '史老师的中文岛', py: 'shǐ lǎo shī de zhōng wén dǎo', en: "Ms. Shih's Chinese Island", width: 1240,
+    zh: '史老师的中文岛', py: 'shǐ lǎo shī de zhōng wén dǎo', en: "Ms. Shih's Chinese Island", width: 2480,
     places: [
       { id: 'family', zh: '家', py: 'jiā', en: 'Family', x: 875, y: 132, color: 'dad',
         games: [
@@ -41,12 +41,25 @@ window.ISLANDS = {
         games: [
           { zh: '图书馆', py: 'tú shū guǎn', en: 'Library', note: 'Read the book. Pick 2 to 12 words you want to practice, then start matching!', href: 'games/library.html?unit=library' }
         ] },
-      { id: 'mall', zh: '购物中心', py: 'gòu wù zhōng xīn', en: 'Shopping Mall', x: 352, y: 492, color: 'night',
+      { zh: '超市', py: 'chāo shì', en: 'Supermarket', x: 352, y: 492, color: 'me', games: [] },
+      { id: 'hospital', zh: '医院', py: 'yī yuàn', en: 'Hospital', x: 158, y: 548, color: 'mom',
+        games: [
+          { zh: '看医生', py: 'kàn yī shēng', en: 'See the Doctor', note: 'Pick the word, or read or listen and tap the body part (Level 2: put on the bandage).', href: 'games/doctor.html?unit=body' },
+          { zh: '候诊室', py: 'hòu zhěn shì', en: 'Waiting Room', note: 'Drag the right sentence into each speech bubble.', href: 'games/waiting.html?unit=body' }
+        ] },
+      // ---- 往右滑：城镇区 ----
+      { id: 'mall', zh: '购物中心', py: 'gòu wù zhōng xīn', en: 'Shopping Mall', x: 1470, y: 84, color: 'night',
         games: [
           { zh: '服务台', py: 'fú wù tái', en: 'Lost Kid Announcement', note: 'Tap 🔊 to hear the top and bottom of the lost kid. Then find the lost kid in the crowd.', href: 'games/lost.html?unit=clothes' },
           { zh: '找朋友', py: 'zhǎo péng yǒu', en: 'Find My Friends', note: "Read your friend's message to see their top and bottom. Then find your friend in the crowd.", href: 'games/find.html?unit=clothes' }
         ] },
-      { id: 'hello', zh: '你好', py: 'nǐ hǎo', en: 'Hello', x: 158, y: 548, color: 'sea',
+      { zh: '宠物店', py: 'chǒng wù diàn', en: 'Pet Shop', x: 1200, y: 132, color: 'mom', games: [] },
+      { zh: '消防局', py: 'xiāo fáng jú', en: 'Fire Station', x: 1760, y: 132, color: 'dad', games: [] },
+      { zh: '餐厅', py: 'cān tīng', en: 'Restaurant', x: 1330, y: 526, color: 'dad', games: [] },
+      { zh: '公安局', py: 'gōng ān jú', en: 'Police Station', x: 1620, y: 564, color: 'sea', games: [] },
+      { zh: '邮政局', py: 'yóu zhèng jú', en: 'Post Office', x: 1910, y: 510, color: 'me', games: [] },
+      // 旅客中心：在码头旁边，坐船来的人先到这里
+      { id: 'hello', zh: '你好', py: 'nǐ hǎo', en: 'Hello', x: 2060, y: 88, color: 'sea',
         games: [
           { zh: '认字手牵手', py: 'rèn zì shǒu qiān shǒu', en: 'Hand in Hand', note: 'Tap a Chinese word, then tap its English match. Match all the pairs.', href: 'games/match.html?unit=hello' },
           { zh: '你好吗？', py: 'nǐ hǎo ma?', en: 'How Are You?', note: 'Look at the kid. Tap what he or she would say.', href: 'games/feel.html?unit=hello' },

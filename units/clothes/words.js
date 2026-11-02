@@ -5,7 +5,7 @@
    Level 2（三年级）只看颜色；Level 3（四年级）颜色和衣服都要对。拼音照台湾的念法。
 
    衣服（clothes）每件一行：
-     zh    中文（简体）     py  拼音     en  英文（给老师看的）
+     zh    中文（简体）     py  拼音（T恤 只写 xù）     en  英文（给老师看的）
      kind  哪一个部位：top 上身、bottom 下身、dress 连衣裙（上下一件）、shoes 鞋子、hat 帽子
            题目只出 top／bottom；连衣裙、鞋子、帽子只是穿在人群里的人身上
    颜色（colors）：题目和衣服用到的颜色；level 2 = 三年级就会（Level 2 只用这些），level 3 = 四年级才加
@@ -14,7 +14,7 @@
 window.UNIT = {};
 
 UNIT.clothes = [
-  { zh: 'T恤',    py: 'T xù',         en: 't-shirt',       kind: 'top' },
+  { zh: 'T恤',    py: 'xù',           en: 't-shirt',       kind: 'top' },   // T 是英文字母，拼音只标「恤」
   { zh: '毛衣',   py: 'máo yī',       en: 'sweater',       kind: 'top' },
   { zh: '外套',   py: 'wài tào',      en: 'coat',          kind: 'top' },
   { zh: '球衣',   py: 'qiú yī',       en: 'jersey',        kind: 'top' },
@@ -27,6 +27,9 @@ UNIT.clothes = [
   { zh: '高跟鞋', py: 'gāo gēn xié',  en: 'heels',         kind: 'shoes' },
   { zh: '帽子',   py: 'mào zi',       en: 'hat',           kind: 'hat' }
 ];
+
+/* 图书馆读 UNIT.words：衣服的字 */
+UNIT.words = UNIT.clothes;
 
 UNIT.colors = [
   { zh: '红色',   py: 'hóng sè',     en: 'red',    hex: '#E5483B', level: 2 },
