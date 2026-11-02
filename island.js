@@ -12,7 +12,7 @@
    - 点牌子会跳出这个地点的游戏选单（games）。
      还没有游戏的地点，牌子是虚线、写 Coming soon，点了不会有反应。
    - id：有游戏的地点要有一个英文 id（小写、用 - 连接），游戏里的「回到地点」按钮会用到。
-   - labelOnly: true 的地点只是岛上的名牌（例如卫生间、饮水机），不会有游戏。
+   - labelOnly: true 的地点只是岛上的名牌，不会有游戏。
    - color：'me' 绿、'dad' 橘、'mom' 粉红、'sea' 蓝、'sun' 黄、'night' 紫
    ===================================================================== */
 window.ISLANDS = {
@@ -32,16 +32,20 @@ window.ISLANDS = {
           { zh: '对话框', py: 'duì huà kuàng', en: 'Chat Bubbles', note: 'Read the chat. Drag the cards into the empty bubbles. You can also tap a card, then tap a bubble.', href: 'games/chat.html?unit=school' },
           { zh: '自我介绍', py: 'zì wǒ jiè shào', en: 'About Me', note: 'Read the All About Me card. Drag the words into the sentences.', href: 'games/intro.html?unit=school' }
         ] },
-      { id: 'playground', zh: '游乐场', py: 'yóu lè chǎng', en: 'Playground', x: 535, y: 590, color: 'me',
+      { id: 'playground', zh: '公园', py: 'gōng yuán', en: 'Park', x: 535, y: 590, color: 'me',
         games: [
-          { zh: '好朋友', py: 'hǎo péng yǒu', en: 'Best Friends', note: 'Look at the picture. Drag the names and words into the sentences.', href: 'games/friends.html?unit=school' }
+          { zh: '好朋友', py: 'hǎo péng yǒu', en: 'Best Friends', note: 'Look at the picture. Drag the names and words into the sentences.', href: 'games/friends.html?unit=school' },
+          { zh: '套圈圈', py: 'tào quān quān', en: 'Ring Toss', note: "Match the color of the ring with the color word printed on the bottle. Don't be tricked by the bottle color!", href: 'games/ringtoss.html?unit=colors' }
         ] },
       { id: 'library', zh: '图书馆', py: 'tú shū guǎn', en: 'Library', x: 615, y: 112, color: 'night',
         games: [
           { zh: '图书馆', py: 'tú shū guǎn', en: 'Library', note: 'Read the book. Pick 2 to 12 words you want to practice, then start matching!', href: 'games/library.html?unit=library' }
         ] },
-      { zh: '卫生间', py: 'wèi shēng jiān', en: 'Restroom', x: 348, y: 600, labelOnly: true },
-      { zh: '饮水机', py: 'yǐn shuǐ jī', en: 'Water Fountain', x: 435, y: 378, labelOnly: true },
+      { id: 'mall', zh: '购物中心', py: 'gòu wù zhōng xīn', en: 'Shopping Mall', x: 384, y: 352, color: 'night',
+        games: [
+          { zh: '服务台', py: 'fú wù tái', en: 'Lost Kid Announcement', note: 'Tap 🔊 to hear the top and bottom of the lost kid. Then find the lost kid in the crowd.', href: 'games/lost.html?unit=clothes' },
+          { zh: '找朋友', py: 'zhǎo péng yǒu', en: 'Find My Friends', note: "Read your friend's message to see their top and bottom. Then find your friend in the crowd.", href: 'games/find.html?unit=clothes' }
+        ] },
       { id: 'hello', zh: '你好', py: 'nǐ hǎo', en: 'Hello', x: 158, y: 548, color: 'sea',
         games: [
           { zh: '认字手牵手', py: 'rèn zì shǒu qiān shǒu', en: 'Hand in Hand', note: 'Tap a Chinese word, then tap its English match. Match all the pairs.', href: 'games/match.html?unit=hello' },

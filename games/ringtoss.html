@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>套圈圈 Ring Toss</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 套圈圈：10 个瓶子排成保龄球的三角形，每个瓶子挂一个写着颜色的牌子。
+   点圈圈、再点瓶子（或反过来）：牌子上的颜色跟圈圈一样才算套中，瓶子本身的颜色是来骗人的。
+   时间内套中的数量达标就有金币。
+   用法：ringtoss.html?unit=colors（颜色、秒数、目标都在 units/colors/words.js） */
+body.game { background: #FFF6E5; }
+.stage { max-width: 920px; margin: 0 auto; }
+.stage svg.booth { display: block; width: 100%; height: auto; max-height: calc(100vh - 215px); min-height: 300px; touch-action: manipulation; }
+.booth .bottle { cursor: pointer; }
+.booth .bottle .hit { fill: transparent; }
+.booth .bottle.sel .glow { opacity: 1; }
+.booth .glow { opacity: 0; fill: none; stroke: var(--pick); stroke-width: 18; stroke-linejoin: round; }
+.booth .tag-py { font: 700 15px var(--f-latin); }
+.booth .tag-zh { font: 700 30px var(--f-zh); }
+.booth .ring { cursor: pointer; }
+.booth .ring .glow { opacity: 0; stroke: var(--pick); stroke-width: 40; }
+.booth .ring.sel .glow { opacity: .7; }
+.booth .pop { transform-box: fill-box; transform-origin: 50% 100%; }
+.help { text-align: center; }
+.clock.low { color: var(--bad); border-color: var(--bad); }
+.endMsg { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; text-align: center; font-size: 22px; font-weight: 700; color: var(--dad-ink); background: var(--dad-soft); border: 2px solid var(--dad); border-radius: 14px; padding: 10px; margin-bottom: 10px; }
+.endMsg .ruby .py { font-size: 15px; } .endMsg .zh { font-size: 30px; }
+.endMsg button.ctl { border-color: var(--dad-ink); color: var(--dad-ink); }
+.win .ruby .py { font-size: 15px; }
+.win .en { font-size: 18px; }
+@media (orientation: landscape) and (max-height: 720px) {
+  .stage svg.booth { max-height: calc(100vh - 170px); }
+}
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill clock" id="clock">1:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> <span class="en" id="winEn"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="endMsg" id="endMsg" hidden><span><span class="ruby" id="endRuby"></span> <span id="endEn"></span></span><button class="ctl" id="again2Btn" type="button">Try again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="stage">
+        <svg class="booth" id="booth" viewBox="0 0 1000 620" aria-label="Ring toss booth">
+          <defs>
+            <clipPath id="frame"><rect x="2" y="2" width="996" height="616" rx="22"/></clipPath>
+            <linearGradient id="g-gold" x1="0" x2="1"><stop offset="0" stop-color="#B98510"/><stop offset=".45" stop-color="#F6D35A"/><stop offset="1" stop-color="#C9961C"/></linearGradient>
+            <linearGradient id="g-silver" x1="0" x2="1"><stop offset="0" stop-color="#9AA3AD"/><stop offset=".45" stop-color="#EEF1F4"/><stop offset="1" stop-color="#A9B1BA"/></linearGradient>
+          </defs>
+          <g clip-path="url(#frame)">
+            <!-- 夜市的晚上 -->
+            <rect width="1000" height="620" fill="#2E3A66"/>
+            <!-- 摊位后面的布 -->
+            <rect x="0" y="60" width="1000" height="170" fill="#F3D9A4"/>
+            <g id="stripes"></g>
+            <path d="M0 230 L1000 230" stroke="#2B2B2B" stroke-width="3"/>
+            <!-- 放瓶子的木台（前面宽、后面窄） -->
+            <path d="M150 200 L850 200 L985 520 L15 520 Z" fill="#E2A35E" stroke="#2B2B2B" stroke-width="4" stroke-linejoin="round"/>
+            <path d="M131 245 L869 245 M93 335 L907 335 M54 427 L946 427" stroke="#C8864A" stroke-width="3"/>
+            <!-- 前面的柜台：圈圈放这里 -->
+            <rect x="-4" y="520" width="1008" height="104" fill="#B8682E" stroke="#2B2B2B" stroke-width="4"/>
+            <rect x="-4" y="520" width="1008" height="16" fill="#D88A44" stroke="#2B2B2B" stroke-width="4"/>
+            <!-- 遮阳棚和小灯泡 -->
+            <rect x="0" y="0" width="1000" height="36" fill="#D9473B"/>
+            <g id="awning"></g>
+            <path id="wire" d="M0 92 Q250 132 500 92 Q750 132 1000 92" fill="none" stroke="#2B2B2B" stroke-width="3"/>
+            <g id="bulbs"></g>
+            <g id="bottles"></g>
+            <g id="tray"></g>
+            <g id="fly"></g>
+          </g>
+          <rect x="2" y="2" width="996" height="616" rx="22" fill="none" stroke="#2B2B2B" stroke-width="5"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.ringtoss;
+  const LEVELS = UNIT.levels || [{ note: '' }];
+  const $ = id => document.getElementById(id);
+  const NS = 'http://www.w3.org/2000/svg';
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.rubyText(C.done.zh, C.done.py);
+  $('endRuby').innerHTML = Shih.ruby('时间到', 'shí jiān dào');
+  Shih.soundButton($('soundBtn'));
+
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const pickOne = a => a[Math.floor(Math.random() * a.length)];
+  const fmt = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+
+  // ---- 背景：遮阳棚、条纹布、小灯泡 ----
+  (function () {
+    let a = '';
+    for (let x = 0, k = 0; x < 1000; x += 50, k++) a += `<path d="M${x} 34 L${x + 50} 34 L${x + 50} 40 Q${x + 25} 74 ${x} 40 Z" fill="${k % 2 ? '#FFFFFF' : '#D9473B'}" stroke="#2B2B2B" stroke-width="3"/>`;
+    $('awning').innerHTML = a + '<path d="M0 36 L1000 36" stroke="#2B2B2B" stroke-width="3"/>';
+    let s = '';
+    for (let x = 0; x < 1000; x += 80) s += `<rect x="${x}" y="60" width="40" height="170" fill="#EBC888"/>`;
+    $('stripes').innerHTML = s;
+    const wire = $('wire'), L = wire.getTotalLength(), cols = ['#FFE066', '#FF8A80', '#8CE0A8', '#8CC8FF'];
+    let b = '';
+    for (let k = 1; k < 20; k++) { const p = wire.getPointAtLength(L * k / 20); b += `<circle cx="${p.x}" cy="${p.y + 9}" r="8" fill="${cols[k % 4]}" stroke="#2B2B2B" stroke-width="2.5"/>`; }
+    $('bulbs').innerHTML = b;
+  })();
+
+  // ---- 瓶子的位置：保龄球的三角形，后面 4 个、前面 1 个；后面的小一点 ----
+  const ROWS = [{ n: 4, y: 240, s: .78 }, { n: 3, y: 330, s: .86 }, { n: 2, y: 422, s: .93 }, { n: 1, y: 512, s: 1 }];
+  const SPOTS = [];
+  ROWS.forEach(R => { for (let i = 0; i < R.n; i++) SPOTS.push({ x: 500 + (i - (R.n - 1) / 2) * 236 * R.s, y: R.y, s: R.s }); });
+  const RING_X = [290, 430, 570, 710], RING_Y = 576;
+
+  const fillOf = w => w.zh === '金色' ? 'url(#g-gold)' : w.zh === '银色' ? 'url(#g-silver)' : w.hex;
+  const BOTTLE = 'M-46 0 Q-57 0 -57 -10 L-57 -106 Q-57 -130 -16 -140 L-14 -164 L14 -164 L16 -140 Q57 -130 57 -106 L57 -10 Q57 0 46 0 Z';
+  const LIGHT = ['白色', '黄色', '粉红色', '金色', '银色'];   // 浅色瓶子用黑字，其他用白字
+
+  // 一个瓶子（牌子上写 sign，瓶子是 color 的颜色）
+  function drawBottle(spot, b) {
+    const g = el('g', { class: 'bottle', transform: `translate(${spot.x} ${spot.y}) scale(${spot.s})` });
+    g.setAttribute('role', 'button');
+    g.setAttribute('aria-label', `bottle, sign says ${b.sign.en}`);
+    const pop = el('g', { class: 'pop' }, g);
+    el('ellipse', { cx: 0, cy: 0, rx: 58, ry: 11, fill: 'rgba(43,43,43,.25)' }, pop);
+    b.back = el('g', {}, pop);                                  // 套中时，圈圈后面那一半
+    el('path', { d: BOTTLE, class: 'glow' }, pop);
+    el('path', { d: BOTTLE, fill: fillOf(b.color), stroke: '#2B2B2B', 'stroke-width': 4, 'stroke-linejoin': 'round' }, pop);
+    el('rect', { x: -18, y: -176, width: 36, height: 14, rx: 4, fill: fillOf(b.color), stroke: '#2B2B2B', 'stroke-width': 4 }, pop);
+    el('path', { d: 'M-47 -98 L-47 -16', stroke: b.color.zh === '白色' ? 'rgba(43,43,43,.12)' : 'rgba(255,255,255,.45)', 'stroke-width': 7, 'stroke-linecap': 'round' }, pop);
+    // 字直接印在瓶身上（拼音在上、中文在下）
+    const dark = LIGHT.includes(b.color.zh);
+    const ink = dark ? { fill: '#2B2B2B' } : { fill: '#FFFFFF', stroke: '#2B2B2B', 'stroke-width': 3.5, 'paint-order': 'stroke', 'stroke-linejoin': 'round' };
+    const zh = Array.from(b.sign.zh), py = b.sign.py.split(' '), step = zh.length > 2 ? 37 : 42, x0 = -(zh.length - 1) * step / 2;
+    zh.forEach((c, i) => {
+      el('text', Object.assign({ x: x0 + i * step, y: -80, 'text-anchor': 'middle', class: 'tag-py' }, ink), pop).textContent = py[i] || '';
+      el('text', Object.assign({ x: x0 + i * step, y: -48, 'text-anchor': 'middle', class: 'tag-zh' }, ink), pop).textContent = c;
+    });
+    b.front = el('g', {}, pop);                                 // 套中时，圈圈前面那一半
+    el('rect', { x: -60, y: -182, width: 120, height: 186, class: 'hit' }, g);
+    b.g = g; b.pop = pop;
+    return g;
+  }
+
+  // 圈圈（rx 46 的椭圆，粗黑边）；half：'back' / 'front' 只画一半（套在瓶子上用）
+  function ringShape(parent, w, half) {
+    const d = half === 'back' ? 'M-46 0 A46 19 0 0 1 46 0' : half === 'front' ? 'M-46 0 A46 19 0 0 0 46 0' : 'M-46 0 A46 19 0 1 1 46 0 A46 19 0 1 1 -46 0';
+    el('path', { d, fill: 'none', stroke: '#2B2B2B', 'stroke-width': 21, 'stroke-linecap': 'round' }, parent);
+    el('path', { d, fill: 'none', stroke: fillOf(w), 'stroke-width': 13, 'stroke-linecap': 'round' }, parent);
+    if (!half) el('path', { d: 'M-30 -9 A38 13 0 0 1 10 -16', fill: 'none', stroke: w.zh === '白色' ? 'rgba(43,43,43,.15)' : 'rgba(255,255,255,.55)', 'stroke-width': 4, 'stroke-linecap': 'round' }, parent);
+  }
+  function drawRing(r) {
+    const g = el('g', { class: 'ring', transform: `translate(${r.x} ${RING_Y})` });
+    g.setAttribute('role', 'button');
+    g.setAttribute('aria-label', `${r.color.en} ring`);
+    el('ellipse', { cx: 0, cy: 0, rx: 46, ry: 19, fill: 'none', 'stroke-width': 34, class: 'glow' }, g);
+    ringShape(g, r.color);
+    el('ellipse', { cx: 0, cy: 0, rx: 62, ry: 34, fill: 'transparent' }, g);   // 好点一点
+    r.g = g;
+    return g;
+  }
+
+  // ---- 小动画 ----
+  function tween(ms, step, done) {
+    const t0 = performance.now();
+    const go = now => {
+      const t = Math.min(1, (now - t0) / ms);
+      step(t);
+      if (t < 1) requestAnimationFrame(go); else done && done();
+    };
+    requestAnimationFrame(go);
+  }
+  const ease = t => 1 - Math.pow(1 - t, 2);
+
+  // ---- 游戏 ----
+  const words = lv => UNIT.words.filter(w => (w.level || 1) <= lv);
+  let level = Shih.startLevel('ringtossLevel', LEVELS.length);
+  const target = () => C.targets[level - 1] || C.targets[C.targets.length - 1];
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level,
+    lv => words(lv).length, lv => { level = lv; Shih.set('ringtossLevel', lv); setup(); });
+  const wait = Shih.startCover($('playArea'), start);
+
+  let slots = [], rings = [], picked = null, hits = 0, playing = false, startT = 0, raf = 0;
+  const scoreEl = $('score'), clockEl = $('clock');
+  const paintScore = () => { scoreEl.textContent = `${hits} / ${target()}`; };
+
+  // 新瓶子：牌子尽量用比较少出现的颜色；下面的圈圈如果找不到牌子，就一定写那个颜色
+  function newBottle(skip) {
+    const pal = words(level);
+    const others = slots.filter((s, i) => i !== skip && s);
+    const signs = others.map(s => s.sign.zh);
+    const orphan = rings.find(r => r && !r.gone && !signs.includes(r.color.zh));
+    let sign;
+    if (orphan) sign = orphan.color;
+    else {
+      const cnt = w => signs.filter(z => z === w.zh).length;
+      const min = Math.min(...pal.map(cnt));
+      sign = pickOne(pal.filter(w => cnt(w) <= min));
+    }
+    const color = Math.random() < C.same ? sign : pickOne(pal.filter(w => w.zh !== sign.zh));
+    return { sign, color, busy: false };
+  }
+  // 新圈圈：一定有牌子对得上；尽量跟下面的圈圈不同颜色
+  function newRingColor() {
+    const signs = [...new Map(slots.map(s => [s.sign.zh, s.sign])).values()];
+    const inTray = rings.filter(r => r && !r.gone).map(r => r.color.zh);
+    const fresh = signs.filter(w => !inTray.includes(w.zh));
+    return pickOne(fresh.length ? fresh : signs);
+  }
+  function addRing(k, slide) {
+    const r = { k, x: RING_X[k], color: newRingColor(), gone: false };
+    rings[k] = r;
+    const g = drawRing(r);
+    g.addEventListener('click', () => tapRing(r));
+    $('tray').appendChild(g);
+    if (slide) tween(260, t => g.setAttribute('transform', `translate(${r.x + (1 - ease(t)) * 400} ${RING_Y})`));
+  }
+  function placeBottle(i, pop) {
+    const b = slots[i];
+    const g = drawBottle(SPOTS[i], b);
+    g.addEventListener('click', () => tapBottle(i));
+    const old = $('bottles').querySelector(`[data-i="${i}"]`);
+    g.dataset.i = i;
+    // 前面的瓶子要画在后面瓶子的上面：照顺序插回去
+    const after = [...$('bottles').children].find(c => +c.dataset.i > i);
+    if (old) old.remove();
+    $('bottles').insertBefore(g, after || null);
+    if (pop) tween(220, t => b.pop.setAttribute('transform', `scale(${ease(t)})`), () => b.pop.removeAttribute('transform'));
+  }
+
+  function select(x) {
+    if (picked) picked.g.classList.remove('sel');
+    picked = picked === x ? null : x;
+    if (picked) picked.g.classList.add('sel');
+  }
+  function tapRing(r) {
+    if (!playing || r.gone) return;
+    if (picked && picked.isBottle) { const i = picked.i; select(picked); toss(r, i); }
+    else select(r);
+  }
+  function tapBottle(i) {
+    if (!playing || slots[i].busy) return;
+    if (picked && !picked.isBottle) { const r = picked; select(r); toss(r, i); }
+    else { slots[i].isBottle = true; slots[i].i = i; select(slots[i]); }
+  }
+
+  // ---- 丢圈圈 ----
+  function toss(r, i) {
+    const b = slots[i], spot = SPOTS[i];
+    const ok = r.color.zh === b.sign.zh;
+    r.gone = true; r.g.remove();
+    // 飞过去的圈圈
+    const f = el('g', {}, $('fly'));
+    ringShape(f, r.color);
+    const x0 = r.x, y0 = RING_Y, x1 = spot.x, y1 = spot.y - 188 * spot.s, k1 = 0.5 * spot.s;
+    const at = (x, y, k) => f.setAttribute('transform', `translate(${x} ${y}) scale(${k})`);
+    if (ok) {
+      hits++; paintScore();
+      b.busy = true;
+      slots[i] = newBottle(i);         // 先把新瓶子决定好（下面的圈圈才对得上），等动画做完再换上去
+      slots[i].busy = true;
+      Shih.speak(b.sign.zh);
+    }
+    addRing(r.k, true);
+    tween(430, t => {
+      const e = ease(t);
+      at(x0 + (x1 - x0) * e, y0 + (y1 - y0) * e - Math.sin(Math.PI * t) * 110, 1 + (k1 - 1) * e);
+    }, () => {
+      if (ok) {
+        // 往下套进瓶颈
+        tween(150, t => at(x1, y1 + (spot.y - 142 * spot.s - y1) * t, k1), () => {
+          f.remove();
+          const back = el('g', { transform: 'translate(0 -142) scale(.5)' }, b.back), front = el('g', { transform: 'translate(0 -142) scale(.5)' }, b.front);
+          ringShape(back, r.color, 'back'); ringShape(front, r.color, 'front');
+          if (hits >= target()) return finish(true);
+          setTimeout(() => {
+            if (!playing) return;
+            tween(200, t => b.pop.setAttribute('transform', `scale(${1 - t})`), () => {
+              if (!playing) return;
+              slots[i].busy = false;
+              placeBottle(i, true);
+            });
+          }, 380);
+        });
+      } else {
+        // 弹开、掉下去
+        const side = x1 < 500 ? -1 : 1;
+        tween(520, t => {
+          const x = x1 + side * 120 * t, y = y1 - Math.sin(Math.PI * Math.min(1, t * 1.6)) * 50 + (t > .6 ? (t - .6) / .4 * (640 - y1) : 0);
+          at(x, y, k1);
+          f.setAttribute('opacity', String(1 - Math.max(0, t - .5) * 2));
+        }, () => f.remove());
+      }
+    });
+  }
+
+  function frame(now) {
+    if (!playing) return;
+    const left = Math.max(0, C.seconds - (now - startT) / 1000);
+    const s = Math.ceil(left);
+    clockEl.textContent = fmt(s);
+    clockEl.classList.toggle('low', s <= 10);
+    if (left <= 0) return finish(false);
+    raf = requestAnimationFrame(frame);
+  }
+
+  function setup() {
+    paintLevels(level);
+    playing = false; cancelAnimationFrame(raf); picked = null; hits = 0;
+    $('bottles').innerHTML = ''; $('tray').innerHTML = ''; $('fly').innerHTML = '';
+    slots = []; rings = [];
+    for (let i = 0; i < SPOTS.length; i++) slots[i] = newBottle(i);
+    SPOTS.forEach((_, i) => placeBottle(i, false));
+    RING_X.slice(0, C.rings).forEach((_, k) => addRing(k, false));
+    paintScore();
+    $('help').textContent = `${C.help} Get ${target()} rings in ${C.seconds} seconds.`;
+    clockEl.textContent = fmt(C.seconds); clockEl.classList.remove('low');
+    $('winMsg').hidden = true; $('endMsg').hidden = true;
+    wait();
+  }
+  function start() {
+    playing = true;
+    startT = performance.now();
+    raf = requestAnimationFrame(frame);
+  }
+  function finish(ok) {
+    if (!playing) return;
+    playing = false; cancelAnimationFrame(raf);
+    if (picked) select(picked);
+    const sec = Math.round((performance.now() - startT) / 1000);
+    setTimeout(() => {
+      if (ok) {
+        $('winEn').textContent = `You got ${target()} rings in ${sec} seconds!`;
+        $('winMsg').hidden = false; Shih.speak(C.done.zh);
+      } else {
+        $('endEn').textContent = `Time's up! You got ${hits} of ${target()}. Try again!`;
+        $('endMsg').hidden = false;
+      }
+    }, ok ? 500 : 0);
+  }
+
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2Btn').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>服务台 Lost Kid Announcement</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 服务台（听）和找朋友（读）长得一样，只有题目不同。玩法和规则写在 shared/crowd.js。
+   用法：lost.html?unit=clothes（听）、find.html?unit=clothes（读） */
+body.game { background: #FFF6E5; }
+.crowdWrap { display: flex; gap: 12px; align-items: flex-start; justify-content: center; }
+.clue { flex: none; width: 250px; background: var(--card); border: 4px solid var(--ink); border-radius: 18px; padding: 10px 12px; }
+.clue .head { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; margin-bottom: 6px; }
+.clue .head .ic { font-size: 26px; }
+.clue .no { font-size: 14px; color: var(--muted); font-weight: 700; margin-bottom: 4px; }
+.row { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; column-gap: 6px; align-items: center; padding: 5px 0 7px; border-top: 2px dashed var(--line); }
+.row .lab { grid-column: 1; font-weight: 700; font-size: 15px; color: var(--muted); }
+.row .ruby, .row .say { grid-column: 1; grid-row: 2; justify-self: start; }
+.row .mark { grid-column: 2; grid-row: 1 / 3; }
+.row .ruby { gap: 1px; } .row .ruby .py { font-size: 12px; } .row .ruby .zh { font-size: 22px; }
+.row .mark { font-size: 22px; min-width: 26px; text-align: center; }
+.say { font-size: 26px; line-height: 1; padding: 6px 16px; border: 3px solid var(--ink); border-radius: 14px; background: var(--sea); cursor: pointer; box-shadow: 0 3px 0 var(--ink); }
+.say:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.say.on { animation: sayOn .5s; }
+@keyframes sayOn { 50% { background: #FFE066; } }
+svg.booth { display: block; flex: none; aspect-ratio: 5 / 3; height: auto; width: min(calc(100% - 262px), calc((100vh - 250px) * 5 / 3), 1000px); border: 4px solid var(--ink); border-radius: 18px; background: #F4EEE2; touch-action: manipulation; }
+.booth .kid { cursor: pointer; transform-box: fill-box; }
+.booth .kid .hit { fill: transparent; }
+.booth .kid.nope { animation: nope .4s; }
+@keyframes nope { 0%,100% { translate: 0 0 } 25% { translate: -6px 0 } 75% { translate: 6px 0 } }
+.booth .kid.found, .booth .kid.answer { filter: drop-shadow(0 0 6px #2F7A4D) drop-shadow(0 0 3px #2F7A4D); }
+.booth .kid.answer { filter: drop-shadow(0 0 6px #C2372F) drop-shadow(0 0 3px #C2372F); }
+.booth #people.swap { animation: swapIn .4s; }
+@keyframes swapIn { from { opacity: 0; } }
+.booth .kid.leave { transition: opacity .45s, translate .45s; opacity: 0; translate: 0 -30px; }
+.clock.low { color: var(--bad); border-color: var(--bad); }
+.endMsg { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; text-align: center; font-size: 22px; font-weight: 700; color: var(--dad-ink); background: var(--dad-soft); border: 2px solid var(--dad); border-radius: 14px; padding: 10px; margin-bottom: 10px; }
+.endMsg .ruby .py { font-size: 15px; } .endMsg .zh { font-size: 30px; }
+.endMsg button.ctl { border-color: var(--dad-ink); color: var(--dad-ink); }
+.win .ruby .py { font-size: 15px; } .win .en { font-size: 18px; }
+@media (orientation: landscape) and (max-height: 720px) {
+  svg.booth { width: min(calc(100% - 242px), calc((100vh - 195px) * 5 / 3), 1000px); }
+  .clue { width: 230px; padding: 6px 10px; }
+}
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 3</span>
+      <span class="pill clock" id="clock">1:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> <span class="en" id="winEn"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="endMsg" id="endMsg" hidden><span><span class="ruby" id="endRuby"></span> <span id="endEn"></span></span><button class="ctl" id="again2Btn" type="button">Try again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="crowdWrap">
+        <div class="clue">
+          <div class="head"><span class="ic" aria-hidden="true">📢</span><span id="clueHead">Lost kid!</span></div>
+          <div class="no" id="clueNo"></div>
+          <div id="rows"></div>
+        </div>
+        <svg class="booth" id="booth" viewBox="0 0 1000 600" aria-label="Shopping mall crowd"></svg>
+      </div>
+    </div>
+  </div>
+
+<script>window.CROWD_MODE = 'listen';</script>
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/kids.js"></script>
+<script src="../shared/crowd.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => ShihCrowd(UNIT, window.CROWD_MODE));
+</script>
+</body>
+</html>
