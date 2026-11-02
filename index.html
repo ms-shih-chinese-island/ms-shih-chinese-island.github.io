@@ -352,8 +352,8 @@ table.rec tr:nth-child(even) td { background: #F6FAFB; }
         <path d="M424 252 L424 228 Q435 218 446 228 L446 252 Z" fill="#B4471C"/>
         <path d="M384 252 L486 252" stroke-width="4"/>
       </g>
-      <!-- shopping mall（原本饮水机的位置）：宽宽的楼、条纹遮阳棚、玻璃门、购物袋招牌 -->
-      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+      <!-- shopping mall（原本饮水机的位置）：宽宽的楼、条纹遮阳棚、玻璃门、购物袋招牌；牌子在楼的下面 -->
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" transform="translate(-28 -22)">
         <rect x="318" y="404" width="132" height="60" fill="#FFFFFF"/>
         <rect x="312" y="394" width="144" height="12" fill="#7A5BC7"/>
         <path d="M318 406 L340 406 L340 414 Q329 422 318 414 Z M362 406 L384 406 L384 414 Q373 422 362 414 Z M406 406 L428 406 L428 414 Q417 422 406 414 Z" fill="#F5C531" stroke-width="2"/>
@@ -709,7 +709,7 @@ const WALK = {
   main: {
     nodes: {
       A: [300, 300], B: [440, 322], C: [560, 332], D: [690, 336], E: [820, 345], G: [955, 355], F: [290, 420],
-      school: [216, 350], schoolDoor: [265, 258], library: [525, 268], mall: [384, 474], P1: [670, 400], plaza: [700, 467], home: [735, 300],
+      school: [216, 350], schoolDoor: [265, 258], library: [525, 268], mall: [356, 450], P1: [670, 400], plaza: [700, 467], home: [735, 300],
       visitor: [227, 505], bank: [800, 418], dock: [1002, 372], playground: [540, 548]
     },
     edges: [['school', 'A'], ['A', 'schoolDoor'], ['A', 'B'], ['B', 'library'], ['B', 'C'], ['C', 'P1'], ['P1', 'plaza'], ['C', 'D'], ['D', 'home'],
