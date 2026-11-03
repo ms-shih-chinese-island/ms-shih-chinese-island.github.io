@@ -48,9 +48,7 @@
     bar.appendChild(a);
     document.body.insertBefore(bar, document.body.firstChild);
     // find which place on the island this game belongs to, and add a "back to that place" button
-    const s = document.createElement('script');
-    s.src = '../island.js';
-    s.onload = () => {
+    const run = () => {
       const here = location.pathname.split('/').pop() + '?unit=' + S.unitId();
       let place = null;
       Object.values(window.ISLANDS || {}).forEach(I => I.places.forEach(P => {
@@ -66,6 +64,13 @@
       const controls = document.querySelector('.controls');
       (controls || bar).appendChild(b);
     };
+    // island.js 可能已经被 gate.js（包场）读过了，不要读第二次
+    if (window.ISLANDS) return run();
+    const old = [...document.scripts].find(x => /island\.js$/.test(x.src));
+    if (old) { old.addEventListener('load', run); return; }
+    const s = document.createElement('script');
+    s.src = '../island.js';
+    s.onload = run;
     document.head.appendChild(s);
   };
 

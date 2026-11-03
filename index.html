@@ -117,6 +117,11 @@ body.holiday { background: #CBC3E8; }
 .spot.label::before { display: none; }
 .spot.label:hover { transform: translate(-50%, -50%); }
 .spot .soonTag { font-size: clamp(9px, 1vw, 12px); color: var(--muted); }
+/* 包场：门口挂一块 Closed 的小牌子（点进去才写 Special event today!）；最上面一条提示 */
+.spot .resvTag { display: none; font: 700 clamp(9px, 1vw, 12px) var(--f-latin); color: #fff; background: #7A5BC7; border-radius: 6px; padding: 1px 6px; margin-top: 2px; }
+.spot.reserved .resvTag { display: inline-block; }
+.resvNote { display: none; margin: 0 auto 8px; max-width: 900px; text-align: center; font-weight: 700; font-size: 16px; color: #4B3A86; background: #F1ECFB; border: 2px solid #7A5BC7; border-radius: 12px; padding: 6px 12px; }
+body.reservedOn .resvNote { display: block; }
 @keyframes bob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-3px) } }
 
 .overlay { position: fixed; inset: 0; background: rgba(31,94,115,.35); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 20; }
@@ -326,6 +331,7 @@ table.rec tr:nth-child(even) td { background: #F6FAFB; }
       <button class="listBtn" id="whoBtn" type="button"></button>
     </div>
   </header>
+  <div class="resvNote" id="resvNote">Some places are closed for special events today.</div>
 
   <div class="scene" id="scene-main">
   <div class="mapScroll" id="scroll-main">
@@ -748,7 +754,8 @@ Object.entries(ISLANDS).forEach(([id, I]) => {
     b.className = 'spot' + (soon ? ' soon' : '');
     b.style.left = X(P.x); b.style.top = Y(P.y);
     b.style.setProperty('--c', (COLORS[P.color] || COLORS.me)[0]);
-    b.innerHTML = `<span class="ruby">${rubyHTML(P.zh, P.py)}</span><span class="en">${P.en}</span>` + (soon ? '<span class="soonTag">Coming soon</span>' : '');
+    b.innerHTML = `<span class="ruby">${rubyHTML(P.zh, P.py)}</span><span class="en">${P.en}</span>` + (soon ? '<span class="soonTag">Coming soon</span>' : '<span class="resvTag">Closed</span>');
+    if (!soon && P.id) b.dataset.place = P.id;
     b.setAttribute('aria-label', `${P.zh} ${P.en}${soon ? ' (coming soon)' : ''}`);
     if (soon) b.setAttribute('aria-disabled', 'true');
     b.addEventListener('click', () => goTo(id, P, soon ? null : b));
@@ -756,7 +763,18 @@ Object.entries(ISLANDS).forEach(([id, I]) => {
   });
 });
 
+// 包场：锁着的建筑先输入密码，对了才打开选单
+function paintReserved() {
+  const R = window.ShihReserve;
+  document.body.classList.toggle('reservedOn', !!(R && R.state() && R.state().on));
+  document.querySelectorAll('.spot[data-place]').forEach(b => b.classList.toggle('reserved', !!(R && R.locked(b.dataset.place))));
+}
+if (window.ShihReserve) ShihReserve.ready.then(paintReserved);
 function openTopic(T, from) {
+  if (window.ShihReserve && T.id && ShihReserve.locked(T.id)) {
+    ShihReserve.enter(T).then(ok => { paintReserved(); if (ok) openTopic(T, from); });
+    return;
+  }
   lastFocus = from;
   panelTitle.innerHTML = `<span class="ruby">${rubyHTML(T.zh, T.py)}</span><span class="en">${T.en}</span>`;
   panelGames.innerHTML = gameCards(T);
