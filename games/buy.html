@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>水果买一买 Shopping List</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 水果买一买：上面一张购物清单「＿个（颜色的）＿＿」，架上是一袋一袋的水果（袋子上不写数字）。
+   点袋子放进篮子（再点一下拿出来），一袋或两袋刚好就按「结帐」。
+   买错了篮子上出现红色圆圈＋白色 ✗、摇一摇，袋子再飞回架上，不扣分；时间内全部买对就有金币。
+   用法：buy.html?unit=fruits（题目设定在 units/fruits/words.js 的 UNIT.buy；水果的图在 units/fruits/art.js） */
+body.game { background: #EEF7EA; }
+.stage { max-width: 940px; margin: 0 auto; }
+.ask { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0 auto 8px; }
+.list { position: relative; background: #FFFDF2; border: 3px solid var(--ink); border-radius: 6px 6px 14px 14px; padding: 4px 22px 8px; box-shadow: 4px 4px 0 rgba(43,43,43,.15); }
+.list .cap { font: 700 13px var(--f-latin); color: var(--muted); text-align: center; letter-spacing: .5px; }
+.say { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center; gap: 2px 4px; }
+.say .ruby .py { font-size: 15px; } .say .ruby .zh { font-size: clamp(26px, 3.6vw, 36px); }
+.say .ruby.hot .zh { color: var(--pick); }
+.say .sym { font: 700 clamp(26px, 3.6vw, 36px) var(--f-zh); line-height: 1.1; }
+.ask .hear { min-width: 48px; min-height: 48px; font-size: 22px; }
+.stage svg.store { display: block; width: 100%; height: auto; max-height: calc(100vh - 320px); min-height: 260px; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.store .bag { cursor: pointer; }
+.store .bag .pop { transform-box: fill-box; transform-origin: 50% 100%; }
+.store .basket.nope { animation: nope .45s; transform-box: fill-box; transform-origin: 50% 100%; }
+.store .basket.yes .rim { fill: var(--me-done); }
+@keyframes nope { 20% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } 80% { transform: rotate(-3deg); } }
+.store .pay { cursor: pointer; }
+.store .pay:hover .face { fill: #FFE48A; }
+.store .pay-py { font: 700 16px var(--f-latin); fill: #2B2B2B; }
+.store .pay-zh { font: 700 30px var(--f-zh); fill: #2B2B2B; }
+.store .pay-en { font: 700 15px var(--f-latin); fill: #6B6255; }
+.store .roundNo { font: 700 18px var(--f-latin); fill: #6B6255; }
+.help { text-align: center; }
+.clock.low { color: var(--bad); border-color: var(--bad); }
+.endMsg { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; text-align: center; font-size: 22px; font-weight: 700; color: var(--dad-ink); background: var(--dad-soft); border: 2px solid var(--dad); border-radius: 14px; padding: 10px; margin-bottom: 10px; }
+.endMsg .ruby .py { font-size: 15px; } .endMsg .zh { font-size: 30px; }
+.endMsg button.ctl { border-color: var(--dad-ink); color: var(--dad-ink); }
+.win .ruby .py { font-size: 15px; }
+.win .en { font-size: 18px; }
+@media (orientation: landscape) and (max-height: 720px) {
+  .stage svg.store { max-height: calc(100vh - 300px); }
+  .say { padding: 4px 14px 6px; }
+}
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill clock" id="clock">2:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> <span class="en" id="winEn"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="endMsg" id="endMsg" hidden><span><span class="ruby" id="endRuby"></span> <span id="endEn"></span></span><button class="ctl" id="again2Btn" type="button">Try again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="stage">
+        <div class="ask"><div class="list"><div class="cap">Shopping list</div><div class="say" id="say"></div></div><button class="ctl hear" id="hear" type="button" aria-label="Listen">🔊</button></div>
+        <svg class="store" id="store" viewBox="0 0 1000 540" aria-label="Fruit shelf and a shopping cart">
+          <defs><clipPath id="frame"><rect x="2" y="2" width="996" height="536" rx="22"/></clipPath></defs>
+          <g clip-path="url(#frame)">
+            <rect width="1000" height="540" fill="#FFF8EC"/>
+            <!-- 架子：两层 -->
+            <rect x="18" y="16" width="752" height="508" rx="14" fill="#F2D6A8" stroke="#2B2B2B" stroke-width="4"/>
+            <g id="planks"></g>
+            <!-- 右边：柜台 -->
+            <rect x="786" y="16" width="196" height="508" rx="14" fill="#E3F1DC" stroke="#2B2B2B" stroke-width="4"/>
+            <text class="roundNo" id="roundNo" x="884" y="50" text-anchor="middle"></text>
+            <g id="bags"></g>
+            <g class="basket" id="basket"></g>
+            <g id="inBasket"></g>
+            <g class="pay" id="pay" role="button" aria-label="Check out"></g>
+            <g id="tick" opacity="0" pointer-events="none"><circle cx="884" cy="290" r="72" fill="#45A852" stroke="#2B2B2B" stroke-width="6"/><path d="M848 292 L874 319 L922 266" fill="none" stroke="#FFFFFF" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/></g>
+            <g id="cross" opacity="0" pointer-events="none"><circle cx="884" cy="290" r="72" fill="#E5483B" stroke="#2B2B2B" stroke-width="6"/><path d="M856 262 L912 318 M912 262 L856 318" fill="none" stroke="#FFFFFF" stroke-width="20" stroke-linecap="round"/></g>
+          </g>
+          <rect x="2" y="2" width="996" height="536" rx="22" fill="none" stroke="#2B2B2B" stroke-width="5"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/numbers.js"></script>
+<script src="../units/fruits/art.js"></script>
+<script>
+Shih.islandBar();
+const FART = window.ART;
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.buy;
+  const LEVELS = UNIT.levels || [{ note: '' }];
+  const $ = id => document.getElementById(id);
+  const NS = 'http://www.w3.org/2000/svg';
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.rubyText(C.done.zh, C.done.py);
+  $('endRuby').innerHTML = Shih.ruby('时间到', 'shí jiān dào');
+  Shih.soundButton($('soundBtn'));
+
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const pickOne = a => a[Math.floor(Math.random() * a.length)];
+  const rand = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
+  const fmt = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+
+  // ---- 水果 ----
+  const W = Shih.wordMap(UNIT);
+  const FRUITS = UNIT.words.filter(w => w.shelf !== false);
+  const at = lv => FRUITS.filter(w => (w.level || 1) <= lv);
+  const same = (a, b) => a.f === b.f && (level === 1 || a.c === b.c);
+  // Level 2 所有的（水果，颜色）；colors 空的就用本来的颜色（c = null）
+  const variants = (list) => list.flatMap(w => (w.colors || []).length ? w.colors.map(c => ({ f: w.zh, c })) : [{ f: w.zh, c: null }]);
+
+  // 量词（照水果换）
+  const MW = { '个': 'gè', '根': 'gēn', '串': 'chuàn' };
+  // ---- 购物清单：＿个／根／串（颜色的）＿＿ ----
+  function sentence(q) {
+    const bits = [];
+    const num = ShihNum.parts(q.n).map(b => b.concat('hot'));
+    const mw = W[q.t.f].mw || '个';
+    bits.push(...num, [mw, MW[mw]]);
+    if (level > 1 && q.t.c) bits.push([q.t.c, UNIT.colors[q.t.c].py, 'hot'], ['的', 'de']);
+    bits.push([q.t.f, W[q.t.f].py, 'hot']);
+    const zh = bits.map(b => b[0]).join('');
+    const html = bits.map(b => `<span class="ruby${b[2] ? ' hot' : ''}">${Shih.ruby(b[0], b[1])}</span>`).join('');
+    return { zh, html };
+  }
+
+  // ---- 出题 ----
+  const L = () => C.levels[level - 1] || C.levels[C.levels.length - 1];
+  function makeRound(prevF, prevN) {
+    const cfg = L(), max = cfg.bag;
+    // 要买的：量词是「个」的水果；Level 2 多半挑有好几种颜色的（才有颜色陷阱）
+    const buyable = at(level).filter(w => MW[w.mw] && w.zh !== prevF && (level === 1 || (w.colors || []).length >= 2));
+    let t;
+    if (level === 1) t = { f: pickOne(buyable).zh, c: null };
+    else {
+      const w = pickOne(buyable);
+      t = { f: w.zh, c: pickOne(w.colors) };
+    }
+    // 一袋就刚好（数量要 ≤ 一袋最多几个），或两袋加起来
+    const one = Math.random() < (cfg.single || 0) && cfg.nums.some(x => x <= max && x !== prevN);
+    const n = pickOne(cfg.nums.filter(x => (one ? x <= max : x <= 2 * max) && x !== prevN));
+    const bags = [];
+    if (one) bags.push({ it: t, k: n });
+    else { const a = rand(Math.max(1, n - max), Math.min(max, n - 1)); bags.push({ it: t, k: a }, { it: t, k: n - a }); }
+    // 对的水果再多放几袋（数量都不一样），两袋题不能有一袋刚好
+    const ks = bags.map(b => b.k);
+    for (let g = 0; bags.length < (cfg.right || 3) && g < 200; g++) {
+      const x = rand(1, max);
+      if (ks.includes(x) && g < 150) continue;
+      if (!one && x === n) continue;
+      ks.push(x); bags.push({ it: t, k: x });
+    }
+    // 陷阱：别的东西也凑得出 n（一袋题就一袋刚好，两袋题就两袋加起来）
+    const trapFor = it => one ? [{ it, k: n }] : (p => [{ it, k: p }, { it, k: n - p }])(rand(Math.max(1, n - max), Math.min(max, n - 1)));
+    if (level === 1) {
+      // 别的水果：两种各自也凑得出 n（骗没读字的），其他随便
+      const others = shuffle(at(1).filter(w => w.zh !== t.f));
+      bags.push(...trapFor({ f: others[0].zh, c: null }), ...trapFor({ f: others[1].zh, c: null }));
+      let o = 2;
+      while (bags.length < cfg.bags) bags.push({ it: { f: others[o++ % others.length].zh, c: null }, k: rand(1, max) });
+    } else {
+      const all = variants(at(2));
+      const sameFruit = all.filter(v => v.f === t.f && v.c !== t.c);
+      const sameColor = all.filter(v => v.c === t.c && v.f !== t.f);
+      const rest = all.filter(v => v.f !== t.f && v.c !== t.c);
+      // 同一种水果、别的颜色：也凑得出 n（没看颜色就会选错），再多一袋
+      const sf = sameFruit.length ? sameFruit : (sameColor.length ? sameColor : rest);
+      bags.push(...trapFor(pickOne(sf)));
+      while (bags.filter(b => b.it.f === t.f && b.it.c !== t.c).length < (cfg.bags > 10 ? 4 : 3) && bags.length < cfg.bags) bags.push({ it: pickOne(sf), k: rand(1, max) });
+      // 同颜色、别的水果（也凑得出 n）
+      if (sameColor.length && bags.length + 2 <= cfg.bags) bags.push(...trapFor(pickOne(sameColor)));
+      while (bags.length < cfg.bags) bags.push({ it: pickOne(sameColor.length && Math.random() < 0.5 ? sameColor : rest), k: rand(1, max) });
+    }
+    return { t, n, bags: shuffle(bags) };
+  }
+
+  // ---- 画面 ----
+  const BW = 150, BH = 210;
+  // 架上的位置：10 袋以下排两层，再多就排三层（每层 4 袋）；每层一样高
+  const SHELF = { x: 18, w: 752, top: 16, h: 508, plank: 18 };
+  function homes(count) {
+    const rows = count > 10 ? 3 : 2, cols = Math.ceil(count / rows);
+    const step = Math.min(188, (SHELF.w - 24) / cols), x0 = SHELF.x + SHELF.w / 2 - (cols - 1) * step / 2;
+    const H = (SHELF.h - rows * SHELF.plank) / rows;
+    const bottoms = Array.from({ length: rows }, (_, r) => SHELF.top + r * (H + SHELF.plank) + H);
+    const s = Math.min(1, step / 192, (H - 6) / 188);
+    $('planks').innerHTML = bottoms.map(y => `<rect x="${SHELF.x}" y="${y}" width="${SHELF.w}" height="${SHELF.plank}" rx="4" fill="#C98B4E" stroke="#2B2B2B" stroke-width="4"/>`).join('');
+    return Array.from({ length: count }, (_, i) => ({ x: x0 + (i % cols) * step, y: bottoms[Math.floor(i / cols)], s }));   // 袋子底部中间、大小
+  }
+  // 有些水果画得比较细（葡萄、香蕉、草莓），放进袋子时放大一点，看起来才跟苹果一样大
+  const ZOOM = { '葡萄': 1.15, '香蕉': 1.08, '草莓': 1.25, '菠萝': 1.1, '梨子': 1.1 };
+  // 一袋水果（原点 = 袋子底部中间）
+  function bagArt(it, k) {
+    const g = document.createElementNS(NS, 'g');
+    // 透明的塑胶袋：上面收口、用红色的绳子绑起来，绳子上面一小撮袋子口
+    const BAG = 'rgba(255,255,255,.82)';
+    let s = `<path d="M-82 -108 C-90 -60 -92 -18 -76 0 L76 0 C92 -18 90 -60 82 -108 C72 -130 34 -146 12 -152 L-12 -152 C-34 -146 -72 -130 -82 -108 Z" fill="${BAG}" stroke="#2B2B2B" stroke-width="4" stroke-linejoin="round"/>` +
+      `<path d="M-6 -149 C-22 -140 -44 -128 -60 -116 M6 -149 C22 -140 44 -128 60 -116 M0 -150 L0 -134" fill="none" stroke="rgba(150,175,195,.7)" stroke-width="3" stroke-linecap="round"/>` +
+      `<path d="M-11 -154 L-28 -178 L-15 -170 L-7 -186 L0 -173 L7 -186 L15 -170 L28 -178 L11 -154 Z" fill="${BAG}" stroke="#2B2B2B" stroke-width="3.5" stroke-linejoin="round"/>` +
+      `<rect x="-17" y="-160" width="34" height="10" rx="4" fill="#E5483B" stroke="#2B2B2B" stroke-width="3"/>` +
+      `<path d="M-74 -96 C-80 -60 -80 -36 -76 -18" fill="none" stroke="rgba(160,190,210,.6)" stroke-width="6" stroke-linecap="round"/>`;
+    // 袋子里的水果：一排最多 3 个，画大一点
+    const S = 64, rows = k <= 3 ? [k] : [Math.ceil(k / 2), Math.floor(k / 2)];
+    const ys = rows.length === 1 ? [-62] : [-94, -36];
+    rows.forEach((m, r) => {
+      for (let j = 0; j < m; j++) {
+        const z = ZOOM[it.f] || 1, x = (j - (m - 1) / 2) * 54 - S * z / 2, y = ys[r] - S * z / 2;
+        s += `<g transform="translate(${x} ${y}) scale(${S * z / 100})">${FART.fruit(it.f, it.c || undefined, true)}</g>`;
+      }
+    });
+    g.innerHTML = s;
+    return g;
+  }
+  // 购物车（原点 = 轮子底下的中间）
+  const BASKET = { x: 890, y: 400 };
+  function drawBasket() {
+    const g = $('basket');
+    g.setAttribute('transform', `translate(${BASKET.x} ${BASKET.y})`);
+    g.innerHTML =
+      // 把手
+      `<path d="M-74 -116 L-82 -146" stroke="#2B2B2B" stroke-width="7" stroke-linecap="round"/>` +
+      `<rect x="-94" y="-156" width="26" height="14" rx="6" fill="#E5483B" stroke="#2B2B2B" stroke-width="3"/>` +
+      // 车篮（铁丝网）
+      `<path class="rim" d="M-76 -118 L80 -118 L66 -44 L-62 -44 Z" fill="#DCE7EF" stroke="#2B2B2B" stroke-width="4" stroke-linejoin="round"/>` +
+      `<path d="M-40 -118 L-34 -44 M0 -118 L2 -44 M40 -118 L36 -44 M-72 -94 L75 -94 M-67 -68 L70 -68" stroke="#9FB2C2" stroke-width="3"/>` +
+      // 车架和轮子
+      `<path d="M-62 -44 L-56 -22 L62 -22 L66 -44" fill="none" stroke="#2B2B2B" stroke-width="5" stroke-linejoin="round"/>` +
+      `<circle cx="-44" cy="-10" r="10" fill="#4A4F57" stroke="#2B2B2B" stroke-width="3"/><circle cx="48" cy="-10" r="10" fill="#4A4F57" stroke="#2B2B2B" stroke-width="3"/>`;
+  }
+  // 结帐按钮
+  function drawPay() {
+    const g = $('pay');
+    g.innerHTML = `<rect class="face" x="798" y="430" width="172" height="80" rx="16" fill="#F5C531" stroke="#2B2B2B" stroke-width="4"/>` +
+      `<text class="pay-py" x="828" y="458" text-anchor="middle">jié</text><text class="pay-py" x="864" y="458" text-anchor="middle">zhàng</text>` +
+      `<text class="pay-zh" x="828" y="492" text-anchor="middle">结</text><text class="pay-zh" x="864" y="492" text-anchor="middle">帐</text>` +
+      `<text class="pay-en" x="930" y="482" text-anchor="middle">Check</text><text class="pay-en" x="930" y="500" text-anchor="middle">out</text>`;
+    g.addEventListener('click', checkout);
+  }
+  // 购物车里的位置（最多 4 袋，缩小放进车篮）
+  const SLOT = k => ({ x: BASKET.x + [-36, 40, -36, 40][k], y: BASKET.y - 56 - (k >= 2 ? 26 : 0), s: .44 });
+
+  // ---- 小动画 ----
+  function tween(ms, step, done) {
+    const t0 = performance.now();
+    const go = now => { const t = Math.min(1, (now - t0) / ms); step(t); if (t < 1) requestAnimationFrame(go); else done && done(); };
+    requestAnimationFrame(go);
+  }
+  const ease = t => 1 - Math.pow(1 - t, 2);
+  const put = (g, x, y, s) => g.setAttribute('transform', `translate(${x} ${y}) scale(${s})`);
+
+  // ---- 游戏 ----
+  let level = Shih.startLevel('buyLevel', LEVELS.length);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('buyLevel', lv); setup(); });
+  const wait = Shih.startCover($('playArea'), start);
+  let qs = [], qi = 0, bags = [], basket = [], done = 0, playing = false, busy = false, startT = 0, raf = 0;
+  const paintScore = () => { $('score').textContent = `${done} / ${qs.length}`; };
+
+  function showQuestion() {
+    const q = qs[qi];
+    const S = sentence(q);
+    q.zh = S.zh;
+    $('say').innerHTML = S.html;
+    $('roundNo').textContent = `${qi + 1} of ${qs.length}`;
+    $('bags').innerHTML = ''; $('inBasket').innerHTML = '';
+    $('basket').classList.remove('yes');
+    basket = [];
+    const H = homes(q.bags.length);
+    bags = q.bags.map((b, i) => {
+      const g = el('g', { class: 'bag', role: 'button', 'aria-label': `bag of ${b.it.c || ''}${b.it.f}` }, $('bags'));
+      const pop = el('g', { class: 'pop' }, g);
+      pop.appendChild(bagArt(b.it, b.k));
+      el('rect', { x: -92, y: -188, width: 184, height: 190, fill: 'transparent' }, pop);
+      const bag = Object.assign({ g, home: H[i], where: 'shelf' }, b);
+      put(g, bag.home.x, bag.home.y, bag.home.s);
+      g.addEventListener('click', () => tapBag(bag));
+      return bag;
+    });
+    if (playing) Shih.speak(q.zh);
+  }
+  function layoutBasket() {
+    basket.forEach((b, k) => { const p = SLOT(k); move(b, p.x, p.y, p.s); });
+  }
+  function move(b, x, y, s) {
+    const m = (b.g.getAttribute('transform') || '').match(/-?[\d.]+/g).map(Number);
+    const [x0, y0, s0] = [m[0], m[1], m[2] || 1];
+    tween(240, t => { const e = ease(t); put(b.g, x0 + (x - x0) * e, y0 + (y - y0) * e, s0 + (s - s0) * e); });
+  }
+  function tapBag(b) {
+    if (!playing || busy) return;
+    if (b.where === 'shelf') {
+      if (basket.length >= 4) return;
+      b.where = 'basket'; basket.push(b);
+      $('inBasket').appendChild(b.g);
+    } else {
+      b.where = 'shelf'; basket = basket.filter(x => x !== b);
+      $('bags').appendChild(b.g);
+      move(b, b.home.x, b.home.y, b.home.s);
+    }
+    layoutBasket();
+  }
+  function checkout() {
+    if (!playing || busy || !basket.length) return;
+    const q = qs[qi];
+    const ok = basket.every(b => same(b.it, q.t)) && basket.reduce((s, b) => s + b.k, 0) === q.n;
+    if (ok) {
+      busy = true;
+      done++; paintScore();
+      $('basket').classList.add('yes');
+      const tk = $('tick');
+      tween(160, t => tk.setAttribute('opacity', String(t)));
+      setTimeout(() => tween(160, t => tk.setAttribute('opacity', String(1 - t))), 900);
+      Shih.speak(q.zh);
+      setTimeout(() => {
+        if (!playing) return;
+        busy = false;
+        if (done >= qs.length) return finish(true);
+        qi++; showQuestion();
+      }, 1100);
+    } else {
+      // 买错了：篮子上一个大大的红色 ✗、篮子摇一摇；停一下，袋子再一袋一袋飞回架上（不扣分）
+      busy = true;
+      const bk = $('basket'), x = $('cross');
+      bk.classList.remove('nope'); void bk.getBBox();
+      bk.classList.add('nope');
+      tween(160, t => x.setAttribute('opacity', String(t)));
+      setTimeout(() => {
+        bk.classList.remove('nope');
+        tween(200, t => x.setAttribute('opacity', String(1 - t)));
+        basket.slice().forEach((b, k) => setTimeout(() => { b.where = 'shelf'; $('bags').appendChild(b.g); move(b, b.home.x, b.home.y, b.home.s); }, k * 180));
+        setTimeout(() => { basket = basket.filter(b => b.where === 'basket'); busy = false; }, basket.length * 180 + 260);
+      }, 1000);
+    }
+  }
+
+  function frame(now) {
+    if (!playing) return;
+    const left = Math.max(0, C.seconds - (now - startT) / 1000);
+    const s = Math.ceil(left);
+    $('clock').textContent = fmt(s);
+    $('clock').classList.toggle('low', s <= 10);
+    if (left <= 0) return finish(false);
+    raf = requestAnimationFrame(frame);
+  }
+
+  function setup() {
+    paintLevels(level);
+    playing = false; busy = false; cancelAnimationFrame(raf); done = 0; qi = 0;
+    qs = [];
+    for (let i = 0; i < C.rounds; i++) { const prev = qs[qs.length - 1]; qs.push(makeRound(prev && prev.t.f, prev && prev.n)); }
+    showQuestion();
+    paintScore();
+    $('help').textContent = (C.help[level - 1] || C.help[0]).replace('{s}', C.seconds);
+    $('clock').textContent = fmt(C.seconds); $('clock').classList.remove('low');
+    $('winMsg').hidden = true; $('endMsg').hidden = true;
+    window.__buy = { q: () => qs[qi], bags: () => bags, basket: () => basket, qs: () => qs, level: () => level, same };
+    wait();
+  }
+  function start() {
+    playing = true;
+    startT = performance.now();
+    raf = requestAnimationFrame(frame);
+    Shih.speak(qs[qi].zh);
+  }
+  function finish(ok) {
+    if (!playing) return;
+    playing = false; cancelAnimationFrame(raf);
+    const sec = Math.round((performance.now() - startT) / 1000);
+    setTimeout(() => {
+      if (ok) {
+        $('winEn').textContent = `You bought everything in ${sec} seconds!`;
+        $('winMsg').hidden = false; Shih.speak(C.done.zh);
+      } else {
+        $('endEn').textContent = `Time's up! Try again!`;
+        $('endMsg').hidden = false;
+      }
+    }, ok ? 300 : 0);
+  }
+
+  drawBasket(); drawPay();
+  $('hear').addEventListener('click', () => { if (qs[qi]) Shih.speak(qs[qi].zh); });
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2Btn').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

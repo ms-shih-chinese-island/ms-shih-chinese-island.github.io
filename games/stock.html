@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>快手摆一摆 Stock the Shelves</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Noto+Sans+SC:wght@500;700&display=swap">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 快手摆一摆：超市的架子一直有两格，每格上面贴一张价签（只有字），下面是放一个水果的格子。
+   哪一格摆好了，那一格就换一张新的价签（像套圈圈），摆好 target 格就过关。
+   输送带从右往左送水果：点水果再点格子（或先点格子再点水果、或直接拖过去）。
+   对了水果摆上去；错了弹回输送带，不扣分。时间内四格都摆满就有金币。
+   用法：stock.html?unit=fruits（水果、秒数、速度都在 units/fruits/words.js；图在 units/fruits/art.js） */
+body.game { background: #EEF7EA; }
+.stage { max-width: 920px; margin: 0 auto; }
+.stage svg.store { display: block; width: 100%; height: auto; max-height: calc(100vh - 215px); min-height: 300px; touch-action: none; user-select: none; -webkit-user-select: none; }
+.store .shelf { cursor: pointer; }
+.store .shelf .box { fill: rgba(255,255,255,.55); stroke: #9C8F7A; stroke-width: 3; stroke-dasharray: 10 7; }
+.store .shelf.armed .box { stroke: var(--pick); stroke-width: 6; stroke-dasharray: none; fill: var(--pick-soft); }
+.store .shelf.full .box { stroke: var(--me); stroke-width: 5; stroke-dasharray: none; fill: var(--me-done); }
+.store .shelf .check { opacity: 0; }
+.store .shelf.full .check { opacity: 1; }
+.store .tag-py { font: 700 18px var(--f-latin); fill: #2B2B2B; }
+.store .tag-zh { font: 700 40px var(--f-zh); fill: #2B2B2B; }
+.store .shelf.bye { transition: opacity .35s; opacity: 0; }
+.store .fruit { cursor: grab; }
+.store .fruit .glow { opacity: 0; fill: var(--pick-soft); stroke: var(--pick); stroke-width: 6; }
+.store .fruit.sel .glow { opacity: 1; }
+.store .fruit.drag { cursor: grabbing; }
+.store .fruit .wob { transform-box: fill-box; transform-origin: 50% 100%; }
+.store .fruit.nope .wob { animation: nope .4s; }
+@keyframes nope { 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
+.help { text-align: center; }
+.clock.low { color: var(--bad); border-color: var(--bad); }
+.endMsg { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; text-align: center; font-size: 22px; font-weight: 700; color: var(--dad-ink); background: var(--dad-soft); border: 2px solid var(--dad); border-radius: 14px; padding: 10px; margin-bottom: 10px; }
+.endMsg .ruby .py { font-size: 15px; } .endMsg .zh { font-size: 30px; }
+.endMsg button.ctl { border-color: var(--dad-ink); color: var(--dad-ink); }
+.win .ruby .py { font-size: 15px; }
+.win .en { font-size: 18px; }
+@media (orientation: landscape) and (max-height: 720px) {
+  .stage svg.store { max-height: calc(100vh - 170px); }
+}
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill clock" id="clock">1:30</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> <span class="en" id="winEn"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="endMsg" id="endMsg" hidden><span><span class="ruby" id="endRuby"></span> <span id="endEn"></span></span><button class="ctl" id="again2Btn" type="button">Try again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="stage">
+        <svg class="store" id="store" viewBox="0 0 1000 620" aria-label="Supermarket shelves and a fruit belt">
+          <defs><clipPath id="frame"><rect x="2" y="2" width="996" height="616" rx="22"/></clipPath></defs>
+          <g clip-path="url(#frame)">
+            <!-- 超市的墙和地板 -->
+            <rect width="1000" height="620" fill="#FFF8EC"/>
+            <rect y="0" width="1000" height="22" fill="#45A852"/>
+            <rect y="400" width="1000" height="220" fill="#E8DCC8"/>
+            <path d="M0 400 L1000 400" stroke="#2B2B2B" stroke-width="3"/>
+            <!-- 架子：一块大木板，下面一条层板 -->
+            <rect x="26" y="30" width="948" height="300" rx="14" fill="#F2D6A8" stroke="#2B2B2B" stroke-width="4"/>
+            <rect x="26" y="314" width="948" height="22" rx="6" fill="#C98B4E" stroke="#2B2B2B" stroke-width="4"/>
+            <g id="shelves"></g>
+            <!-- 输送带 -->
+            <rect x="-10" y="512" width="1020" height="46" fill="#4A4F57" stroke="#2B2B2B" stroke-width="4"/>
+            <path id="belt" d="M-40 535 L1040 535" stroke="#6B717A" stroke-width="30" stroke-dasharray="26 26"/>
+            <rect x="-10" y="556" width="1020" height="24" fill="#9AA0A8" stroke="#2B2B2B" stroke-width="4"/>
+            <g id="rollers"></g>
+            <g id="fruits"></g>
+            <g id="fly"></g>
+          </g>
+          <rect x="2" y="2" width="996" height="616" rx="22" fill="none" stroke="#2B2B2B" stroke-width="5"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../units/fruits/art.js"></script>
+<script>
+Shih.islandBar();
+const FART = window.ART;
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.stock;
+  const LEVELS = UNIT.levels || [{ note: '' }];
+  const $ = id => document.getElementById(id);
+  const NS = 'http://www.w3.org/2000/svg';
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.rubyText(C.done.zh, C.done.py);
+  $('endRuby').innerHTML = Shih.ruby('时间到', 'shí jiān dào');
+  Shih.soundButton($('soundBtn'));
+
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const pickOne = a => a[Math.floor(Math.random() * a.length)];
+  const fmt = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+  const svgEl = $('store');
+  const toSvg = (cx, cy) => { const p = svgEl.createSVGPoint(); p.x = cx; p.y = cy; return p.matrixTransform(svgEl.getScreenCTM().inverse()); };
+
+  // 输送带下面的滚轮
+  (function () { let s = ''; for (let x = 20; x < 1000; x += 60) s += `<circle cx="${x}" cy="568" r="8" fill="#6B717A" stroke="#2B2B2B" stroke-width="2.5"/>`; $('rollers').innerHTML = s; })();
+
+  // ---- 东西（水果＋颜色） ----
+  const W = Shih.wordMap(UNIT);
+  const FRUITS = UNIT.words.filter(w => w.shelf !== false);
+  const fruitsAt = lv => FRUITS.filter(w => (w.level || 1) <= lv);
+  // Level 1 只看水果（颜色用本来的）；Level 2 看颜色＋水果
+  const same = (a, b) => a.f === b.f && (level === 1 || a.c === b.c);
+  const keyOf = it => level === 1 ? it.f : it.f + '|' + it.c;
+  const label = it => level === 1 ? { zh: it.f, py: W[it.f].py }
+    : { zh: `${it.c}的${it.f}`, py: `${UNIT.colors[it.c].py} de ${W[it.f].py}` };
+  // Level 2 所有可以上架的（水果，颜色）
+  const variants = () => fruitsAt(2).flatMap(w => (w.colors || []).map(c => ({ f: w.zh, c })));
+
+  // ---- 下一张价签：other = 旁边那一格；recent = 最近出现过的价签 ----
+  //   Level 1：跟旁边不同的水果，最近出现过的先不要，出现比较少的优先
+  //   Level 2：跟旁边很像（同水果别的颜色，或同颜色别的水果），最近出现过的先不要
+  const used = {};
+  function nextLabel(other, recent) {
+    const pool = level === 1 ? fruitsAt(1).map(w => ({ f: w.zh, c: null })) : variants();
+    let cand = pool.filter(it => !(other && (level === 1 ? it.f === other.f : same(it, other))));
+    const fresh = cand.filter(it => !recent.some(x => same(x, it)));
+    if (fresh.length) cand = fresh;
+    if (level === 2 && other) {
+      const near = cand.filter(it => it.f === other.f || it.c === other.c);
+      if (near.length && Math.random() < 0.75) cand = near;
+    }
+    const n = it => used[keyOf(it)] || 0, low = Math.min(...cand.map(n));
+    const it = Object.assign({}, pickOne(cand.filter(x => n(x) === low)));
+    used[keyOf(it)] = n(it) + 1;
+    return it;
+  }
+
+  // ---- 画面 ----
+  const COLS = [282, 718], TAG_Y = 40, BOX_Y = 140, BOX_H = 162, COL_W = 380;
+  const SPOT = (i, k) => ({ x: COLS[i] + (C.need > 1 ? (k === 0 ? -64 : 64) : 0), y: BOX_Y + 128 });   // 水果站的位置（脚底）
+  const BELT_Y = 520, SIZE = 108;     // 水果在输送带上（脚底的 y）、大小
+  function drawShelf(i, s) {
+    const g = el('g', { class: 'shelf', role: 'button', 'aria-label': `shelf: ${label(s.item).zh}` }, $('shelves'));
+    s.col = i;
+    const x = COLS[i];
+    // 价签：白底、上面一条黄色
+    el('rect', { x: x - COL_W / 2, y: TAG_Y, width: COL_W, height: 90, rx: 8, fill: '#FFFFFF', stroke: '#2B2B2B', 'stroke-width': 4 }, g);
+    el('rect', { x: x - COL_W / 2 + 2, y: TAG_Y + 2, width: COL_W - 4, height: 12, rx: 6, fill: '#F5C531' }, g);
+    const L = label(s.item), zh = Array.from(L.zh), py = L.py.split(' ');
+    const step = Math.min(56, (COL_W - 24) / zh.length), x0 = x - (zh.length - 1) * step / 2;
+    zh.forEach((c, k) => {
+      el('text', { x: x0 + k * step, y: TAG_Y + 40, 'text-anchor': 'middle', class: 'tag-py' }, g).textContent = py[k] || '';
+      el('text', { x: x0 + k * step, y: TAG_Y + 80, 'text-anchor': 'middle', class: 'tag-zh' }, g).textContent = c;
+    });
+    // 放水果的格子
+    el('rect', { x: x - COL_W / 2, y: BOX_Y, width: COL_W, height: BOX_H, rx: 14, class: 'box' }, g);
+    for (let k = 0; k < C.need && k < 2; k++) { const p = SPOT(i, k); el('ellipse', { cx: p.x, cy: p.y - 2, rx: 34, ry: 8, fill: 'rgba(43,43,43,.12)' }, g); }
+    s.inner = el('g', {}, g);
+    const ck = el('g', { class: 'check', transform: `translate(${x + COL_W / 2 - 22} ${BOX_Y + 22})` }, g);
+    el('circle', { r: 17, fill: 'var(--me)', stroke: '#2B2B2B', 'stroke-width': 3 }, ck);
+    el('path', { d: 'M-8 0 L-2 7 L9 -6', fill: 'none', stroke: '#FFFFFF', 'stroke-width': 5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, ck);
+    s.g = g;
+    g.addEventListener('click', () => tapShelf(i));
+  }
+  // 一个水果（g 的原点 = 脚底中间）
+  function fruitG(it, parent) {
+    const g = el('g', { class: 'fruit' }, parent);
+    el('ellipse', { cx: 0, cy: -SIZE / 2, rx: SIZE / 2 + 6, ry: SIZE / 2 + 6, class: 'glow' }, g);
+    const wob = el('g', { class: 'wob' }, g);
+    const art = el('g', { transform: `translate(${-SIZE / 2} ${-SIZE}) scale(${SIZE / 100})` }, wob);
+    art.innerHTML = FART.fruit(it.f, it.c || undefined);
+    el('rect', { x: -SIZE / 2 - 6, y: -SIZE - 6, width: SIZE + 12, height: SIZE + 12, fill: 'transparent' }, g);
+    return g;
+  }
+  const put = (g, x, y, k) => g.setAttribute('transform', `translate(${x} ${y})${k && k !== 1 ? ` scale(${k})` : ''}`);
+
+  // ---- 小动画 ----
+  function tween(ms, step, done) {
+    const t0 = performance.now();
+    const go = now => { const t = Math.min(1, (now - t0) / ms); step(t); if (t < 1) requestAnimationFrame(go); else done && done(); };
+    requestAnimationFrame(go);
+  }
+  const ease = t => 1 - Math.pow(1 - t, 2);
+
+  // ---- 游戏 ----
+  let level = Shih.startLevel('stockLevel', LEVELS.length);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('stockLevel', lv); setup(); });
+  const wait = Shih.startCover($('playArea'), start);
+  const P = () => C.levels[level - 1] || C.levels[C.levels.length - 1];
+
+  let made = 0, recent = [];
+  let shelves = [], belt = [], picked = null, armed = -1, placed = 0, playing = false, startT = 0, lastT = 0, nextSpawn = 0, raf = 0, drag = null, beltOff = 0;
+  const total = () => [].concat(C.target)[level - 1] || [].concat(C.target).pop();
+  const paintScore = () => { $('score').textContent = `${placed} / ${total()}`; };
+
+  // 下一个水果：大多是架子还缺的（输送带上还没有的优先），有一些是架子上没有的（干扰）
+  function nextItem() {
+    const open = shelves.filter(s => s && s.n < C.need);
+    const onBelt = it => belt.filter(b => b.state === 'belt' && same(b.item, it)).length;
+    const want = open.map(s => ({ s, gap: C.need - s.n - onBelt(s.item) }));
+    const short = want.filter(w => w.gap > 0);
+    const noisy = Math.random() < P().noise || !open.length || (!short.length && Math.random() < 0.5);
+    if (!noisy) {
+      const list = short.length ? short : want;
+      const top = Math.max(...list.map(w => w.gap));
+      return Object.assign({}, pickOne(list.filter(w => w.gap === top)).s.item);
+    }
+    return decoy();
+  }
+  // 干扰：架子上没有的。Level 2 多半挑很像的（同一种水果别的颜色，或同颜色别的水果）
+  function decoy() {
+    const onShelf = it => shelves.some(s => s && same(s.item, it));
+    if (level === 1) {
+      const others = fruitsAt(1).map(w => ({ f: w.zh, c: null })).filter(it => !onShelf(it));
+      return pickOne(others);
+    }
+    const cand = variants().concat(fruitsAt(2).filter(w => !(w.colors || []).length).map(w => ({ f: w.zh, c: null }))).filter(it => !onShelf(it));
+    const near = cand.filter(it => shelves.some(s => s && (s.item.f === it.f || (it.c && s.item.c === it.c))));
+    return pickOne(near.length && Math.random() < 0.75 ? near : cand);
+  }
+  const speed = () => 1080 / P().cross;
+  function spawn() {
+    const it = nextItem();
+    const b = { item: it, x: 1060, state: 'belt' };
+    b.g = fruitG(it, $('fruits'));
+    b.g.setAttribute('role', 'button');
+    b.g.setAttribute('aria-label', `fruit: ${it.c ? it.c : ''}${it.f}`);
+    b.g.addEventListener('pointerdown', e => down(e, b));
+    put(b.g, b.x, BELT_Y);
+    belt.push(b);
+  }
+  function removeFromBelt(b) { belt = belt.filter(x => x !== b); }
+
+  function selectFruit(b) {
+    if (picked) picked.g.classList.remove('sel');
+    picked = picked === b ? null : b;
+    if (picked) picked.g.classList.add('sel');
+  }
+  function arm(i) {
+    if (armed >= 0) shelves[armed].g.classList.remove('armed');
+    armed = armed === i ? -1 : i;
+    if (armed >= 0) shelves[armed].g.classList.add('armed');
+  }
+  function tapFruit(b) {
+    if (!playing || b.state !== 'belt') return;
+    if (armed >= 0) { const i = armed; tryPlace(b, i); return; }
+    selectFruit(b);
+  }
+  function tapShelf(i) {
+    if (!playing || !shelves[i] || shelves[i].n >= C.need) return;
+    if (picked) { const b = picked; selectFruit(b); tryPlace(b, i); return; }
+    arm(i);
+  }
+
+  // 放到第 i 格：对了飞上去；错了弹回输送带（不扣分）
+  function tryPlace(b, i) {
+    const s = shelves[i];
+    if (picked === b) selectFruit(b);
+    if (same(b.item, s.item) && s.n < C.need) {
+      const k = s.n++;
+      if (s.n >= C.need) { placed++; paintScore(); }
+      if (s.n >= C.need) s.g.classList.add('full');
+      if (armed === i) arm(i);          // 先点格子的：放好一个就不亮了（放错的话格子继续亮着）
+      Shih.speak(label(s.item).zh);
+      b.state = 'fly'; removeFromBelt(b);
+      const [x0, y0] = b.g.getAttribute('transform').match(/-?[\d.]+/g).map(Number);
+      const to = SPOT(i, Math.min(k, 1));
+      $('fly').appendChild(b.g);
+      b.g.classList.remove('sel', 'drag');
+      tween(320, t => { const e = ease(t); put(b.g, x0 + (to.x - x0) * e, y0 + (to.y - y0) * e - Math.sin(Math.PI * t) * 60, 1 - .05 * e); }, () => {
+        s.inner.appendChild(b.g); put(b.g, to.x, to.y, .95);
+        b.g.style.pointerEvents = 'none';
+        if (placed >= total()) finish(true);
+        else if (s.n >= C.need) replaceShelf(i, s);
+      });
+    } else {
+      bounce(b);
+    }
+  }
+  // 弹回输送带：摇一摇，再回到它现在在输送带上的位置
+  function bounce(b) {
+    b.g.classList.remove('nope'); void b.g.getBBox(); b.g.classList.add('nope');
+    setTimeout(() => b.g.classList.remove('nope'), 420);
+    if (b.state === 'drag') {
+      const [x0, y0] = b.g.getAttribute('transform').match(/-?[\d.]+/g).map(Number);
+      b.state = 'back';
+      tween(260, t => { const e = ease(t); put(b.g, x0 + (b.x - x0) * e, y0 + (BELT_Y - y0) * e); }, () => { b.state = 'belt'; $('fruits').appendChild(b.g); });
+    }
+  }
+
+  // ---- 拖拉（拖动超过 6px 才算拖，不然就是点一下） ----
+  function down(e, b) {
+    if (!playing || b.state !== 'belt' || drag) return;
+    e.preventDefault();
+    const p = toSvg(e.clientX, e.clientY);
+    drag = { b, id: e.pointerId, x0: e.clientX, y0: e.clientY, dx: p.x - b.x, dy: p.y - BELT_Y, moved: false };
+    addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+  }
+  const shelfAt = (x, y) => { if (y < TAG_Y - 10 || y > BOX_Y + BOX_H + 20) return -1; return COLS.findIndex(cx => Math.abs(x - cx) <= COL_W / 2 + 8); };
+  function move(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 6) return;
+    const b = drag.b;
+    if (!drag.moved) {
+      if (b.state !== 'belt') { drag = null; return; }
+      drag.moved = true; b.state = 'drag'; b.g.classList.add('drag');
+      if (picked === b) selectFruit(b);
+      $('fly').appendChild(b.g);
+    }
+    const p = toSvg(e.clientX, e.clientY);
+    put(b.g, p.x - drag.dx, p.y - drag.dy);
+    const i = shelfAt(p.x, p.y);
+    shelves.forEach((s, k) => s && s.g.classList.toggle('armed', k === i && s.n < C.need || k === armed));
+  }
+  function up(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
+    const d = drag; drag = null;
+    shelves.forEach((s, k) => s && s.g.classList.toggle('armed', k === armed));
+    if (!d.moved) { tapFruit(d.b); return; }
+    if (!playing) return;
+    const p = toSvg(e.clientX, e.clientY);
+    const i = shelfAt(p.x, p.y);
+    d.b.g.classList.remove('drag');
+    if (i >= 0 && shelves[i] && shelves[i].n < C.need) tryPlace(d.b, i); else bounce(d.b);
+  }
+
+  function frame(now) {
+    if (!playing) return;
+    const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
+    const left = Math.max(0, C.seconds - (now - startT) / 1000);
+    const s = Math.ceil(left);
+    $('clock').textContent = fmt(s);
+    $('clock').classList.toggle('low', s <= 10);
+    if (left <= 0) return finish(false);
+    if (now >= nextSpawn) { spawn(); nextSpawn = now + P().every * 1000; }
+    const v = speed();
+    beltOff = (beltOff + v * dt) % 52;
+    $('belt').setAttribute('stroke-dashoffset', String(beltOff));
+    for (const b of belt.slice()) {
+      b.x -= v * dt;
+      if (b.state === 'belt') {
+        put(b.g, b.x, BELT_Y);
+        if (b.x < -70) { if (picked === b) selectFruit(b); b.g.remove(); removeFromBelt(b); }
+      }
+    }
+    raf = requestAnimationFrame(frame);
+  }
+
+  function setup() {
+    paintLevels(level);
+    playing = false; cancelAnimationFrame(raf); picked = null; armed = -1; placed = 0; drag = null;
+    $('shelves').innerHTML = ''; $('fruits').innerHTML = ''; $('fly').innerHTML = '';
+    belt = []; recent = []; made = 0;
+    for (const k in used) delete used[k];
+    shelves = [];
+    for (let i = 0; i < COLS.length; i++) newShelf(i);
+    paintScore();
+    $('help').textContent = (C.help[level - 1] || C.help[0]).replace('{s}', C.seconds);
+    $('clock').textContent = fmt(C.seconds); $('clock').classList.remove('low');
+    $('winMsg').hidden = true; $('endMsg').hidden = true;
+    window.__stock = { shelves: () => shelves, belt: () => belt, level: () => level, made: () => made, label, same };
+    wait();
+  }
+  // 第 i 格放一张新的价签（跟旁边那格比）
+  function newShelf(i) {
+    const other = shelves[1 - i];
+    const item = nextLabel(other && other.item, recent);
+    recent = [item].concat(recent).slice(0, 3);
+    made++;
+    shelves[i] = { item, n: 0 };
+    drawShelf(i, shelves[i]);
+  }
+  // 这一格摆好了：等一下，换新的价签（已经出够 target 格就不再出新的）
+  function replaceShelf(i, s) {
+    setTimeout(() => {
+      if (!playing || shelves[i] !== s) return;
+      s.g.classList.add('bye');
+      setTimeout(() => {
+        if (!playing || shelves[i] !== s) return;
+        s.g.remove();
+        if (made < total()) newShelf(i); else shelves[i] = null;
+      }, 360);
+    }, 450);
+  }
+  function start() {
+    playing = true;
+    startT = lastT = performance.now();
+    nextSpawn = startT;
+    raf = requestAnimationFrame(frame);
+  }
+  function finish(ok) {
+    if (!playing) return;
+    playing = false; cancelAnimationFrame(raf);
+    if (picked) selectFruit(picked);
+    if (armed >= 0) arm(armed);
+    const sec = Math.round((performance.now() - startT) / 1000);
+    setTimeout(() => {
+      if (ok) {
+        $('winEn').textContent = `You stocked the shelves in ${sec} seconds!`;
+        $('winMsg').hidden = false; Shih.speak(C.done.zh);
+      } else {
+        $('endEn').textContent = `Time's up! Try again!`;
+        $('endMsg').hidden = false;
+      }
+    }, ok ? 500 : 0);
+  }
+
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2Btn').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

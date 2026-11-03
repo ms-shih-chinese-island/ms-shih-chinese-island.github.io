@@ -41,7 +41,12 @@ window.ISLANDS = {
         games: [
           { zh: '图书馆', py: 'tú shū guǎn', en: 'Library', note: 'Read the book. Pick 2 to 12 words you want to practice, then start matching!', href: 'games/library.html?unit=library' }
         ] },
-      { zh: '超市', py: 'chāo shì', en: 'Supermarket', x: 352, y: 492, color: 'me', games: [] },
+      { id: 'supermarket', zh: '超市', py: 'chāo shì', en: 'Supermarket', x: 352, y: 492, color: 'me',
+        games: [
+          { zh: '快手摆一摆', py: 'kuài shǒu bǎi yi bǎi', en: 'Stock the Shelves', note: 'Read the signs on the shelves and fill them in 90 seconds! Drag a fruit to its shelf, or tap a fruit and its shelf.', href: 'games/stock.html?unit=fruits' },
+          { zh: '水果买一买', py: 'shuǐ guǒ mǎi yi mǎi', en: 'Shopping List', note: "Fill the cart with what's on the shopping list. Tap 1 or more bags, then check out!", href: 'games/buy.html?unit=fruits' },
+          { zh: '超市算一算', py: 'chāo shì suàn yi suàn', en: 'Supermarket Math', note: 'Read the fruit words and do the math. Pick the right answer.', href: 'games/calc.html?unit=fruits' }
+        ] },
       { id: 'hospital', zh: '医院', py: 'yī yuàn', en: 'Hospital', x: 158, y: 548, color: 'mom',
         games: [
           { zh: '看医生', py: 'kàn yī shēng', en: 'See the Doctor', note: 'Pick the word, or read or listen and tap the body part (Level 2: put on the bandage).', href: 'games/doctor.html?unit=body' },

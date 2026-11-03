@@ -99,7 +99,7 @@ body.game { background: #FFF6E5; }
 Shih.islandBar();
 Promise.all([Shih.loadUnit(), Shih.loadArt()]).then(([UNIT, ART]) => {
   const C = UNIT.calc, N = window.ShihNum;
-  const LEVELS = UNIT.levels || [{ note: '' }];
+  const LEVELS = C.levelList || UNIT.levels || [{ note: '' }];   // 这个游戏自己的等级（例如水果单元别的游戏两级，这里三级）
   const $ = id => document.getElementById(id);
   document.title = `${C.title.zh} ${C.title.en}`;
   $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
@@ -118,15 +118,18 @@ Promise.all([Shih.loadUnit(), Shih.loadArt()]).then(([UNIT, ART]) => {
   const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('calcLevel', lv); setup(); });
   const L = () => C.levels[level - 1] || C.levels[C.levels.length - 1];
 
-  // ---- 字：会出「几个」的（量词是「个」）、只当干扰的 ----
+  // ---- 字：会出「几个」的（量词在 UNIT.calc.countMW，没写就只有「个」）、只当干扰的 ----
+  const MWPY = { '个': 'gè', '根': 'gēn', '串': 'chuàn', '只': 'zhī', '片': 'piàn' };
+  const COUNT_MW = C.countMW || ['个'];
+  const mwOf = w => COUNT_MW.includes(w.mw) ? w.mw : '个';
   const inLevel = w => (w.level || 1) <= level && ART.pic(w.zh);
-  const countable = () => UNIT.words.filter(w => inLevel(w) && w.mw === '个');
-  const decoys = () => UNIT.words.filter(w => inLevel(w) && w.mw && w.mw !== '个');
+  const countable = () => UNIT.words.filter(w => inLevel(w) && COUNT_MW.includes(w.mw));
+  const decoys = () => UNIT.words.filter(w => inLevel(w) && w.mw && !COUNT_MW.includes(w.mw));
 
   // ---- 中文：一句话 = 一串小块，每块是 [中文, 拼音]（拼音在上）或符号（$5、＋、＝、？） ----
   // 数量是 2 的时候念「两」；「一个」的一念 yí（跟「不是」念 bú 一样，标变调）
   const num = n => n === 2 ? [['两', 'liǎng']] : n === 1 ? [['一', 'yí']] : N.parts(n);
-  const ge = (n, w) => [...num(n), ['个', 'gè'], [w.zh, w.py]];       // 三个苹果
+  const ge = (n, w) => [...num(n), [mwOf(w), MWPY[mwOf(w)]], [w.zh, w.py]];       // 三个苹果、三根香蕉
   const T = (zh, py) => [[zh, py]];
   function say(bits, cls = '') {
     const html = bits.map(b => Array.isArray(b)
@@ -224,9 +227,9 @@ Promise.all([Shih.loadUnit(), Shih.loadArt()]).then(([UNIT, ART]) => {
       hint: minus ? 'Take the second group away from the first. Read the question to see what to count!'
                   : 'Add the two groups. Read the question to see what to count!',
       body: `<div class="eq" data-icons="${ga.length + gb.length}" data-groups="2">${box(ga)}${op}${box(gb)}<span class="eqop">＝</span><span class="q">？</span></div>` +
-        `<div class="lines">${say([...T('你', 'nǐ'), ...T('有', 'yǒu'), ...T('几', 'jǐ'), ...T('个', 'gè'), [w.zh, w.py], '？'])}` +
-        say([...T('我', 'wǒ'), ...T('有', 'yǒu'), '＿', ...T('个', 'gè'), [w.zh, w.py], '。']) + `</div>`,
-      opts: nearNums(ans, okNum, trap).map(v => ({ html: numRuby(v), ok: v === ans, speak: '我有' + (v === 2 ? '两' : N.zh(v)) + '个' + w.zh })) };
+        `<div class="lines">${say([...T('你', 'nǐ'), ...T('有', 'yǒu'), ...T('几', 'jǐ'), ...T(mwOf(w), MWPY[mwOf(w)]), [w.zh, w.py], '？'])}` +
+        say([...T('我', 'wǒ'), ...T('有', 'yǒu'), '＿', ...T(mwOf(w), MWPY[mwOf(w)]), [w.zh, w.py], '。']) + `</div>`,
+      opts: nearNums(ans, okNum, trap).map(v => ({ html: numRuby(v), ok: v === ans, speak: '我有' + (v === 2 ? '两' : N.zh(v)) + mwOf(w) + w.zh })) };
   };
 
   // 你有几个？（看篮子）
@@ -235,9 +238,9 @@ Promise.all([Shih.loadUnit(), Shih.loadArt()]).then(([UNIT, ART]) => {
     let n; do { n = rnd(1, Math.min(L().max, 9)); } while (!okNum(n));
     const bk = basket(w, n);
     return { hint: 'Count them in the basket!',
-      body: bk.html + `<div class="lines">${say([...T('你', 'nǐ'), ...T('有', 'yǒu'), ...T('几', 'jǐ'), ...T('个', 'gè'), [w.zh, w.py], '？'])}` +
-        say([...T('我', 'wǒ'), ...T('有', 'yǒu'), '＿', ...T('个', 'gè'), [w.zh, w.py], '。']) + `</div>`,
-      opts: nearNums(n, okNum, bk.trap).map(v => ({ html: numRuby(v), ok: v === n, speak: '我有' + N.zh(v) + '个' + w.zh })) };
+      body: bk.html + `<div class="lines">${say([...T('你', 'nǐ'), ...T('有', 'yǒu'), ...T('几', 'jǐ'), ...T(mwOf(w), MWPY[mwOf(w)]), [w.zh, w.py], '？'])}` +
+        say([...T('我', 'wǒ'), ...T('有', 'yǒu'), '＿', ...T(mwOf(w), MWPY[mwOf(w)]), [w.zh, w.py], '。']) + `</div>`,
+      opts: nearNums(n, okNum, bk.trap).map(v => ({ html: numRuby(v), ok: v === n, speak: '我有' + N.zh(v) + mwOf(w) + w.zh })) };
   };
 
   // 是／不是：看篮子

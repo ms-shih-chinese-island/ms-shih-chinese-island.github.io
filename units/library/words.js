@@ -37,7 +37,8 @@ window.LIBRARY = {
     { id: 'thanksgiving', zh: '感恩节', py: 'gǎn ēn jié', en: 'Thanksgiving', from: 'thanksgiving' },
     { id: 'colors', zh: '颜色', py: 'yán sè', en: 'Colors', from: 'colors' },
     { id: 'clothes', zh: '衣服', py: 'yī fu', en: 'Clothes', from: 'clothes' },
-    { id: 'body', zh: '身体', py: 'shēn tǐ', en: 'Body', from: 'body' }
+    { id: 'body', zh: '身体', py: 'shēn tǐ', en: 'Body', from: 'body' },
+    { id: 'fruits', zh: '水果', py: 'shuǐ guǒ', en: 'Fruits', from: 'fruits' }
   ]
 };
 
