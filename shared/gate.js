@@ -1,5 +1,6 @@
 /* =====================================================================
-   每一页最先读的档：手机直拿的提示、岛的总开关、快闪活动的开关、成绩记录、包场（密码锁）
+   每一页最先读的档：手机直拿的提示、岛的总开关、快闪活动的开关、包场（密码锁）
+   网站不收集学生的资料：问开关的时候只问开关，不带名字、也不带电脑代号。
    ===================================================================== */
 /* ---- 手机直着拿的时候，请学生把手机横过来 ---- */
 (function () {
@@ -106,40 +107,13 @@ const SHIH_DEMO = false;   // 试玩版用：不连试算表，一直包场，�
 })();
 
 /* =====================================================================
-   成绩记录：玩完一回合，就在老师的 Google 试算表加一行
-     网址就是上面的 SHIH_URL；空着 → 不传任何东西，游戏照常玩
-   这里只会「送出」，不会读回任何资料。
-   同一台电脑：两笔之间至少隔 5 秒，一天最多 200 笔。
+   隐私：网站不收集任何学生的资料。
+   名字、金币、「我的记录」只存在学生自己的电脑里（浏览器），不会送到任何地方。
+   网站只会问开关（岛的总开关、包场、快闪活动）和密码对不对，问的时候不带任何学生的资料。
+   （以前会把成绩送到试算表，已经拿掉了。这里留一个空的，旧的程式叫它也不会出错。）
    ===================================================================== */
-(function () {
-  const REPORT_URL = SHIH_URL;
-
-  const get = (k, d) => { try { const v = localStorage.getItem('shih:' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
-  const set = (k, v) => { try { localStorage.setItem('shih:' + k, JSON.stringify(v)); } catch (e) {} };
-  // 这台电脑的代号（随机 8 个字，用来算有几台电脑来玩，不是个人资料）
-  function pid() {
-    let p = get('pid', '');
-    if (!/^[a-z0-9]{8}$/.test(p)) { p = Array.from({ length: 8 }, () => 'abcdefghijkmnpqrstuvwxyz23456789'[Math.floor(Math.random() * 32)]).join(''); set('pid', p); }
-    return p;
-  }
-  const today = () => new Date().toISOString().slice(0, 10);
-  function send(row) {
-    if (!REPORT_URL) return false;
-    const day = today(), q = get('sent', { day: '', n: 0, last: 0 });
-    if (q.day !== day) { q.day = day; q.n = 0; }
-    if (q.n >= 200 || Date.now() - (q.last || 0) < 5000) return false;
-    q.n++; q.last = Date.now(); set('sent', q);
-    const body = JSON.stringify(Object.assign({ pid: pid(), name: get('name', '') }, row));
-    try { fetch(REPORT_URL, { method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain' }, body }).catch(() => {}); } catch (e) {}
-    return true;
-  }
-  window.ShihReport = {
-    on: !!REPORT_URL,
-    round: row => send(Object.assign({ type: 'round' }, row)),
-    // 来玩了：一台电脑一天只记一次
-    visit() { if (get('visitDay', '') === today()) return; if (send({ type: 'visit' })) set('visitDay', today()); }
-  };
-})();
+window.ShihReport = { on: false, round() { return false; }, visit() {} };
+(function () { try { localStorage.removeItem('shih:pid'); localStorage.removeItem('shih:sent'); localStorage.removeItem('shih:visitDay'); } catch (e) {} })();   // 以前留下的电脑代号，清掉
 
 /* =====================================================================
    包场（密码锁）：岛主办公室试算表「开关」那一页的「包场」
@@ -151,7 +125,6 @@ const SHIH_DEMO = false;   // 试玩版用：不连试算表，一直包场，�
 (function () {
   const get = (k, d) => { try { const v = localStorage.getItem('shih:' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
   const set = (k, v) => { try { localStorage.setItem('shih:' + k, JSON.stringify(v)); } catch (e) {} };
-  const pid = () => get('pid', '') || 'nopid000';
   const keys = () => { const k = get('keys', {}); return k && typeof k === 'object' ? k : {}; };
   const IN_GAME = /\/games\//.test(location.pathname);
   const base = IN_GAME ? '../' : '';
@@ -214,7 +187,7 @@ const SHIH_DEMO = false;   // 试玩版用：不连试算表，一直包场，�
         const code = inp.value;
         if (!/^\d{4}$/.test(code)) { msg.textContent = 'Type 4 numbers.'; return; }
         busy = true; msg.textContent = '';
-        ask({ a: 'check', id: P.id, code, pid: pid() }).then(r => {
+        ask({ a: 'check', id: P.id, code }).then(r => {
           busy = false;
           if (r && r.ok) {
             const k = keys(); k[P.id] = code; set('keys', k);

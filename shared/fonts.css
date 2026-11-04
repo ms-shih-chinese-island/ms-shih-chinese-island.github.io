@@ -1,0 +1,6 @@
+/* 网站自己的字体（放在 shared/fonts/，不连 Google Fonts）。
+   中文字体只有网站上用到的字；加了新的字要跑 tools/make-fonts.py 重新做。没有的字会用电脑本来的字体。 */
+@font-face { font-family: 'Andika'; font-weight: 400; font-style: normal; font-display: swap; src: url('fonts/Andika-400.woff2') format('woff2'); }
+@font-face { font-family: 'Andika'; font-weight: 700; font-style: normal; font-display: swap; src: url('fonts/Andika-700.woff2') format('woff2'); }
+@font-face { font-family: 'Noto Sans SC'; font-weight: 500; font-style: normal; font-display: swap; src: url('fonts/NotoSansSC-500.woff2') format('woff2'); }
+@font-face { font-family: 'Noto Sans SC'; font-weight: 700; font-style: normal; font-display: swap; src: url('fonts/NotoSansSC-700.woff2') format('woff2'); }

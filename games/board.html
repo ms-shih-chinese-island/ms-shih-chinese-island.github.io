@@ -5,35 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="../shared/gate.js"></script>
   <title>Family Board Game - 家庭大富翁</title>
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- FontAwesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <!-- Fonts: Fredoka, Nunito, Noto Sans -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@700;800;900&family=Noto+Sans+SC:wght@700;900&family=Noto+Sans+TC:wght@700;900&display=swap" rel="stylesheet">
-
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            dadTop: '#f4a04d',
-            momTop: '#f086ab',
-            famTop: '#78c69f',
-            goYellow: '#f5c531',
-            boardBorder: '#1e293b'
-          },
-          fontFamily: {
-            fun: ['"Fredoka"', 'system-ui', 'sans-serif'],
-            pinyin: ['"Nunito"', '"Fredoka"', 'sans-serif'],
-            cn: ['"Noto Sans SC"', '"Noto Sans TC"', 'sans-serif']
-          }
-        }
-      }
-    }
-  </script>
+  <!-- 样式和字体都放在自己的网站上（不连 Tailwind、Font Awesome、Google Fonts 的网站）
+       board.css 是用 tools/tailwind.board.config.js 做出来的；改了这一页的 class，要重新做一次 board.css -->
+  <link rel="stylesheet" href="board.css">
+  <link rel="stylesheet" href="../shared/vendor/fontawesome/css/fontawesome.min.css">
+  <link rel="stylesheet" href="../shared/vendor/fontawesome/css/solid.min.css">
+  <link rel="stylesheet" href="../shared/board-fonts.css">
 
   <link rel="stylesheet" href="../shared/common.css">
   <style>

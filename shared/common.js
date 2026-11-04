@@ -396,7 +396,7 @@
     const list = S.get('records', []);
     list.push(Object.assign({ t: Date.now(), title: titleEl || document.title }, row));
     S.set('records', list.slice(-300));
-    if (window.ShihReport) window.ShihReport.round(row);
+    // 只存在这台电脑里，不会送到任何地方
   }
 
   // ---- 开始画面：游戏区先模糊，按 Start 才开始 ----
