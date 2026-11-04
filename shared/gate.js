@@ -1,6 +1,6 @@
 /* =====================================================================
    每一页最先读的档：手机直拿的提示、岛的总开关、快闪活动的开关、包场（密码锁）
-   网站不收集学生的资料：问开关的时候只问开关，不带名字、也不带电脑代号。
+   网站不收集学生的资料：问开关的时候只问开关；玩完只送不知道是谁的次数统计。
    ===================================================================== */
 /* ---- 手机直着拿的时候，请学生把手机横过来 ---- */
 (function () {
@@ -108,12 +108,27 @@ const SHIH_DEMO = false;   // 试玩版用：不连试算表，一直包场，�
 
 /* =====================================================================
    隐私：网站不收集任何学生的资料。
-   名字、金币、「我的记录」只存在学生自己的电脑里（浏览器），不会送到任何地方。
-   网站只会问开关（岛的总开关、包场、快闪活动）和密码对不对，问的时候不带任何学生的资料。
-   （以前会把成绩送到试算表，已经拿掉了。这里留一个空的，旧的程式叫它也不会出错。）
+   名字、金币、「我的记录」只存在学生自己的浏览器里，不会送到任何地方。
+   玩完一回合，只送「不知道是谁的统计」：哪个游戏、哪一级、有没有全对。
+     不送名字、不送分数和秒数、不送电脑代号。试算表那边也只是把次数加一。
+   同一个浏览器：两笔之间至少隔 5 秒，一天最多 200 笔（只是计数，不认是谁）。
    ===================================================================== */
-window.ShihReport = { on: false, round() { return false; }, visit() {} };
-(function () { try { localStorage.removeItem('shih:pid'); localStorage.removeItem('shih:sent'); localStorage.removeItem('shih:visitDay'); } catch (e) {} })();   // 以前留下的电脑代号，清掉
+(function () {
+  const get = (k, d) => { try { const v = localStorage.getItem('shih:' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
+  const set = (k, v) => { try { localStorage.setItem('shih:' + k, JSON.stringify(v)); } catch (e) {} };
+  try { localStorage.removeItem('shih:pid'); localStorage.removeItem('shih:visitDay'); } catch (e) {}   // 以前留下的电脑代号，清掉
+  function send(row) {
+    if (!SHIH_URL || SHIH_DEMO) return false;
+    const day = new Date().toISOString().slice(0, 10), q = get('sent', { day: '', n: 0, last: 0 });
+    if (q.day !== day) { q.day = day; q.n = 0; }
+    if (q.n >= 200 || Date.now() - (q.last || 0) < 5000) return false;
+    q.n++; q.last = Date.now(); set('sent', q);
+    const body = JSON.stringify({ type: 'round', game: String(row.game || ''), unit: String(row.unit || ''), level: +row.level || 0, perfect: !!row.perfect });
+    try { fetch(SHIH_URL, { method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain' }, body }).catch(() => {}); } catch (e) {}
+    return true;
+  }
+  window.ShihReport = { on: !!SHIH_URL, round: send, visit() {} };
+})();
 
 /* =====================================================================
    包场（密码锁）：岛主办公室试算表「开关」那一页的「包场」

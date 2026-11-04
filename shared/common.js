@@ -396,7 +396,8 @@
     const list = S.get('records', []);
     list.push(Object.assign({ t: Date.now(), title: titleEl || document.title }, row));
     S.set('records', list.slice(-300));
-    // 只存在这台电脑里，不会送到任何地方
+    // 名字、分数只存在这台电脑里；送出去的只有「哪个游戏、哪一级、有没有全对」（gate.js）
+    if (window.ShihReport) window.ShihReport.round(row);
   }
 
   // ---- 开始画面：游戏区先模糊，按 Start 才开始 ----
