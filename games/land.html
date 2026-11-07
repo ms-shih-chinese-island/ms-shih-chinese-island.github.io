@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>快闪抢地盘 Land Grab</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 快闪活动 · 快闪抢地盘：上课用投影机，全班分队一起玩。题目从「快闪抢地盘」试算表读。
+   掷骰子 → 走到空地 → 答对就拿下那块地，得到那块地的分数。走到别人的地答对，得 1/4。
+   时间到，分数最高的赢（不计时的话，地都被拿完就结束）。
+   不算金币、不传成绩。 */
+body.game { background: #2F6B4F; color: var(--ink); }
+body.game .gameHead { color: #fff; }
+body.game .gameHead .gameTitle .py, body.game .gameHead .gameTitle .zh, body.game .gameHead .gameTitle .en { color: #fff; }
+.ctl.light { background: #fff; }
+.ctl.light[aria-pressed="false"] { opacity: .7; }
+.wrap { display: flex; align-items: center; justify-content: center; height: calc(100vh - 92px); min-height: 420px; }
+
+/* 开始前 */
+.setup { margin: auto; background: #fff; border: 4px solid var(--ink); border-radius: 26px; box-shadow: 0 8px 0 #1C4331; padding: 22px 30px; width: min(720px, 100%);
+  display: flex; flex-direction: column; gap: 16px; align-items: center; }
+.setup .q { display: flex; flex-direction: column; align-items: center; }
+.setup .q .ruby .py { font-size: 15px; color: #1F5E73; } .setup .q .ruby .zh { font-size: 32px; }
+.setup .q .en { font-weight: 700; color: var(--muted); font-size: 18px; }
+.nTeams { display: flex; gap: 10px; }
+.nTeams button { font: 700 30px var(--f-latin); width: 64px; height: 64px; border-radius: 16px; border: 3px solid var(--ink); background: #fff; cursor: pointer; box-shadow: 0 4px 0 var(--ink); }
+.nTeams button[aria-pressed="true"] { background: #F5C531; }
+.names { display: grid; grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr)); gap: 10px; width: 100%; }
+.names label { display: flex; align-items: center; gap: 8px; border: 3px solid var(--tc); border-radius: 14px; padding: 6px 10px; background: var(--ts); }
+.names .dot { width: 18px; height: 18px; border-radius: 50%; background: var(--tc); border: 2px solid var(--ink); flex: none; }
+.names input { font: 700 20px var(--f-latin); font-family: var(--f-latin), var(--f-zh); border: 0; background: transparent; width: 100%; min-width: 0; }
+.secRow { display: flex; align-items: center; gap: 14px; }
+.secRow button { font: 700 30px var(--f-latin); width: 56px; height: 56px; border-radius: 50%; border: 3px solid var(--ink); background: #fff; cursor: pointer; box-shadow: 0 4px 0 var(--ink); }
+.secRow button:disabled { opacity: .3; cursor: default; }
+.secVal { font: 700 34px var(--f-latin); min-width: 160px; text-align: center; display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
+.secVal small { font-size: 14px; color: var(--muted); }
+.secVal .ruby .py { font-size: 13px; } .secVal .ruby .zh { font-size: 28px; }
+.sizeNote { font-weight: 700; color: var(--muted); font-size: 16px; text-align: center; }
+.go { font: 700 24px var(--f-latin); cursor: pointer; background: #8CC7A0; border: 3px solid #2F7A4D; border-radius: 18px; box-shadow: 0 5px 0 #2F7A4D; padding: 8px 30px 10px; display: flex; align-items: center; gap: 12px; }
+.go .ruby .py { font-size: 14px; } .go .ruby .zh { font-size: 30px; }
+
+/* 棋盘 */
+.board { display: grid; grid-template-columns: repeat(var(--c), minmax(0, 1fr)); grid-template-rows: repeat(var(--r), minmax(0, 1fr)); gap: 6px; }
+.sq { position: relative; background: #FFFBEF; border: 3px solid var(--ink); border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 4px; overflow: hidden; text-align: center; cursor: pointer; font: inherit; color: var(--ink); }
+.sq .ruby .py { font-size: var(--tp, 13px); color: #1F5E73; } .sq .ruby .zh { font-size: var(--tz, 26px); }
+.sq .en { font: 700 var(--te, 11px) var(--f-latin); color: var(--muted); line-height: 1.1; margin-top: 2px; overflow-wrap: anywhere; }
+.sq.own { background: var(--ts); border-color: var(--tc-ink); box-shadow: inset 0 0 0 4px var(--tc); }
+.sq .ptsTag { position: absolute; top: 3px; right: 4px; font: 700 var(--te, 11px) var(--f-latin); background: #F5C531; border: 2px solid var(--ink); border-radius: 999px; padding: 0 5px; line-height: 1.3; }
+.sq.own .flag { position: absolute; top: 4px; left: 4px; width: 16px; height: 16px; border-radius: 50%; background: var(--tc); border: 2px solid var(--ink); }
+.sq.go { background: #F5C531; }
+.sq.go .big { font: 900 var(--tz, 26px) var(--f-latin); line-height: 1; }
+.sq.go .goArrow { font: 900 calc(var(--tz, 26px) * 1.6) var(--f-latin); line-height: .9; color: #B3202D; animation: nudge 1.2s ease-in-out infinite; }
+@keyframes nudge { 50% { transform: translateX(-6px); } }
+.sq.chance { background: #FDE7F0; }
+.sq.chance .q { font: 900 calc(var(--tz, 26px) * 1.9) var(--f-latin); color: #C2185B; line-height: 1; }
+.sq.chance .en { color: #C2185B; }
+.sq.here { outline: 5px solid #fff; outline-offset: -1px; }
+.tokens { position: absolute; right: 4px; bottom: 4px; display: flex; flex-wrap: wrap-reverse; justify-content: flex-end; gap: 2px; max-width: 70%; }
+.tok { width: var(--tk, 22px); height: var(--tk, 22px); border-radius: 50%; background: var(--tc); border: 2px solid var(--ink); color: #fff; font: 700 calc(var(--tk, 22px) * .55) var(--f-latin);
+  display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 0 var(--ink); }
+.tok.now { animation: hop .7s ease-in-out infinite; }
+@keyframes hop { 50% { transform: translateY(-4px); } }
+
+/* 中间 */
+.mid { background: #fff; border: 4px solid var(--ink); border-radius: 22px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 10px; min-height: 0; overflow: hidden; }
+.turnLab { display: flex; align-items: center; gap: 10px; font: 700 clamp(18px, 2vw, 30px) var(--f-latin); font-family: var(--f-latin), var(--f-zh); color: var(--tc-ink); }
+.turnLab .ruby .py { font-size: 12px; } .turnLab .ruby .zh { font-size: clamp(18px, 2vw, 30px); }
+.turnLab .dot { width: 26px; height: 26px; border-radius: 50%; background: var(--tc); border: 3px solid var(--ink); }
+.rollRow { display: flex; align-items: center; gap: 16px; }
+.die { width: clamp(56px, 8vh, 84px); aspect-ratio: 1; background: #fff; border: 4px solid var(--ink); border-radius: 16px; box-shadow: 0 4px 0 var(--ink); position: relative; }
+.die i { position: absolute; width: 18%; height: 18%; border-radius: 50%; background: var(--ink); transform: translate(-50%, -50%); }
+.die.spin { animation: spin .5s linear infinite; } @keyframes spin { to { transform: rotate(360deg); } }
+.roll { font: 700 24px var(--f-latin); cursor: pointer; background: #F5C531; border: 3px solid var(--ink); border-radius: 18px; box-shadow: 0 5px 0 var(--ink); padding: 6px 22px 8px; display: flex; align-items: center; gap: 10px; }
+.roll .ruby .py { font-size: 13px; } .roll .ruby .zh { font-size: 28px; }
+.roll:disabled { opacity: .45; cursor: default; }
+.scores { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.team { background: var(--ts); border: 3px solid var(--tc); border-radius: 14px; padding: 2px 10px; display: flex; align-items: center; gap: 8px; font: 700 clamp(14px, 1.4vw, 20px) var(--f-latin); font-family: var(--f-latin), var(--f-zh); }
+.team .ruby .py { font-size: 10px; } .team .ruby .zh { font-size: clamp(14px, 1.4vw, 20px); }
+.team b { font-size: clamp(20px, 2vw, 30px); color: var(--tc-ink); }
+.team.now { box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--tc); }
+.clock { display: flex; align-items: center; gap: 8px; background: #E6F4F8; border: 4px solid #1F5E73; border-radius: 999px; padding: 2px 6px 2px 16px; }
+.clock .num { font: 700 clamp(22px, 2.6vw, 36px) var(--f-latin); color: #1F5E73; min-width: 2.6em; text-align: center; }
+.clock .pause { font-size: 18px; width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--ink); background: #fff; cursor: pointer; }
+.clock.hurry { background: #FDECEE; border-color: #E63946; } .clock.hurry .num { color: #E63946; }
+.clock.paused { opacity: .7; }
+
+/* 弹出来的卡片 */
+.ov { position: fixed; inset: 0; z-index: 50; background: rgba(20,40,30,.72); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.card { background: #fff; border: 5px solid var(--ink); border-radius: 28px; box-shadow: 0 10px 0 #1C4331; width: min(1100px, 100%); max-height: calc(100vh - 32px); overflow: auto;
+  padding: 18px 26px 22px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.card.chanceCard { background: #FFF5FA; }
+.cTop { align-self: stretch; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.tag { border-radius: 999px; padding: 4px 16px; font-weight: 700; display: flex; align-items: center; gap: 10px; background: var(--tc, #1B2447); color: #fff; font-family: var(--f-latin), var(--f-zh); }
+.tag .ruby .py { font-size: 11px; color: #fff; } .tag .ruby .zh { font-size: 20px; color: #fff; }
+.word { display: flex; flex-direction: column; align-items: center; background: #FFFBEF; border: 3px solid var(--ink); border-radius: 18px; padding: 6px 22px; }
+.word .ruby .py { font-size: clamp(14px, 1.6vw, 22px); color: #1F5E73; } .word .ruby .zh { font-size: clamp(30px, 4vw, 54px); }
+.word .en { font: 700 clamp(14px, 1.5vw, 20px) var(--f-latin); color: var(--muted); }
+.line { display: flex; align-items: center; gap: 14px; justify-content: center; max-width: 100%; }
+.txt { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; row-gap: 6px; max-width: 100%; }
+.txt .ruby { flex-wrap: wrap; justify-content: center; row-gap: 6px; }
+.txt .ruby .py { color: #1F5E73; font-size: calc(var(--fz) * .4); min-height: 1.1em; } .txt .ruby .zh { font-size: var(--fz); }
+.txt .ruby .lat { font: 700 var(--fz) var(--f-latin); line-height: 1.1; white-space: pre; }
+.txt .ruby > .hit .zh { background: linear-gradient(transparent 58%, #FFE066 58%); }
+.txt .ruby > .hit + .hit { margin-left: -3px; padding-left: 3px; }
+/* 题目卡：左边是这块地，右边是问题 */
+.qRow { display: flex; align-items: center; gap: 18px; justify-content: center; align-self: stretch; }
+.landTile { flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.landTile .lab { font: 700 15px var(--f-latin); color: var(--muted); }
+.landTile .word { box-shadow: 0 5px 0 var(--ink); }
+.landTile .word.own { background: var(--ts); border-color: var(--tc-ink); box-shadow: inset 0 0 0 5px var(--tc), 0 5px 0 var(--ink); }
+.arrow { font: 900 46px var(--f-latin); color: #C9C2AE; flex: none; }
+.qSide { display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+@media (max-width: 760px) { .qRow { flex-direction: column; } .arrow { transform: rotate(90deg); } }
+.useWord { display: flex; align-items: center; gap: 10px; background: #FFF8D6; border: 3px dashed #E0B800; border-radius: 16px; padding: 2px 14px; font: 700 clamp(18px, 2vw, 26px) var(--f-latin); }
+.step { align-self: stretch; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 18px; background: #F6F3EA; }
+.step.ans2 { background: #EEF6F0; }
+.stepHead { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.role { font: 700 clamp(17px, 1.8vw, 24px) var(--f-latin); font-family: var(--f-latin), var(--f-zh); background: #fff; border: 3px solid var(--ink); border-radius: 999px; padding: 2px 14px; white-space: nowrap; }
+.btn.yes { background: #5BB36A; border-color: #2F7A4D; box-shadow: 0 5px 0 #2F7A4D; color: #fff; }
+.btn.no { background: #fff; border-color: #B3202D; box-shadow: 0 5px 0 #B3202D; color: #B3202D; }
+.btn .ic { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #fff; flex: none; }
+.btn.yes .ic { background: #fff; color: #2F7A4D; } .btn.no .ic { background: #E63946; }
+.btn .two { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; text-align: left; }
+.btn .two small { font-size: 15px; opacity: .85; }
+.noPy .txt .ruby .py, .noPy .sq .ruby .py, .noPy .word .ruby .py { visibility: hidden; }
+.sub { font: 700 clamp(16px, 1.9vw, 26px) var(--f-latin); color: var(--muted); text-align: center; }
+.say { cursor: pointer; background: #fff; border: 3px solid var(--ink); border-radius: 999px; width: 56px; height: 56px; box-shadow: 0 3px 0 var(--ink); font-size: 26px; flex: none; }
+.ansBtn { font: 700 22px var(--f-latin); cursor: pointer; background: #F5C531; border: 3px solid var(--ink); border-radius: 16px; box-shadow: 0 5px 0 var(--ink); padding: 6px 22px 8px; display: flex; align-items: center; gap: 10px; }
+.ansBtn .ruby .py { font-size: 13px; } .ansBtn .ruby .zh { font-size: 26px; }
+.ans { background: #E3F3E8; border: 4px solid #2F7A4D; border-radius: 20px; padding: 8px 22px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.ans .txt .ruby .py { color: #1D4D30; }
+.acts { align-self: stretch; border-top: 3px dashed var(--line); padding-top: 14px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.btn { font: 700 22px var(--f-latin); cursor: pointer; border-radius: 18px; padding: 8px 24px 10px; display: flex; align-items: center; gap: 10px; border: 3px solid var(--ink); background: #fff; box-shadow: 0 5px 0 var(--ink); }
+.btn .ruby .py { font-size: 13px; } .btn .ruby .zh { font-size: 28px; }
+.btn.claim { background: var(--tc); border-color: var(--tc-ink); box-shadow: 0 5px 0 var(--tc-ink); color: #fff; }
+.btn.claim .ruby .py, .btn.claim .ruby .zh { color: #fff; }
+.mark { font-size: 56px; line-height: 1; }
+
+/* 结束 */
+.endCard { background: #fff; border: 5px solid var(--ink); border-radius: 28px; box-shadow: 0 10px 0 #1C4331; padding: 26px 40px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.endCard .trophy { font-size: 90px; line-height: 1; }
+.endCard .big { font: 700 44px var(--f-latin); font-family: var(--f-latin), var(--f-zh); display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.endCard .big .ruby .py { font-size: 16px; } .endCard .big .ruby .zh { font-size: 44px; }
+.endCard .rank { display: flex; flex-direction: column; gap: 4px; font-size: 22px; font-weight: 700; align-items: center; }
+.endCard .rank > span { display: flex; align-items: flex-end; gap: 8px; }
+.endCard .rank .ruby .py { font-size: 11px; } .endCard .rank .ruby .zh { font-size: 22px; }
+.endCard .why { font-weight: 700; color: var(--muted); display: flex; align-items: flex-end; gap: 8px; }
+.endCard .why .ruby .py { font-size: 11px; } .endCard .why .ruby .zh { font-size: 20px; color: var(--ink); }
+
+.closed { margin: auto; background: #fff; border: 4px solid var(--ink); border-radius: 26px; padding: 26px 34px; text-align: center; max-width: 560px; }
+.closed .ruby .py { font-size: 16px; color: #1F5E73; } .closed .ruby .zh { font-size: 38px; }
+.closed p { font-size: 20px; font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { .tok.now, .die.spin, .sq.go .goArrow { animation: none; } }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en">Land Grab</span></div>
+    <div class="controls">
+      <button class="ctl light" id="pyBtn" type="button"></button>
+      <button class="ctl light" id="soundBtn" type="button"></button>
+      <button class="ctl light" id="fullBtn" type="button">⛶ Full screen</button>
+      <button class="ctl light" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="wrap" id="wrap"></div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/flash.js"></script>
+<script src="../shared/vendor/pinyin-pro.js"></script>
+<script src="../shared/py-tw.js"></script>
+<script src="../shared/autopy.js"></script>
+<script>
+Shih.islandBar();
+const $ = id => document.getElementById(id);
+const esc = Shih.esc;
+const R = (zh, py) => `<span class="ruby">${Shih.ruby(zh, py)}</span>`;
+$('titleRuby').innerHTML = Shih.ruby('快闪抢地盘', 'kuài shǎn qiǎng dì pán');
+Shih.soundButton($('soundBtn'));
+$('fullBtn').addEventListener('click', () => {
+  if (document.fullscreenElement) document.exitFullscreen(); else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+});
+// 拼音开／关（记住）
+let showPy = Shih.get('landPy', true);
+const paintPy = () => { document.body.classList.toggle('noPy', !showPy); $('pyBtn').textContent = showPy ? 'Pinyin on' : 'Pinyin off'; $('pyBtn').setAttribute('aria-pressed', showPy); };
+$('pyBtn').addEventListener('click', () => { showPy = !showPy; Shih.set('landPy', showPy); paintPy(); });
+paintPy();
+
+// ---- 拼音：试算表打的拼音优先，空着就自动（ShihPY） ----
+const HAN = /[㐀-鿿]/;
+const syl = py => String(py || '').replace(/[.,?!;:，。？！、\/／…「」『』""''()（）]/g, ' ').trim().split(/\s+/).filter(Boolean);
+// 一段文字 + 拼音 → 注音的 HTML（汉字上面有拼音；英文、数字连在一起不拆开；Ctrl + Enter 的换行也照放）
+// hl = 这块地的字：句子里有出现的话，用黄色标出来（看得出问题跟这块地有关）
+function hitMap(chars, hl) {
+  const w = Array.from(String(hl || '')), on = chars.map(() => false);
+  if (!w.length || !w.some(c => HAN.test(c))) return on;
+  for (let i = 0; i + w.length <= chars.length; i++) if (w.every((c, j) => chars[i + j] === c)) w.forEach((_, j) => { on[i + j] = true; });
+  return on;
+}
+function rubyLine(text, py, hl) {
+  const s = syl(py); let k = 0, out = '', lat = '';
+  const chars = Array.from(String(text)), on = hitMap(chars, hl);
+  const flush = () => { if (lat) { out += `<span><span class="py">&nbsp;</span><span class="lat">${esc(lat)}</span></span>`; lat = ''; } };
+  chars.forEach((c, i) => {
+    if (HAN.test(c)) { flush(); out += `<span${on[i] ? ' class="hit"' : ''}><span class="py">${esc(s[k++] || '') || '&nbsp;'}</span><span class="zh">${esc(c)}</span></span>`; }
+    else lat += c;
+  });
+  flush();
+  return `<span class="ruby">${out}</span>`;
+}
+function rubyText(text, py, hl) {
+  // 换行：拼音也照汉字数分给每一行
+  const lines = String(text).split(/\r?\n/), s = syl(py); let k = 0;
+  return lines.map(L => { const n = Array.from(L).filter(c => HAN.test(c)).length; const part = s.slice(k, k + n).join(' '); k += n; return rubyLine(L, part, hl); }).join('<br>');
+}
+function sized(text, big) {
+  const n = Array.from(String(text).replace(/\s/g, '')).length;
+  const f = n <= 8 ? 1 : n <= 14 ? .8 : n <= 22 ? .66 : n <= 34 ? .54 : .44;
+  return `--fz:calc(${big} * ${f})`;
+}
+
+// ---- 小小的音效（跟着 Sound on / off） ----
+let actx = null;
+function beep(f, len, type) {
+  if (!Shih.get('sound', true)) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.frequency.value = f; o.type = type || 'sine';
+    g.gain.setValueAtTime(.12, actx.currentTime); g.gain.exponentialRampToValueAtTime(.001, actx.currentTime + len);
+    o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + len);
+  } catch (e) {}
+}
+
+// ---- 队伍 ----
+const TEAM_COLORS = [['#E63946', '#FDECEE', '#B3202D'], ['#4A86D0', '#E3F0FB', '#2B5E9E'], ['#5BB36A', '#E6F4E8', '#2F7A4D'], ['#F28C3A', '#FFF1E3', '#B4471C'], ['#9B6BC9', '#F1E9F9', '#6A3E96']];
+const DEFAULT_NAMES = [1, 2, 3, 4, 5].map(n => ['Player ' + n]);
+const teamVars = k => `--tc:${TEAM_COLORS[k][0]};--ts:${TEAM_COLORS[k][1]};--tc-ink:${TEAM_COLORS[k][2]}`;
+const teamName = k => esc(st.teams[k]);
+
+// ---- 试玩版的范例（真的版本从试算表来） ----
+const DEMO_ROWS = [
+  ['你好', 'nǐ hǎo', 'hello', '你好！', 'nǐ hǎo', 'Say hello!', '你好！', 'nǐ hǎo', 100],
+  ['老师', 'lǎo shī', 'teacher', '这是谁？', 'zhè shì shéi', '', '这是老师。', 'zhè shì lǎo shī', 100],
+  ['名字', 'míng zì', 'name', '你叫什么名字？', 'nǐ jiào shén me míng zì', "What's your name?", '我叫……', 'wǒ jiào', 200],
+  ['朋友', 'péng yǒu', 'friend', '你有朋友吗？', 'nǐ yǒu péng yǒu ma', '', '我有朋友。', 'wǒ yǒu péng yǒu', 200],
+  ['几岁', 'jǐ suì', 'how old', '你几岁？', 'nǐ jǐ suì', 'How old are you?', '我八岁。', 'wǒ bā suì', 200],
+  ['铅笔', 'qiān bǐ', 'pencil', '你有铅笔吗？', 'nǐ yǒu qiān bǐ ma', '', '我有铅笔。／我没有铅笔。', 'wǒ yǒu qiān bǐ wǒ méi yǒu qiān bǐ', 200],
+  ['书包', 'shū bāo', 'backpack', '这是什么？', 'zhè shì shén me', '', '这是书包。', 'zhè shì shū bāo', 100],
+  ['学校', 'xué xiào', 'school', '你喜欢学校吗？', 'nǐ xǐ huān xué xiào ma', '', '我喜欢学校。', 'wǒ xǐ huān xué xiào', 200],
+  ['再见', 'zài jiàn', 'goodbye', '下课了，你说什么？', 'xià kè le nǐ shuō shén me', 'Class is over. What do you say?', '再见！', 'zài jiàn', 200],
+  ['谢谢', 'xiè xie', 'thank you', '朋友给你一支铅笔，你说什么？', 'péng yǒu gěi nǐ yī zhī qiān bǐ nǐ shuō shén me', 'A friend gives you a pencil. What do you say?', '谢谢！', 'xiè xie', 300],
+  ['你好吗', 'nǐ hǎo ma', 'how are you', '你好吗？', 'nǐ hǎo ma', 'How are you?', '我很好。', 'wǒ hěn hǎo', 200],
+  ['十', 'shí', 'ten', '用中文从一数到十。', 'yòng zhōng wén cóng yī shǔ dào shí', 'Count from 1 to 10.', '一、二、三……十', 'yī èr sān shí', 300]
+];
+const DEMO_CARDS = [
+  ['回答：你好吗？', 'huí dá nǐ hǎo ma', 'Answer the question!', '说话'],
+  ['回答：你叫什么名字？', 'huí dá nǐ jiào shén me míng zì', 'Answer the question!', '说话'],
+  ['用中文从十数到一。', 'yòng zhōng wén cóng shí shǔ dào yī', 'Count from 10 to 1 in Chinese.', '说话'],
+  ['什么时候要说「谢谢你」？', 'shén me shí hòu yào shuō xiè xie nǐ', 'When do you say 谢谢你 to others?', '说话'],
+  ['跟右边的同学说「你好」。', 'gēn yòu biān de tóng xué shuō nǐ hǎo', 'Say hello to the classmate on your right.', '说话'],
+  ['前进两格。', 'qián jìn liǎng gé', 'Move forward 2 spaces.', '前进 2'],
+  ['退后一格。', 'tuì hòu yī gé', 'Move back 1 space.', '退后 1'],
+  ['再掷一次骰子。', 'zài zhì yī cì tóu zi', 'Roll the dice again!', '再掷一次']
+];
+
+// ---- 整理试算表的资料 ----
+let WORDS = [], CARDS = [], TILES = [], C = 6, RW = 4;
+const NUM = { 一: 1, 二: 2, 两: 2, 三: 3, 四: 4, 五: 5, 六: 6 };
+function action(a, text) {
+  const s = String(a || '') + ' ' + String(text || '');
+  const n = (s.match(/(\d|[一二两三四五六])/) || [])[1];
+  const k = n ? (+n || NUM[n]) : 1;
+  if (/前进|前進|forward/i.test(a)) return { move: k };
+  if (/退后|退後|back/i.test(a)) return { move: -k };
+  if (/再掷|再擲|again/i.test(a)) return { again: true };
+  return {};
+}
+function readData(F) {
+  const rows = (F.demo ? DEMO_ROWS : F.rows || []).filter(r => String(r[0] || '').trim()).slice(0, 18);
+  WORDS = rows.map(r => {
+    const t = i => String(r[i] || '').trim();
+    return { zh: t(0), py: ShihPY.pick(t(0), t(1)), en: t(2), q: t(3), qpy: t(3) ? ShihPY.pick(t(3), t(4)) : '', qen: t(5), a: t(6), apy: t(6) ? ShihPY.pick(t(6), t(7)) : '', pts: Math.max(0, parseInt(t(8).replace(/[^\d]/g, ''), 10) || 100) };
+  });
+  let cards = (F.demo ? DEMO_CARDS : F.cards || []).filter(r => String(r[0] || '').trim());
+  if (!cards.length) cards = DEMO_CARDS;
+  CARDS = cards.map(r => ({ zh: String(r[0]).trim(), py: ShihPY.pick(String(r[0]).trim(), r[1]), en: String(r[2] || '').trim(), ...action(r[3], '') }));
+}
+// 小盘：6×4 一圈 16 格（起点 + 2 机会 + 13 块地）；大盘：8×5 一圈 22 格（起点 + 3 机会 + 18 块地）
+function buildTiles() {
+  const big = WORDS.length > 13;
+  C = big ? 8 : 6; RW = big ? 5 : 4;
+  const cells = [[RW - 1, C - 1]];
+  for (let c = C - 2; c >= 0; c--) cells.push([RW - 1, c]);
+  for (let r = RW - 2; r >= 0; r--) cells.push([r, 0]);
+  for (let c = 1; c <= C - 1; c++) cells.push([0, c]);
+  for (let r = 1; r <= RW - 2; r++) cells.push([r, C - 1]);
+  const chance = big ? [4, 11, 18] : [4, 11];
+  let w = 0;
+  TILES = cells.map(([r, c], i) => {
+    if (i === 0) return { kind: 'go', r, c };
+    if (chance.includes(i)) return { kind: 'chance', r, c };
+    return { kind: 'land', r, c, w: (w++) % WORDS.length };   // 题目不够：从头再用一次
+  });
+}
+
+// ---- 游戏状态（存在这个分页里，不小心重新整理也不会不见） ----
+const SAVE = 'land';
+let st = null;
+const save = () => { try { sessionStorage.setItem('shih:' + SAVE, JSON.stringify(st)); } catch (e) {} };
+const sig = () => WORDS.map(w => w.zh).join('|');
+
+// ---- 开始前：几队、队名、玩多久 ----
+const MINS = [0, 5, 10, 15, 20, 25, 30];
+function showSetup() {
+  stopClock();
+  const names = st && st.teams ? st.teams.slice() : DEFAULT_NAMES.map(d => d[0]);
+  let pick = st && st.teams ? st.teams.length : 2;
+  let mins = Shih.get('landMins', 10); if (!MINS.includes(mins)) mins = 10;
+  const wrap = $('wrap');
+  const paint = () => {
+    wrap.innerHTML = `<div class="setup"><div class="q">${R('几个人', 'jǐ gè rén')}<span class="en">How many players?</span></div>` +
+      `<div class="nTeams">${[2, 3, 4, 5].map(k => `<button type="button" data-n="${k}" aria-pressed="${k === pick}">${k}</button>`).join('')}</div>` +
+      `<div class="names" style="--cols:${pick === 4 ? 2 : Math.min(pick, 3)}">${Array.from({ length: pick }, (_, k) => `<label style="${teamVars(k)}"><span class="dot"></span><input maxlength="10" data-k="${k}" value="${esc(names[k] || DEFAULT_NAMES[k][0])}" aria-label="Player ${k + 1} name"></label>`).join('')}</div>` +
+      `<div class="q">${R('玩多久', 'wán duō jiǔ')}<span class="en">How long?</span></div>` +
+      `<div class="secRow"><button type="button" id="mMinus" aria-label="less time">−</button><span class="secVal" id="mVal"></span><button type="button" id="mPlus" aria-label="more time">＋</button></div>` +
+      `<div class="sizeNote">${WORDS.length} questions · ${TILES.length} squares</div>` +
+      `<button type="button" class="go" id="goBtn">${R('开始', 'kāi shǐ')}<span>Start</span></button></div>`;
+    wrap.querySelectorAll('.nTeams button').forEach(b => b.addEventListener('click', () => { keep(); pick = +b.dataset.n; paint(); }));
+    wrap.querySelectorAll('.names input').forEach(i => i.addEventListener('input', keep));
+    const paintM = () => {
+      $('mVal').innerHTML = mins ? `<span style="display:flex;align-items:flex-end;gap:6px">${mins}${R('分钟', 'fēn zhōng')}</span><small>minutes</small>` : `${R('不计时', 'bù jì shí')}<small>No timer</small>`;
+      $('mMinus').disabled = mins <= 0; $('mPlus').disabled = mins >= MINS[MINS.length - 1];
+    };
+    $('mMinus').addEventListener('click', () => { mins = MINS[Math.max(0, MINS.indexOf(mins) - 1)]; Shih.set('landMins', mins); paintM(); });
+    $('mPlus').addEventListener('click', () => { mins = MINS[Math.min(MINS.length - 1, MINS.indexOf(mins) + 1)]; Shih.set('landMins', mins); paintM(); });
+    paintM();
+    $('goBtn').addEventListener('click', () => {
+      keep();
+      const teams = Array.from({ length: pick }, (_, k) => (names[k] || '').trim().slice(0, 10) || DEFAULT_NAMES[k][0]);
+      st = { sig: sig(), teams, pos: teams.map(() => 0), own: {}, pts: teams.map(() => 0), turn: 0, left: mins * 60000, timed: !!mins, paused: false, deck: [], over: '' };
+      save(); showBoard();
+    });
+  };
+  const keep = () => wrap.querySelectorAll('.names input').forEach(i => { names[+i.dataset.k] = i.value; });
+  paint();
+}
+
+// ---- 棋盘 ----
+let busy = false;
+function fit() {
+  const b = $('board'); if (!b) return;
+  const wrap = $('wrap');
+  const H = Math.max(300, innerHeight - wrap.getBoundingClientRect().top - 10);
+  wrap.style.height = H + 'px';
+  const W = wrap.clientWidth;
+  // 每格大约是 1.15 : 1（宽一点）
+  const cell = Math.min(W / (C * 1.15), H / RW);
+  b.style.width = Math.min(W, cell * C * 1.15) + 'px'; b.style.height = Math.min(H, cell * RW) + 'px';
+  // 字的大小跟着格子（每一格再按字数缩小：--tz-b × 比例）
+  b.style.setProperty('--tz', Math.max(14, cell * .27) + 'px'); b.style.setProperty('--tz-b', Math.max(14, cell * .27) + 'px');
+  b.style.setProperty('--tp', Math.max(9, cell * .12) + 'px'); b.style.setProperty('--tp-b', Math.max(9, cell * .12) + 'px');
+  b.style.setProperty('--te', Math.max(9, cell * .095) + 'px');
+  b.style.setProperty('--tk', Math.max(16, cell * .2) + 'px');
+}
+addEventListener('resize', fit); document.addEventListener('fullscreenchange', () => setTimeout(fit, 100));
+
+function tileHTML(t, i) {
+  const toks = st.pos.map((p, k) => p === i ? `<span class="tok${k === st.turn ? ' now' : ''}" style="${teamVars(k)}">${k + 1}</span>` : '').join('');
+  const here = st.pos[st.turn] === i ? ' here' : '';
+  const pos = `grid-row:${t.r + 1};grid-column:${t.c + 1}`;
+  if (t.kind === 'go') return `<div class="sq go${here}" style="${pos}"><span class="big">GO</span><span class="goArrow" aria-label="this way">⬅</span><span class="tokens">${toks}</span></div>`;
+  if (t.kind === 'chance') return `<div class="sq chance${here}" style="${pos}"><span class="q">?</span><span class="en">Chance</span><span class="tokens">${toks}</span></div>`;
+  const w = WORDS[t.w], o = st.own[i];
+  const n = Array.from(w.zh).length, k = n <= 2 ? 1 : n === 3 ? .78 : n === 4 ? .62 : .5;
+  return `<button type="button" class="sq${o !== undefined ? ' own' : ''}${here}" data-i="${i}" style="${pos};${o !== undefined ? teamVars(o) : ''}">` +
+    (o !== undefined ? '<span class="flag"></span>' : '') + `<span class="ptsTag">${w.pts}</span>` +
+    `<span style="--tz:calc(var(--tz-b) * ${k});--tp:calc(var(--tp-b) * ${Math.max(.7, k)})">${rubyLine(w.zh, w.py)}</span>` +
+    (w.en ? `<span class="en">${esc(w.en)}</span>` : '') + `<span class="tokens">${toks}</span></button>`;
+}
+function showBoard() {
+  const wrap = $('wrap');
+  wrap.innerHTML = `<div class="board" id="board" style="--c:${C};--r:${RW}">` + TILES.map(tileHTML).join('') +
+    `<div class="mid" id="mid" style="grid-row:2 / ${RW};grid-column:2 / ${C}"></div></div>`;
+  const b = $('board');
+  fit();
+  b.querySelectorAll('.sq[data-i]').forEach(s => s.addEventListener('click', () => { if (!busy) peek(+s.dataset.i); }));
+  paintMid();
+  startClock();
+  if (st.over) setTimeout(showEnd, 300);
+}
+function repaintTiles() {
+  const b = $('board'); if (!b) return;
+  const mid = $('mid');
+  b.querySelectorAll('.sq').forEach(x => x.remove());
+  b.insertAdjacentHTML('afterbegin', TILES.map(tileHTML).join(''));
+  b.appendChild(mid);
+  b.querySelectorAll('.sq[data-i]').forEach(s => s.addEventListener('click', () => { if (!busy) peek(+s.dataset.i); }));
+}
+const count = k => Object.values(st.own).filter(o => o === k).length;
+const score = k => (st.pts && st.pts[k]) || 0;
+const quarter = n => Math.round(n / 4);
+function paintMid(face) {
+  const mid = $('mid'); if (!mid) return;
+  const k = st.turn;
+  mid.innerHTML =
+    (st.timed ? `<span class="clock" id="clock"><span class="num" id="clockNum">${fmt(st.left)}</span><button type="button" class="pause" id="pauseBtn" aria-label="Pause">${st.paused ? '▶' : '⏸'}</button></span>` : '') +
+    `<div class="turnLab" style="${teamVars(k)}"><span class="dot"></span>${teamName(k)}</div>` +
+    `<div class="rollRow"><div class="die" id="die">${pips(face || st.face || 6)}</div>` +
+    `<button type="button" class="roll" id="rollBtn" style="${teamVars(k)}"${busy ? ' disabled' : ''}>${R('掷骰子', 'zhì tóu zi')}<span>Roll</span></button></div>` +
+    `<div class="scores">${st.teams.map((t, j) => `<span class="team${j === k ? ' now' : ''}" style="${teamVars(j)}">${teamName(j)} <b>${score(j)}</b></span>`).join('')}</div>`;
+  $('rollBtn').addEventListener('click', () => roll());
+  if (st.timed) {
+    $('pauseBtn').addEventListener('click', () => { st.paused = !st.paused; save(); paintMid(face); });
+    $('clock').classList.toggle('paused', st.paused);
+    $('clock').classList.toggle('hurry', st.left <= 60000);
+  }
+}
+// 骰子的点
+const PIPS = { 1: [[50, 50]], 2: [[28, 28], [72, 72]], 3: [[25, 25], [50, 50], [75, 75]], 4: [[28, 28], [72, 28], [28, 72], [72, 72]],
+  5: [[26, 26], [74, 26], [50, 50], [26, 74], [74, 74]], 6: [[28, 24], [72, 24], [28, 50], [72, 50], [28, 76], [72, 76]] };
+const pips = n => (PIPS[n] || []).map(([x, y]) => `<i style="left:${x}%;top:${y}%"></i>`).join('');
+
+// ---- 计时：时间到了，这一轮做完就结束 ----
+let tick = 0, last = 0;
+const fmt = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+function stopClock() { clearInterval(tick); tick = 0; }
+function startClock() {
+  stopClock();
+  if (!st.timed || st.over) return;
+  last = Date.now();
+  tick = setInterval(() => {
+    const now = Date.now();
+    if (!st.paused) st.left -= now - last;
+    last = now;
+    const n = $('clockNum'); if (n) n.textContent = fmt(st.left);
+    const c = $('clock'); if (c) c.classList.toggle('hurry', st.left <= 60000);
+    if (st.left <= 0) {
+      st.left = 0; st.over = 'time'; save(); stopClock(); beep(220, .6, 'sawtooth');
+      if (!document.querySelector('.ov') && !busy) showEnd();
+    } else if (now % 5000 < 110) save();
+  }, 100);
+}
+
+// ---- 掷骰子、走路 ----
+const wait = ms => new Promise(r => setTimeout(r, ms));
+async function roll() {
+  if (busy || st.over) return;
+  busy = true; $('rollBtn').disabled = true;
+  const die = $('die'); die.classList.add('spin');
+  for (let i = 0; i < 8; i++) { die.innerHTML = pips(1 + Math.floor(Math.random() * 6)); beep(500 + Math.random() * 300, .04, 'square'); await wait(70); }
+  const n = 1 + Math.floor(Math.random() * 6);
+  die.classList.remove('spin'); die.innerHTML = pips(n); st.face = n;
+  await wait(400);
+  await walk(n);
+  busy = false;
+  arrive(false, n);
+}
+async function walk(n) {
+  const k = st.turn, step = n > 0 ? 1 : -1;
+  for (let i = 0; i < Math.abs(n); i++) {
+    st.pos[k] = (st.pos[k] + step + TILES.length) % TILES.length;
+    repaintTiles(); beep(660, .06); await wait(260);
+  }
+  save();
+}
+// 走到了：空地 → 回答问题；别人的地 → 地主问你；机会 → 抽一张卡
+function arrive(byCard, face) {
+  const k = st.turn, i = st.pos[k], t = TILES[i];
+  paintMid(face);
+  if (t.kind === 'go') { popInfo('🏁', '', 'Back at GO!'); return; }
+  if (t.kind === 'chance') {
+    if (byCard) { popInfo('🎴', '', 'No card this time.'); return; }
+    drawCard(); return;
+  }
+  const o = st.own[i];
+  if (o === k) { popInfo('🏠', '', 'This is your land!'); return; }
+  popQuestion(i, o);
+}
+function nextTurn(again) {
+  if (!again) st.turn = (st.turn + 1) % st.teams.length;
+  save(); repaintTiles(); paintMid();
+  const all = TILES.every((t, i) => t.kind !== 'land' || st.own[i] !== undefined);
+  if (all && !st.over && !st.timed) { st.over = 'all'; save(); }
+  if (st.over) showEnd();
+}
+
+// ---- 弹出来的卡片 ----
+function overlay(html, cls) {
+  const ov = document.createElement('div');
+  ov.className = 'ov';
+  ov.innerHTML = `<div class="card ${cls || ''}" role="dialog" aria-modal="true">${html}</div>`;
+  document.body.appendChild(ov);
+  return ov;
+}
+const teamTag = k => `<span class="tag" style="${teamVars(k)}">${teamName(k)}</span>`;
+const nextBtn = (lab) => `<button type="button" class="btn" data-next>${lab || 'Next player ➜'}</button>`;
+function popInfo(mark, zh, en, again) {
+  const ov = overlay(`<div class="cTop">${teamTag(st.turn)}</div><div class="mark">${mark}</div>${zh ? `<div class="txt" style="--fz:clamp(30px,4vw,54px)">${zh}</div>` : ''}<div class="sub" style="font-size:clamp(26px,3vw,40px);color:var(--ink)">${esc(en)}</div><div class="acts">${nextBtn()}</div>`);
+  ov.querySelector('[data-next]').addEventListener('click', () => { ov.remove(); nextTurn(again); });
+}
+// who = { asker: k 或 'pc' 或 undefined, answer: k 或 undefined }
+// 两行：🗣 谁问 → 问题；🙋 谁答 → （用这块地的字）→ 看例子
+function qBlock(w, owner, who) {
+  who = who || {};
+  const own = owner !== undefined;
+  const chip = (icon, k, en) => k === undefined || k === 'pc'
+    ? `<span class="role">${icon} ${en}</span>`
+    : `<span class="role" style="${teamVars(k)};background:var(--tc);border-color:var(--tc-ink);color:#fff">${icon} ${teamName(k)} ${en.toLowerCase()}s</span>`;
+  let q = '';
+  if (w.q) q += `<div class="step"><div class="stepHead">${who.asker === 'pc' ? '<span class="role">💻 Computer asks</span>' : chip('🗣', who.asker, 'Ask')}</div>` +
+    `<div class="line"><div class="txt" style="${sized(w.q, 'clamp(30px, 4.2vw, 60px)')}">${rubyText(w.q, w.qpy, w.zh)}</div><button type="button" class="say" data-say="q" aria-label="Listen">🔊</button></div>` +
+    (w.qen ? `<div class="sub">${esc(w.qen)}</div>` : '') + `</div>`;
+  // 问题里没有这块地的字（例如「这是什么？」）：提示要用这块地的字回答
+  const need = w.q && !hitMap(Array.from(w.q), w.zh).some(Boolean) && Array.from(w.zh).some(c => HAN.test(c));
+  q += `<div class="step ans2"><div class="stepHead">${chip('🙋', who.answer, 'Answer')}` +
+    (need ? `<span class="useWord"><span>with</span><span class="txt" style="--fz:clamp(24px, 3vw, 40px)">${rubyText(w.zh, w.py, w.zh)}</span></span>` : '') + `</div>` +
+    (w.a ? `<div id="ansBox"><button type="button" class="ansBtn" id="showA">${R('看例子', 'kàn lì zi')}<span>Show example</span></button></div>` : '') + `</div>`;
+  return `<div class="qRow"><div class="landTile"><span class="lab">This land</span>` +
+    `<div class="word${own ? ' own' : ''}" style="${own ? teamVars(owner) : ''}">${rubyLine(w.zh, w.py)}${w.en ? `<span class="en">${esc(w.en)}</span>` : ''}</div></div>` +
+    `<span class="arrow" aria-hidden="true">➜</span><div class="qSide">${q}</div></div>`;
+}
+function wireQ(ov, w) {
+  const sq = ov.querySelector('[data-say="q"]');
+  if (sq) sq.addEventListener('click', () => Shih.speak(w.q));
+  Shih.speak(w.q || w.zh);
+  const sa = ov.querySelector('#showA');
+  if (sa) sa.addEventListener('click', () => {
+    ov.querySelector('#ansBox').innerHTML = `<div class="ans"><div class="txt" style="${sized(w.a, 'clamp(28px, 4vw, 56px)')}">${rubyText(w.a, w.apy, w.zh)}</div><button type="button" class="say" data-say="a" aria-label="Listen">🔊</button></div>`;
+    ov.querySelector('[data-say="a"]').addEventListener('click', () => Shih.speak(w.a));
+    Shih.speak(w.a);
+  });
+}
+// 空地：答对 → 拿下；答错 → 下一队。别人的地：地主问，你回答（不会换地主）
+function popQuestion(i, owner) {
+  const k = st.turn, w = WORDS[TILES[i].w], free = owner === undefined;
+  const head = `${teamTag(k)}<span class="sub">${free ? 'Free land!' : 'Someone else\'s land'}</span>`;
+  const acts = free
+    ? `<button type="button" class="btn yes" data-claim><span class="ic">✓</span><span class="two">Correct! +${w.pts}<small>Take this land</small></span></button>` +
+      `<button type="button" class="btn no" data-next><span class="ic">✗</span><span class="two">Not correct<small>Next player</small></span></button>`
+    : `<button type="button" class="btn yes" data-quarter><span class="ic">✓</span><span class="two">Correct! +${quarter(w.pts)}<small>Next player</small></span></button>` +
+      `<button type="button" class="btn no" data-next><span class="ic">✗</span><span class="two">Not correct<small>Next player</small></span></button>`;
+  const ov = overlay(`<div class="cTop">${head}</div>${qBlock(w, owner, { asker: free ? 'pc' : owner, answer: k })}<div class="acts">${acts}</div>`);
+  wireQ(ov, w);
+  const c = ov.querySelector('[data-claim]');
+  const gain = n => { st.pts = st.pts || st.teams.map(() => 0); st.pts[k] += n; };
+  const qb = ov.querySelector('[data-quarter]');
+  if (qb) qb.addEventListener('click', () => { gain(quarter(w.pts)); beep(880, .12); ov.remove(); nextTurn(); });
+  if (c) c.addEventListener('click', () => { st.own[i] = k; gain(w.pts); beep(880, .12); setTimeout(() => beep(1175, .2), 120); ov.remove(); nextTurn(); });
+  ov.querySelector('[data-next]').addEventListener('click', () => { ov.remove(); nextTurn(); });
+}
+// 点格子：只是看看（不算一回合）
+function peek(i) {
+  const t = TILES[i]; if (t.kind !== 'land') return;
+  const w = WORDS[t.w];
+  const ov = overlay(`<div class="cTop"><span></span><button type="button" class="ctl" data-close>✕ Back</button></div>${qBlock(w, st.own[i])}`);
+  wireQ(ov, w);
+  ov.querySelector('[data-close]').addEventListener('click', () => ov.remove());
+}
+// 机会卡：洗好的一叠，抽完再洗
+function drawCard() {
+  if (!st.deck || !st.deck.length) {
+    st.deck = CARDS.map((_, i) => i);
+    for (let i = st.deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [st.deck[i], st.deck[j]] = [st.deck[j], st.deck[i]]; }
+  }
+  const c = CARDS[st.deck.pop()]; save();
+  const luck = c.move || c.again;
+  const lab = c.move ? (c.move > 0 ? `Move forward ${c.move} ➜` : `⬅ Move back ${-c.move}`)
+    : c.again ? '🎲 Roll again' : null;
+  const ov = overlay(`<div class="cTop">${teamTag(st.turn)}<span class="tag" style="--tc:#C2185B">? Chance card</span></div>` +
+    `<div class="mark">${luck ? '🍀' : '🗣️'}</div>` +
+    `<div class="line"><div class="txt" style="${sized(c.zh, 'clamp(32px, 4.8vw, 68px)')}">${rubyText(c.zh, c.py)}</div><button type="button" class="say" data-say aria-label="Listen">🔊</button></div>` +
+    (c.en ? `<div class="sub">${esc(c.en)}</div>` : '') +
+    `<div class="acts">${lab ? `<button type="button" class="btn claim" style="${teamVars(st.turn)}" data-go>${lab}</button>` : `<button type="button" class="btn claim" style="${teamVars(st.turn)}" data-next><span class="two">Done!<small>Next player</small></span></button>`}</div>`, 'chanceCard');
+  ov.querySelector('[data-say]').addEventListener('click', () => Shih.speak(c.zh));
+  Shih.speak(c.zh);
+  const nx = ov.querySelector('[data-next]');
+  if (nx) nx.addEventListener('click', () => { ov.remove(); nextTurn(); });
+  const go = ov.querySelector('[data-go]');
+  if (go) go.addEventListener('click', async () => {
+    ov.remove();
+    if (c.again) { nextTurn(true); return; }   // 同一队再掷一次
+    busy = true; paintMid();
+    await walk(c.move);
+    busy = false;
+    arrive(true);
+  });
+}
+
+// ---- 结束：地最多的赢 ----
+function showEnd() {
+  if (document.querySelector('.ov')) return;
+  stopClock();
+  const order = st.teams.map((_, k) => ({ k, n: score(k), land: count(k) })).sort((a, b) => b.n - a.n);
+  const top = order[0], tie = order[1] && order[1].n === top.n;
+  const ov = document.createElement('div');
+  ov.className = 'ov';
+  ov.innerHTML = `<div class="endCard"><div class="why">${st.over === 'time' ? R('时间到', 'shí jiān dào') + "<span>Time's up!</span>" : R('地都被抢光了', 'dì dōu bèi qiǎng guāng le') + '<span>All land is taken!</span>'}</div>` +
+    `<div class="trophy">🏆</div>` +
+    (tie ? `<div class="big">${R('平手', 'píng shǒu')} Tie!</div>` : `<div class="big" style="color:${TEAM_COLORS[top.k][2]}">${teamName(top.k)} ${R('赢了', 'yíng le')}</div>`) +
+    `<div class="rank">${order.map((o, i) => `<span style="color:${TEAM_COLORS[o.k][2]}">${i + 1}. ${teamName(o.k)} · ${o.n} ${R('分', 'fēn')} <small style="color:var(--muted);font-size:16px">(${o.land} ${o.land === 1 ? 'square' : 'squares'})</small></span>`).join('')}</div>` +
+    `<button type="button" class="go" id="again">${R('再玩一次', 'zài wán yī cì')}<span>Play again</span></button>` +
+    `<button type="button" class="ctl" id="seeBoard">See the board</button></div>`;
+  document.body.appendChild(ov);
+  $('again').addEventListener('click', () => { ov.remove(); restart(); });
+  $('seeBoard').addEventListener('click', () => ov.remove());
+  beep(523, .15); setTimeout(() => beep(659, .15), 150); setTimeout(() => beep(784, .3), 300);
+}
+function restart() {
+  try { sessionStorage.removeItem('shih:' + SAVE); } catch (e) {}
+  st = st ? { teams: st.teams } : null;
+  showSetup();
+}
+$('resetBtn').addEventListener('click', () => { document.querySelectorAll('.ov').forEach(x => x.remove()); busy = false; restart(); });
+
+function showClosed(msg) {
+  $('wrap').innerHTML = `<div class="closed"><div style="font-size:70px">🎪</div>${R('快闪活动休息中', 'kuài shǎn huó dòng xiū xi zhōng')}` +
+    `<p>${msg || "The pop-up event isn't open right now."}</p><a class="ctl" href="../index.html">🏝 Back to the island</a></div>`;
+  $('resetBtn').hidden = true;
+}
+
+ShihFlash.loadLand().then(F => {
+  if (!F.on) { showClosed(); return; }
+  readData(F);
+  if (!WORDS.length) { showClosed('No questions yet.'); return; }
+  buildTiles();
+  try { st = JSON.parse(sessionStorage.getItem('shih:' + SAVE) || 'null'); } catch (e) { st = null; }
+  if (st && st.pos && st.sig === sig() && st.pos.every(p => p < TILES.length)) showBoard();
+  else { st = st && st.teams ? { teams: st.teams } : null; showSetup(); }
+});
+</script>
+</body>
+</html>

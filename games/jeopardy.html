@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="../shared/gate.js"></script>
-<title>抢答大挑战 Jeopardy</title>
+<title>快闪抢答 Quiz Challenge</title>
 <link rel="stylesheet" href="../shared/fonts.css">
 <link rel="stylesheet" href="../shared/common.css">
 <style>
-/* 快闪活动 · 抢答大挑战：上课用投影机，全班分队一起玩。题目从「快闪活动」试算表读。
+/* 快闪活动 · 快闪抢答：上课用投影机，全班分队一起玩。题目从「快闪活动」试算表读。
    不算金币、不传成绩。 */
 body.game { background: #2E3A66; color: var(--ink); }
 body.game .gameHead { color: #fff; }
@@ -115,7 +115,7 @@ body.game .gameHead .gameTitle .py, body.game .gameHead .gameTitle .zh, body.gam
 </head>
 <body class="game">
   <div class="gameHead">
-    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en">Jeopardy</span></div>
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en">Quiz Challenge</span></div>
     <div class="controls">
       <button class="ctl light" id="soundBtn" type="button"></button>
       <button class="ctl light" id="fullBtn" type="button">⛶ Full screen</button>
@@ -131,7 +131,7 @@ body.game .gameHead .gameTitle .py, body.game .gameHead .gameTitle .zh, body.gam
 Shih.islandBar();
 const $ = id => document.getElementById(id);
 const esc = Shih.esc;
-$('titleRuby').innerHTML = Shih.ruby('抢答大挑战', 'qiǎng dá dà tiǎo zhàn');
+$('titleRuby').innerHTML = Shih.ruby('快闪抢答', 'kuài shǎn qiǎng dá');
 Shih.soundButton($('soundBtn'));
 // 题板刚好填满画面（投影机、Chromebook 都不用往下拉）
 function fit() { const j = $('jeo'); j.style.height = Math.max(300, innerHeight - j.getBoundingClientRect().top - 10) + 'px'; }
@@ -163,9 +163,9 @@ function beep(f, len) {
 
 // ---- 队伍 ----
 const TEAM_COLORS = [['#E63946', '#FDECEE', '#B3202D'], ['#4A86D0', '#E3F0FB', '#2B5E9E'], ['#5BB36A', '#E6F4E8', '#2F7A4D'], ['#F28C3A', '#FFF1E3', '#B4471C'], ['#9B6BC9', '#F1E9F9', '#6A3E96']];
-const DEFAULT_NAMES = [['第一队', 'dì yī duì'], ['第二队', 'dì èr duì'], ['第三队', 'dì sān duì'], ['第四队', 'dì sì duì'], ['第五队', 'dì wǔ duì']];
+const DEFAULT_NAMES = [1, 2, 3, 4, 5].map(n => ['Player ' + n]);
 const teamVars = k => `--tc:${TEAM_COLORS[k][0]};--ts:${TEAM_COLORS[k][1]};--tc-ink:${TEAM_COLORS[k][2]}`;
-const teamName = (t, k) => { const d = DEFAULT_NAMES[k]; return t.name === d[0] ? `<span class="ruby">${Shih.ruby(d[0], d[1])}</span>` : esc(t.name); };
+const teamName = (t, k) => esc(t.name);
 
 let QS = [], CATS = [], VALS = [], st = null;
 const SAVE = 'jeopardy';
@@ -190,9 +190,9 @@ function showSetup() {
   if (!(sec >= 0 && sec <= 40)) sec = 20;
   const jeo = $('jeo');
   const paint = () => {
-    jeo.innerHTML = `<div class="setup"><div class="q"><span class="ruby">${Shih.ruby('几队', 'jǐ duì')}</span><span class="en">How many teams?</span></div>` +
+    jeo.innerHTML = `<div class="setup"><div class="q"><span class="ruby">${Shih.ruby('几个人', 'jǐ gè rén')}</span><span class="en">How many players?</span></div>` +
       `<div class="nTeams">${[1, 2, 3, 4, 5].map(k => `<button type="button" data-n="${k}" aria-pressed="${k === pick}">${k}</button>`).join('')}</div>` +
-      `<div class="names" style="--cols:${pick === 4 ? 2 : Math.min(pick, 3)}">${Array.from({ length: pick }, (_, k) => `<label style="${teamVars(k)}"><span class="dot"></span><input maxlength="10" data-k="${k}" value="${esc(names[k] || DEFAULT_NAMES[k][0])}" aria-label="Team ${k + 1} name"></label>`).join('')}</div>` +
+      `<div class="names" style="--cols:${pick === 4 ? 2 : Math.min(pick, 3)}">${Array.from({ length: pick }, (_, k) => `<label style="${teamVars(k)}"><span class="dot"></span><input maxlength="10" data-k="${k}" value="${esc(names[k] || DEFAULT_NAMES[k][0])}" aria-label="Player ${k + 1} name"></label>`).join('')}</div>` +
       `<div class="q"><span class="ruby">${Shih.ruby('每题时间', 'měi tí shí jiān')}</span><span class="en">Time per question</span></div>` +
       `<div class="secRow"><button type="button" id="secMinus" aria-label="minus 5 seconds">−</button><span class="secVal" id="secVal"></span><button type="button" id="secPlus" aria-label="plus 5 seconds">＋</button></div>` +
       `<button type="button" class="go" id="goBtn"><span class="ruby">${Shih.ruby('开始', 'kāi shǐ')}</span><span>Start</span></button></div>`;
