@@ -1243,7 +1243,7 @@ const FLASH = { zh: '快闪活动', py: 'kuài shǎn huó dòng', en: 'Pop-up Ev
   games: [] };
 const FLASH_GAMES = {
   quiz: { zh: '快闪抢答', py: 'kuài shǎn qiǎng dá', en: 'Quiz Challenge', note: 'Teams take turns. Pick a box and answer the question to win the points!', href: 'games/jeopardy.html' },
-  land: { zh: '快闪抢地盘', py: 'kuài shǎn qiǎng dì pán', en: 'Land Grab', note: 'Roll the dice and answer to claim the land. Most land wins!', href: 'games/land.html' }
+  land: { zh: '快闪抢地盘', py: 'kuài shǎn qiǎng dì pán', en: 'Land Grab', note: 'Roll the dice and answer to claim the land. Most points wins!', href: 'games/land.html' }
 };
 if (window.ShihFlash) ShihFlash.games().then(g => {
   FLASH.games = ['quiz', 'land'].filter(k => g[k]).map(k => FLASH_GAMES[k]);
