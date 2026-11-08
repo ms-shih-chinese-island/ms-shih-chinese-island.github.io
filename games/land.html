@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="../shared/common.css">
 <style>
 /* 快闪活动 · 快闪抢地盘：上课用投影机，全班分队一起玩。题目从「快闪抢地盘」试算表读。
+   题库：试算表勾了「要用」的题，按盘的大小（小／中／大）随机挑。
    掷骰子 → 走到空地 → 答对就拿下那块地，得到那块地的分数。走到别人的地答对，得 1/4。
    时间到，分数最高的赢（不计时的话，地都被拿完就结束）。
    不算金币、不传成绩。 */
@@ -20,8 +21,8 @@ body.game .gameHead .gameTitle .py, body.game .gameHead .gameTitle .zh, body.gam
 .wrap { display: flex; align-items: center; justify-content: center; height: calc(100vh - 92px); min-height: 420px; }
 
 /* 开始前 */
-.setup { margin: auto; background: #fff; border: 4px solid var(--ink); border-radius: 26px; box-shadow: 0 8px 0 #1C4331; padding: 22px 30px; width: min(720px, 100%);
-  display: flex; flex-direction: column; gap: 16px; align-items: center; }
+.setup { margin: auto; background: #fff; border: 4px solid var(--ink); border-radius: 26px; box-shadow: 0 8px 0 #1C4331; padding: 16px 26px; width: min(980px, 100%);
+  display: flex; flex-direction: column; gap: 12px; align-items: center; }
 .setup .q { display: flex; flex-direction: column; align-items: center; }
 .setup .q .ruby .py { font-size: 15px; color: #1F5E73; } .setup .q .ruby .zh { font-size: 32px; }
 .setup .q .en { font-weight: 700; color: var(--muted); font-size: 18px; }
@@ -38,6 +39,13 @@ body.game .gameHead .gameTitle .py, body.game .gameHead .gameTitle .zh, body.gam
 .secVal { font: 700 34px var(--f-latin); min-width: 160px; text-align: center; display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
 .secVal small { font-size: 14px; color: var(--muted); }
 .secVal .ruby .py { font-size: 13px; } .secVal .ruby .zh { font-size: 28px; }
+.optRow { display: flex; gap: 36px; align-items: flex-start; justify-content: center; flex-wrap: wrap; }
+.opt { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.sizes { display: flex; gap: 10px; }
+.sizes button { cursor: pointer; border: 3px solid var(--ink); border-radius: 16px; background: #fff; box-shadow: 0 4px 0 var(--ink); padding: 4px 16px 6px; display: flex; flex-direction: column; align-items: center; }
+.sizes button[aria-pressed="true"] { background: #F5C531; }
+.sizes .ruby .py { font-size: 12px; } .sizes .ruby .zh { font-size: 26px; }
+.sizes small { font: 700 13px var(--f-latin); color: var(--muted); }
 .sizeNote { font-weight: 700; color: var(--muted); font-size: 16px; text-align: center; }
 .go { font: 700 24px var(--f-latin); cursor: pointer; background: #8CC7A0; border: 3px solid #2F7A4D; border-radius: 18px; box-shadow: 0 5px 0 #2F7A4D; padding: 8px 30px 10px; display: flex; align-items: center; gap: 12px; }
 .go .ruby .py { font-size: 14px; } .go .ruby .zh { font-size: 30px; }
@@ -49,6 +57,8 @@ body.game .gameHead .gameTitle .py, body.game .gameHead .gameTitle .zh, body.gam
 .sq .ruby .py { font-size: var(--tp, 13px); color: #1F5E73; } .sq .ruby .zh { font-size: var(--tz, 26px); }
 .sq .en { font: 700 var(--te, 11px) var(--f-latin); color: var(--muted); line-height: 1.1; margin-top: 2px; overflow-wrap: anywhere; }
 .sq.own { background: var(--ts); border-color: var(--tc-ink); box-shadow: inset 0 0 0 4px var(--tc); }
+.enWord { font: 800 1em var(--f-latin); line-height: 1.05; color: var(--ink); text-align: center; }
+.txt > .ruby { flex-basis: 100%; }
 .sq .ptsTag { position: absolute; top: 3px; right: 4px; font: 700 var(--te, 11px) var(--f-latin); background: #F5C531; border: 2px solid var(--ink); border-radius: 999px; padding: 0 5px; line-height: 1.3; }
 .sq.own .flag { position: absolute; top: 4px; left: 4px; width: 16px; height: 16px; border-radius: 50%; background: var(--tc); border: 2px solid var(--ink); }
 .sq.go { background: #F5C531; }
@@ -104,7 +114,7 @@ body.game .gameHead .gameTitle .py, body.game .gameHead .gameTitle .zh, body.gam
 .txt { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; row-gap: 6px; max-width: 100%; }
 .txt .ruby { flex-wrap: wrap; justify-content: center; row-gap: 6px; }
 .txt .ruby .py { color: #1F5E73; font-size: calc(var(--fz) * .4); min-height: 1.1em; } .txt .ruby .zh { font-size: var(--fz); }
-.txt .ruby .lat { font: 700 var(--fz) var(--f-latin); line-height: 1.1; white-space: pre; }
+.txt .ruby .lat { font: 700 calc(var(--fz) * .8) var(--f-latin); line-height: 1.15; white-space: pre-wrap; }
 .txt .ruby > .hit .zh { background: linear-gradient(transparent 58%, #FFE066 58%); }
 .txt .ruby > .hit + .hit { margin-left: -3px; padding-left: 3px; }
 /* 题目卡：左边是这块地，右边是问题 */
@@ -197,6 +207,15 @@ const HAN = /[㐀-鿿]/;
 const syl = py => String(py || '').replace(/[.,?!;:，。？！、\/／…「」『』""''()（）]/g, ' ').trim().split(/\s+/).filter(Boolean);
 // 一段文字 + 拼音 → 注音的 HTML（汉字上面有拼音；英文、数字连在一起不拆开；Ctrl + Enter 的换行也照放）
 // hl = 这块地的字：句子里有出现的话，用黄色标出来（看得出问题跟这块地有关）
+const hasHan = t => HAN.test(String(t || ''));
+// 念的时候只念中文的部分（英文用中文的声音念很怪）
+const sayText = t => (String(t || '').match(/[\u3400-\u9fff，。？！、；：…＿]+/g) || []).join('，');
+// 地的字是英文（例如 older sister）：大大的英文字，不放拼音
+function wordFace(w, big) {
+  if (hasHan(w.zh)) return rubyLine(w.zh, w.py);
+  const n = Math.max(...w.zh.split(/\s+/).map(x => x.length)), f = n <= 4 ? 1 : n <= 6 ? .85 : n <= 9 ? .68 : .55;
+  return `<span class="enWord" style="font-size:calc(${big} * ${f})">${esc(w.zh)}</span>`;
+}
 function hitMap(chars, hl) {
   const w = Array.from(String(hl || '')), on = chars.map(() => false);
   if (!w.length || !w.some(c => HAN.test(c))) return on;
@@ -217,7 +236,7 @@ function rubyLine(text, py, hl) {
 function rubyText(text, py, hl) {
   // 换行：拼音也照汉字数分给每一行
   const lines = String(text).split(/\r?\n/), s = syl(py); let k = 0;
-  return lines.map(L => { const n = Array.from(L).filter(c => HAN.test(c)).length; const part = s.slice(k, k + n).join(' '); k += n; return rubyLine(L, part, hl); }).join('<br>');
+  return lines.map(L => { const n = Array.from(L).filter(c => HAN.test(c)).length; const part = s.slice(k, k + n).join(' '); k += n; return rubyLine(L, part, hl); }).join('');
 }
 function sized(text, big) {
   const n = Array.from(String(text).replace(/\s/g, '')).length;
@@ -246,18 +265,26 @@ const teamName = k => esc(st.teams[k]);
 
 // ---- 试玩版的范例（真的版本从试算表来） ----
 const DEMO_ROWS = [
-  ['你好', 'nǐ hǎo', 'hello', '你好！', 'nǐ hǎo', 'Say hello!', '你好！', 'nǐ hǎo', 100],
-  ['老师', 'lǎo shī', 'teacher', '这是谁？', 'zhè shì shéi', '', '这是老师。', 'zhè shì lǎo shī', 100],
-  ['名字', 'míng zì', 'name', '你叫什么名字？', 'nǐ jiào shén me míng zì', "What's your name?", '我叫……', 'wǒ jiào', 200],
-  ['朋友', 'péng yǒu', 'friend', '你有朋友吗？', 'nǐ yǒu péng yǒu ma', '', '我有朋友。', 'wǒ yǒu péng yǒu', 200],
-  ['几岁', 'jǐ suì', 'how old', '你几岁？', 'nǐ jǐ suì', 'How old are you?', '我八岁。', 'wǒ bā suì', 200],
-  ['铅笔', 'qiān bǐ', 'pencil', '你有铅笔吗？', 'nǐ yǒu qiān bǐ ma', '', '我有铅笔。／我没有铅笔。', 'wǒ yǒu qiān bǐ wǒ méi yǒu qiān bǐ', 200],
-  ['书包', 'shū bāo', 'backpack', '这是什么？', 'zhè shì shén me', '', '这是书包。', 'zhè shì shū bāo', 100],
-  ['学校', 'xué xiào', 'school', '你喜欢学校吗？', 'nǐ xǐ huān xué xiào ma', '', '我喜欢学校。', 'wǒ xǐ huān xué xiào', 200],
-  ['再见', 'zài jiàn', 'goodbye', '下课了，你说什么？', 'xià kè le nǐ shuō shén me', 'Class is over. What do you say?', '再见！', 'zài jiàn', 200],
-  ['谢谢', 'xiè xie', 'thank you', '朋友给你一支铅笔，你说什么？', 'péng yǒu gěi nǐ yī zhī qiān bǐ nǐ shuō shén me', 'A friend gives you a pencil. What do you say?', '谢谢！', 'xiè xie', 300],
-  ['你好吗', 'nǐ hǎo ma', 'how are you', '你好吗？', 'nǐ hǎo ma', 'How are you?', '我很好。', 'wǒ hěn hǎo', 200],
-  ['十', 'shí', 'ten', '用中文从一数到十。', 'yòng zhōng wén cóng yī shǔ dào shí', 'Count from 1 to 10.', '一、二、三……十', 'yī èr sān shí', 300]
+  ["older sister", "", "", "How to say「older sister」in Chinese?", "", "", "姐姐", "jiě jie", 100],
+  ["younger brother", "", "", "How to say「younger brother」in Chinese?", "", "", "弟弟", "dì di", 100],
+  ["哥哥", "gē ge", "", "哥哥 is a boy or a girl?", "gē ge", "", "男生 boy", "nán shēng", 100],
+  ["几个人", "jǐ gè rén", "how many people", "I have 爸爸、妈妈、哥哥和我 in my family.\n我的家有几个人？", "bà ba mā ma gē ge hé wǒ wǒ de jiā yǒu jǐ gè rén", "", "我的家有四个人。", "wǒ de jiā yǒu sì gè rén", 200],
+  ["teacher", "", "", "How to say「teacher」in Chinese?", "", "", "老师", "lǎo shī", 100],
+  ["名字", "míng zì", "name", "Answer in a complete sentence:\n你叫什么名字？", "nǐ jiào shén me míng zì", "", "我叫＿＿。", "wǒ jiào", 100],
+  ["几岁", "jǐ suì", "how old", "Answer in a complete sentence:\n你几岁？", "nǐ jǐ suì", "", "我＿＿岁。", "wǒ suì", 100],
+  ["同学", "tóng xué", "", "What does this sentence mean?\n我们都是好同学。", "wǒ men dōu shì hǎo tóng xué", "", "We are all good classmates.", "", 200],
+  ["加", "jiā", "plus", "Answer in a complete sentence:\n三加四是多少？", "sān jiā sì shì duō shǎo", "", "三加四是七。", "sān jiā sì shì qī", 100],
+  ["86", "", "", "How to say「86」in Chinese?", "", "", "八十六", "bā shí liù", 100],
+  ["多少", "duō shǎo", "how much", "Answer in a complete sentence:\n二十一加三十八是多少？", "èr shí yī jiā sān shí bā shì duō shǎo", "", "二十一加三十八是五十九。", "èr shí yī jiā sān shí bā shì wǔ shí jiǔ", 200],
+  ["南瓜灯", "nán guā dēng", "", "What is 南瓜灯?", "nán guā dēng", "", "a jack-o'-lantern", "", 200],
+  ["Happy Halloween", "", "", "How to say「Happy Halloween」in Chinese?", "", "", "万圣节快乐！", "wàn shèng jié kuài lè", 100],
+  ["afraid of ghosts", "", "", "How to say「I'm afraid of ghosts」in Chinese?", "", "", "我怕鬼。", "wǒ pà guǐ", 100],
+  ["中秋节", "zhōng qiū jié", "Mid-Autumn Festival", "Say one special food for 中秋节.", "zhōng qiū jié", "", "月饼", "yuè bǐng", 100],
+  ["你好吗", "nǐ hǎo ma", "how are you", "Answer in a complete sentence:\n你好吗？", "nǐ hǎo ma", "", "我很好。", "wǒ hěn hǎo", 100],
+  ["铅笔", "qiān bǐ", "pencil", "A friend gives you a pencil.\nWhat do you say back to the friend in Chinese?", "", "", "谢谢你！", "xiè xie nǐ", 100],
+  ["10 → 1", "", "", "Count from 10 to 1 in Chinese.", "", "", "十、九、八、七、六、五、四、三、二、一", "shí jiǔ bā qī liù wǔ sì sān èr yī", 200],
+  ["好朋友", "hǎo péng yǒu", "good friend", "Answer in a complete sentence:\n你的好朋友叫什么名字？", "nǐ de hǎo péng yǒu jiào shén me míng zì", "", "我的好朋友叫＿＿。", "wǒ de hǎo péng yǒu jiào", 200],
+  ["火鸡", "huǒ jī", "", "What does this mean?\n这是火鸡。", "zhè shì huǒ jī", "", "This is a turkey.", "", 100]
 ];
 const DEMO_CARDS = [
   ['回答：你好吗？', 'huí dá nǐ hǎo ma', 'Answer the question!', '说话'],
@@ -283,7 +310,7 @@ function action(a, text) {
   return {};
 }
 function readData(F) {
-  const rows = (F.demo ? DEMO_ROWS : F.rows || []).filter(r => String(r[0] || '').trim()).slice(0, 18);
+  const rows = (F.demo ? DEMO_ROWS : F.rows || []).filter(r => String(r[0] || '').trim()).slice(0, 300);
   WORDS = rows.map(r => {
     const t = i => String(r[i] || '').trim();
     return { zh: t(0), py: ShihPY.pick(t(0), t(1)), en: t(2), q: t(3), qpy: t(3) ? ShihPY.pick(t(3), t(4)) : '', qen: t(5), a: t(6), apy: t(6) ? ShihPY.pick(t(6), t(7)) : '', pts: Math.max(0, parseInt(t(8).replace(/[^\d]/g, ''), 10) || 100) };
@@ -292,21 +319,37 @@ function readData(F) {
   if (!cards.length) cards = DEMO_CARDS;
   CARDS = cards.map(r => ({ zh: String(r[0]).trim(), py: ShihPY.pick(String(r[0]).trim(), r[1]), en: String(r[2] || '').trim(), ...action(r[3], '') }));
 }
-// 小盘：6×4 一圈 16 格（起点 + 2 机会 + 13 块地）；大盘：8×5 一圈 22 格（起点 + 3 机会 + 18 块地）
+// 三种盘：小盘 6×4 一圈 16 格（起点 + 2 机会 + 13 块地）；中盘 8×5 一圈 22 格（起点 + 3 机会 + 18 块地）；
+// 大盘 8×6 一圈 24 格（起点 + 3 机会 + 20 块地）
+const SIZES = {
+  s: { C: 6, R: 4, chance: [4, 11], n: 13, zh: '小盘', py: 'xiǎo pán', en: 'Small' },
+  m: { C: 8, R: 5, chance: [4, 11, 18], n: 18, zh: '中盘', py: 'zhōng pán', en: 'Medium' },
+  l: { C: 8, R: 6, chance: [4, 12, 20], n: 20, zh: '大盘', py: 'dà pán', en: 'Large' }
+};
+const bestSize = () => WORDS.length <= 13 ? 's' : WORDS.length <= 18 ? 'm' : 'l';
+// 从勾好的题里随机挑：题够多 → 每次不一样；不够 → 洗一洗再用一次
+function deal(size) {
+  const need = SIZES[size].n, out = [];
+  while (out.length < need) {
+    const bag = WORDS.map((_, i) => i);
+    for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; }
+    out.push(...bag.slice(0, need - out.length));
+  }
+  return out;
+}
 function buildTiles() {
-  const big = WORDS.length > 13;
-  C = big ? 8 : 6; RW = big ? 5 : 4;
+  const S = SIZES[st.size] || SIZES.s;
+  C = S.C; RW = S.R;
   const cells = [[RW - 1, C - 1]];
   for (let c = C - 2; c >= 0; c--) cells.push([RW - 1, c]);
   for (let r = RW - 2; r >= 0; r--) cells.push([r, 0]);
   for (let c = 1; c <= C - 1; c++) cells.push([0, c]);
   for (let r = 1; r <= RW - 2; r++) cells.push([r, C - 1]);
-  const chance = big ? [4, 11, 18] : [4, 11];
   let w = 0;
   TILES = cells.map(([r, c], i) => {
     if (i === 0) return { kind: 'go', r, c };
-    if (chance.includes(i)) return { kind: 'chance', r, c };
-    return { kind: 'land', r, c, w: (w++) % WORDS.length };   // 题目不够：从头再用一次
+    if (S.chance.includes(i)) return { kind: 'chance', r, c };
+    return { kind: 'land', r, c, w: st.deal[w++] };
   });
 }
 
@@ -323,17 +366,21 @@ function showSetup() {
   const names = st && st.teams ? st.teams.slice() : DEFAULT_NAMES.map(d => d[0]);
   let pick = st && st.teams ? st.teams.length : 2;
   let mins = Shih.get('landMins', 10); if (!MINS.includes(mins)) mins = 10;
+  let size = st && SIZES[st.size] ? st.size : bestSize();
   const wrap = $('wrap');
   const paint = () => {
     wrap.innerHTML = `<div class="setup"><div class="q">${R('几个人', 'jǐ gè rén')}<span class="en">How many players?</span></div>` +
       `<div class="nTeams">${[2, 3, 4, 5].map(k => `<button type="button" data-n="${k}" aria-pressed="${k === pick}">${k}</button>`).join('')}</div>` +
       `<div class="names" style="--cols:${pick === 4 ? 2 : Math.min(pick, 3)}">${Array.from({ length: pick }, (_, k) => `<label style="${teamVars(k)}"><span class="dot"></span><input maxlength="10" data-k="${k}" value="${esc(names[k] || DEFAULT_NAMES[k][0])}" aria-label="Player ${k + 1} name"></label>`).join('')}</div>` +
-      `<div class="q">${R('玩多久', 'wán duō jiǔ')}<span class="en">How long?</span></div>` +
-      `<div class="secRow"><button type="button" id="mMinus" aria-label="less time">−</button><span class="secVal" id="mVal"></span><button type="button" id="mPlus" aria-label="more time">＋</button></div>` +
-      `<div class="sizeNote">${WORDS.length} questions · ${TILES.length} squares</div>` +
+      `<div class="optRow"><div class="opt"><div class="q">${R('玩多久', 'wán duō jiǔ')}<span class="en">How long?</span></div>` +
+      `<div class="secRow"><button type="button" id="mMinus" aria-label="less time">−</button><span class="secVal" id="mVal"></span><button type="button" id="mPlus" aria-label="more time">＋</button></div></div>` +
+      `<div class="opt"><div class="q">${R('盘的大小', 'pán de dà xiǎo')}<span class="en">Board size</span></div>` +
+      `<div class="sizes">${Object.keys(SIZES).map(k => `<button type="button" data-s="${k}" aria-pressed="${k === size}">${R(SIZES[k].zh, SIZES[k].py)}<small>${SIZES[k].en} · ${SIZES[k].n} questions</small></button>`).join('')}</div></div></div>` +
+      `<div class="sizeNote">${WORDS.length} questions checked` + (WORDS.length < SIZES[size].n ? ` · some will repeat` : WORDS.length > SIZES[size].n ? ` · ${SIZES[size].n} picked at random` : '') + `</div>` +
       `<button type="button" class="go" id="goBtn">${R('开始', 'kāi shǐ')}<span>Start</span></button></div>`;
     wrap.querySelectorAll('.nTeams button').forEach(b => b.addEventListener('click', () => { keep(); pick = +b.dataset.n; paint(); }));
     wrap.querySelectorAll('.names input').forEach(i => i.addEventListener('input', keep));
+    wrap.querySelectorAll('.sizes button').forEach(b => b.addEventListener('click', () => { keep(); size = b.dataset.s; paint(); }));
     const paintM = () => {
       $('mVal').innerHTML = mins ? `<span style="display:flex;align-items:flex-end;gap:6px">${mins}${R('分钟', 'fēn zhōng')}</span><small>minutes</small>` : `${R('不计时', 'bù jì shí')}<small>No timer</small>`;
       $('mMinus').disabled = mins <= 0; $('mPlus').disabled = mins >= MINS[MINS.length - 1];
@@ -344,8 +391,8 @@ function showSetup() {
     $('goBtn').addEventListener('click', () => {
       keep();
       const teams = Array.from({ length: pick }, (_, k) => (names[k] || '').trim().slice(0, 10) || DEFAULT_NAMES[k][0]);
-      st = { sig: sig(), teams, pos: teams.map(() => 0), own: {}, pts: teams.map(() => 0), turn: 0, left: mins * 60000, timed: !!mins, paused: false, deck: [], over: '' };
-      save(); showBoard();
+      st = { sig: sig(), size, deal: deal(size), teams, pos: teams.map(() => 0), own: {}, pts: teams.map(() => 0), turn: 0, left: mins * 60000, timed: !!mins, paused: false, deck: [], over: '' };
+      save(); buildTiles(); showBoard();
     });
   };
   const keep = () => wrap.querySelectorAll('.names input').forEach(i => { names[+i.dataset.k] = i.value; });
@@ -381,7 +428,8 @@ function tileHTML(t, i) {
   const n = Array.from(w.zh).length, k = n <= 2 ? 1 : n === 3 ? .78 : n === 4 ? .62 : .5;
   return `<button type="button" class="sq${o !== undefined ? ' own' : ''}${here}" data-i="${i}" style="${pos};${o !== undefined ? teamVars(o) : ''}">` +
     (o !== undefined ? '<span class="flag"></span>' : '') + `<span class="ptsTag">${w.pts}</span>` +
-    `<span style="--tz:calc(var(--tz-b) * ${k});--tp:calc(var(--tp-b) * ${Math.max(.7, k)})">${rubyLine(w.zh, w.py)}</span>` +
+    (hasHan(w.zh) ? `<span style="--tz:calc(var(--tz-b) * ${k});--tp:calc(var(--tp-b) * ${Math.max(.7, k)})">${rubyLine(w.zh, w.py)}</span>`
+      : wordFace(w, 'var(--tz-b) * 1.05')) +
     (w.en ? `<span class="en">${esc(w.en)}</span>` : '') + `<span class="tokens">${toks}</span></button>`;
 }
 function showBoard() {
@@ -515,26 +563,26 @@ function qBlock(w, owner, who) {
     : `<span class="role" style="${teamVars(k)};background:var(--tc);border-color:var(--tc-ink);color:#fff">${icon} ${teamName(k)} ${en.toLowerCase()}s</span>`;
   let q = '';
   if (w.q) q += `<div class="step"><div class="stepHead">${who.asker === 'pc' ? '<span class="role">💻 Computer asks</span>' : chip('🗣', who.asker, 'Ask')}</div>` +
-    `<div class="line"><div class="txt" style="${sized(w.q, 'clamp(30px, 4.2vw, 60px)')}">${rubyText(w.q, w.qpy, w.zh)}</div><button type="button" class="say" data-say="q" aria-label="Listen">🔊</button></div>` +
+    `<div class="line"><div class="txt" style="${sized(w.q, 'clamp(30px, 4.2vw, 60px)')}">${rubyText(w.q, w.qpy, w.zh)}</div>${hasHan(w.q) ? '<button type="button" class="say" data-say="q" aria-label="Listen">🔊</button>' : ''}</div>` +
     (w.qen ? `<div class="sub">${esc(w.qen)}</div>` : '') + `</div>`;
   // 问题里没有这块地的字（例如「这是什么？」）：提示要用这块地的字回答
-  const need = w.q && !hitMap(Array.from(w.q), w.zh).some(Boolean) && Array.from(w.zh).some(c => HAN.test(c));
+  const need = hasHan(w.q) && !hitMap(Array.from(w.q), w.zh).some(Boolean) && Array.from(w.zh).some(c => HAN.test(c));
   q += `<div class="step ans2"><div class="stepHead">${chip('🙋', who.answer, 'Answer')}` +
     (need ? `<span class="useWord"><span>with</span><span class="txt" style="--fz:clamp(24px, 3vw, 40px)">${rubyText(w.zh, w.py, w.zh)}</span></span>` : '') + `</div>` +
     (w.a ? `<div id="ansBox"><button type="button" class="ansBtn" id="showA">${R('看例子', 'kàn lì zi')}<span>Show example</span></button></div>` : '') + `</div>`;
   return `<div class="qRow"><div class="landTile"><span class="lab">This land</span>` +
-    `<div class="word${own ? ' own' : ''}" style="${own ? teamVars(owner) : ''}">${rubyLine(w.zh, w.py)}${w.en ? `<span class="en">${esc(w.en)}</span>` : ''}</div></div>` +
+    `<div class="word${own ? ' own' : ''}" style="${own ? teamVars(owner) : ''}">${wordFace(w, 'clamp(30px, 3.6vw, 48px)')}${w.en ? `<span class="en">${esc(w.en)}</span>` : ''}</div></div>` +
     `<span class="arrow" aria-hidden="true">➜</span><div class="qSide">${q}</div></div>`;
 }
 function wireQ(ov, w) {
   const sq = ov.querySelector('[data-say="q"]');
-  if (sq) sq.addEventListener('click', () => Shih.speak(w.q));
-  Shih.speak(w.q || w.zh);
+  if (sq) sq.addEventListener('click', () => Shih.speak(sayText(w.q)));
+  if (hasHan(w.q)) Shih.speak(sayText(w.q));
   const sa = ov.querySelector('#showA');
   if (sa) sa.addEventListener('click', () => {
-    ov.querySelector('#ansBox').innerHTML = `<div class="ans"><div class="txt" style="${sized(w.a, 'clamp(28px, 4vw, 56px)')}">${rubyText(w.a, w.apy, w.zh)}</div><button type="button" class="say" data-say="a" aria-label="Listen">🔊</button></div>`;
-    ov.querySelector('[data-say="a"]').addEventListener('click', () => Shih.speak(w.a));
-    Shih.speak(w.a);
+    ov.querySelector('#ansBox').innerHTML = `<div class="ans"><div class="txt" style="${sized(w.a, 'clamp(28px, 4vw, 56px)')}">${rubyText(w.a, w.apy, w.zh)}</div>${hasHan(w.a) ? '<button type="button" class="say" data-say="a" aria-label="Listen">🔊</button>' : ''}</div>`;
+    const b2 = ov.querySelector('[data-say="a"]');
+    if (b2) { b2.addEventListener('click', () => Shih.speak(sayText(w.a))); Shih.speak(sayText(w.a)); }
   });
 }
 // 空地：答对 → 拿下；答错 → 下一队。别人的地：地主问，你回答（不会换地主）
@@ -578,8 +626,8 @@ function drawCard() {
     `<div class="line"><div class="txt" style="${sized(c.zh, 'clamp(32px, 4.8vw, 68px)')}">${rubyText(c.zh, c.py)}</div><button type="button" class="say" data-say aria-label="Listen">🔊</button></div>` +
     (c.en ? `<div class="sub">${esc(c.en)}</div>` : '') +
     `<div class="acts">${lab ? `<button type="button" class="btn claim" style="${teamVars(st.turn)}" data-go>${lab}</button>` : `<button type="button" class="btn claim" style="${teamVars(st.turn)}" data-next><span class="two">Done!<small>Next player</small></span></button>`}</div>`, 'chanceCard');
-  ov.querySelector('[data-say]').addEventListener('click', () => Shih.speak(c.zh));
-  Shih.speak(c.zh);
+  ov.querySelector('[data-say]').addEventListener('click', () => Shih.speak(sayText(c.zh)));
+  if (hasHan(c.zh)) Shih.speak(sayText(c.zh));
   const nx = ov.querySelector('[data-next]');
   if (nx) nx.addEventListener('click', () => { ov.remove(); nextTurn(); });
   const go = ov.querySelector('[data-go]');
@@ -614,7 +662,7 @@ function showEnd() {
 }
 function restart() {
   try { sessionStorage.removeItem('shih:' + SAVE); } catch (e) {}
-  st = st ? { teams: st.teams } : null;
+  st = st ? { teams: st.teams, size: st.size } : null;
   showSetup();
 }
 $('resetBtn').addEventListener('click', () => { document.querySelectorAll('.ov').forEach(x => x.remove()); busy = false; restart(); });
@@ -629,10 +677,12 @@ ShihFlash.loadLand().then(F => {
   if (!F.on) { showClosed(); return; }
   readData(F);
   if (!WORDS.length) { showClosed('No questions yet.'); return; }
-  buildTiles();
   try { st = JSON.parse(sessionStorage.getItem('shih:' + SAVE) || 'null'); } catch (e) { st = null; }
-  if (st && st.pos && st.sig === sig() && st.pos.every(p => p < TILES.length)) showBoard();
-  else { st = st && st.teams ? { teams: st.teams } : null; showSetup(); }
+  if (st && st.pos && st.sig === sig() && SIZES[st.size] && Array.isArray(st.deal) && st.deal.every(x => x < WORDS.length)) {
+    buildTiles();
+    if (st.pos.every(p => p < TILES.length)) { showBoard(); return; }
+  }
+  st = st && st.teams ? { teams: st.teams } : null; showSetup();
 });
 </script>
 </body>
