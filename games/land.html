@@ -175,6 +175,7 @@ body.game .gameHead .gameTitle .py, body.game .gameHead .gameTitle .zh, body.gam
       <button class="ctl light" id="pyBtn" type="button"></button>
       <button class="ctl light" id="soundBtn" type="button"></button>
       <button class="ctl light" id="fullBtn" type="button">⛶ Full screen</button>
+      <button class="ctl light" id="endBtn" type="button" hidden>🏁 End game</button>
       <button class="ctl light" id="resetBtn" type="button">Start over</button>
     </div>
   </div>
@@ -363,6 +364,7 @@ const sig = () => WORDS.map(w => w.zh).join('|');
 const MINS = [0, 5, 10, 15, 20, 25, 30];
 function showSetup() {
   stopClock();
+  $('endBtn').hidden = true;
   const names = st && st.teams ? st.teams.slice() : DEFAULT_NAMES.map(d => d[0]);
   let pick = st && st.teams ? st.teams.length : 2;
   let mins = Shih.get('landMins', 10); if (!MINS.includes(mins)) mins = 10;
@@ -433,6 +435,7 @@ function tileHTML(t, i) {
     (w.en ? `<span class="en">${esc(w.en)}</span>` : '') + `<span class="tokens">${toks}</span></button>`;
 }
 function showBoard() {
+  $('endBtn').hidden = !!st.over;
   const wrap = $('wrap');
   wrap.innerHTML = `<div class="board" id="board" style="--c:${C};--r:${RW}">` + TILES.map(tileHTML).join('') +
     `<div class="mid" id="mid" style="grid-row:2 / ${RW};grid-column:2 / ${C}"></div></div>`;
@@ -645,11 +648,12 @@ function drawCard() {
 function showEnd() {
   if (document.querySelector('.ov')) return;
   stopClock();
+  $('endBtn').hidden = true;
   const order = st.teams.map((_, k) => ({ k, n: score(k), land: count(k) })).sort((a, b) => b.n - a.n);
   const top = order[0], tie = order[1] && order[1].n === top.n;
   const ov = document.createElement('div');
   ov.className = 'ov';
-  ov.innerHTML = `<div class="endCard"><div class="why">${st.over === 'time' ? R('时间到', 'shí jiān dào') + "<span>Time's up!</span>" : R('地都被抢光了', 'dì dōu bèi qiǎng guāng le') + '<span>All land is taken!</span>'}</div>` +
+  ov.innerHTML = `<div class="endCard"><div class="why">${st.over === 'time' ? R('时间到', 'shí jiān dào') + "<span>Time's up!</span>" : st.over === 'end' ? R('游戏结束', 'yóu xì jié shù') + '<span>Game over!</span>' : R('地都被抢光了', 'dì dōu bèi qiǎng guāng le') + '<span>All land is taken!</span>'}</div>` +
     `<div class="trophy">🏆</div>` +
     (tie ? `<div class="big">${R('平手', 'píng shǒu')} Tie!</div>` : `<div class="big" style="color:${TEAM_COLORS[top.k][2]}">${teamName(top.k)} ${R('赢了', 'yíng le')}</div>`) +
     `<div class="rank">${order.map((o, i) => `<span style="color:${TEAM_COLORS[o.k][2]}">${i + 1}. ${teamName(o.k)} · ${o.n} ${R('分', 'fēn')} <small style="color:var(--muted);font-size:16px">(${o.land} ${o.land === 1 ? 'square' : 'squares'})</small></span>`).join('')}</div>` +
@@ -665,6 +669,16 @@ function restart() {
   st = st ? { teams: st.teams, size: st.size } : null;
   showSetup();
 }
+// 提早结束：先问一下（不用浏览器的 confirm，自己做一张卡）
+$('endBtn').addEventListener('click', () => {
+  if (busy || !st || st.over || document.querySelector('.ov')) return;
+  const ov = overlay(`<div class="mark">🏁</div><div class="sub" style="font-size:clamp(26px,3vw,40px);color:var(--ink)">End the game now?</div>` +
+    `<div class="sub">The player with the most points wins.</div>` +
+    `<div class="acts"><button type="button" class="btn yes" data-yes><span class="ic">✓</span><span class="two">Yes, end game<small>See who wins</small></span></button>` +
+    `<button type="button" class="btn" data-no>Keep playing</button></div>`);
+  ov.querySelector('[data-no]').addEventListener('click', () => ov.remove());
+  ov.querySelector('[data-yes]').addEventListener('click', () => { ov.remove(); st.over = 'end'; save(); stopClock(); $('endBtn').hidden = true; showEnd(); });
+});
 $('resetBtn').addEventListener('click', () => { document.querySelectorAll('.ov').forEach(x => x.remove()); busy = false; restart(); });
 
 function showClosed(msg) {
