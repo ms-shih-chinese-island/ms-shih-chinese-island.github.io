@@ -320,14 +320,13 @@ function readData(F) {
   if (!cards.length) cards = DEMO_CARDS;
   CARDS = cards.map(r => ({ zh: String(r[0]).trim(), py: ShihPY.pick(String(r[0]).trim(), r[1]), en: String(r[2] || '').trim(), ...action(r[3], '') }));
 }
-// 三种盘：小盘 6×4 一圈 16 格（起点 + 2 机会 + 13 块地）；中盘 8×5 一圈 22 格（起点 + 3 机会 + 18 块地）；
-// 大盘 8×6 一圈 24 格（起点 + 3 机会 + 20 块地）
+// 三种盘（都是 2 张机会）：小盘 6×4 一圈 16 格（13 块地）；中盘 8×5 一圈 22 格（19 块地）；大盘 10×6 一圈 28 格（25 块地）
 const SIZES = {
   s: { C: 6, R: 4, chance: [4, 11], n: 13, zh: '小盘', py: 'xiǎo pán', en: 'Small' },
-  m: { C: 8, R: 5, chance: [4, 11, 18], n: 18, zh: '中盘', py: 'zhōng pán', en: 'Medium' },
-  l: { C: 8, R: 6, chance: [4, 12, 20], n: 20, zh: '大盘', py: 'dà pán', en: 'Large' }
+  m: { C: 8, R: 5, chance: [5, 16], n: 19, zh: '中盘', py: 'zhōng pán', en: 'Medium' },
+  l: { C: 10, R: 6, chance: [7, 21], n: 25, zh: '大盘', py: 'dà pán', en: 'Large' }
 };
-const bestSize = () => WORDS.length <= 13 ? 's' : WORDS.length <= 18 ? 'm' : 'l';
+const bestSize = () => WORDS.length <= 13 ? 's' : WORDS.length <= 19 ? 'm' : 'l';
 // 从勾好的题里随机挑：题够多 → 每次不一样；不够 → 洗一洗再用一次
 function deal(size) {
   const need = SIZES[size].n, out = [];
@@ -335,6 +334,15 @@ function deal(size) {
     const bag = WORDS.map((_, i) => i);
     for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; }
     out.push(...bag.slice(0, need - out.length));
+  }
+  // 重复的题不要排在隔壁（一圈是连着的，最后一块也算第一块的隔壁）
+  const near = (o, i) => [1, 2].some(d => o[i] === o[(i + d) % o.length] || o[i] === o[(i - d + o.length) % o.length]);
+  for (let t = 0; t < 400; t++) {
+    const bad = out.map((_, i) => i).filter(i => near(out, i));
+    if (!bad.length) break;
+    const i = bad[Math.floor(Math.random() * bad.length)], j = Math.floor(Math.random() * out.length);
+    [out[i], out[j]] = [out[j], out[i]];
+    if (near(out, i) || near(out, j)) [out[i], out[j]] = [out[j], out[i]];
   }
   return out;
 }
