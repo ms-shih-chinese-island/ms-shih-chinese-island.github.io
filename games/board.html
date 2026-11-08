@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="../shared/gate.js"></script>
-  <title>Family Board Game - 家庭大富翁</title>
+  <title>Family Board Game - 家人走一走</title>
   <!-- 样式和字体都放在自己的网站上（不连 Tailwind、Font Awesome、Google Fonts 的网站）
        board.css 是用 tools/tailwind.board.config.js 做出来的；改了这一页的 class，要重新做一次 board.css -->
   <link rel="stylesheet" href="board.css">
@@ -140,7 +140,7 @@
       </div>
       <div>
         <h1 class="text-base sm:text-lg font-black text-slate-900 flex items-center gap-1.5 leading-none">
-          <span id="boardTitleEn">Family Board Game</span> <span id="boardTitleZh" class="font-cn text-amber-600 text-sm sm:text-base">家庭大富翁</span>
+          <span id="boardTitleEn">Family Board Game</span> <span id="boardTitleZh" class="font-cn text-amber-600 text-sm sm:text-base">家人走一走</span>
         </h1>
         <span class="text-[11px] text-slate-400 font-medium hidden sm:inline">1P vs AI to 5 Players</span>
       </div>
@@ -1212,7 +1212,7 @@
       Shih.islandBar();
       Shih.loadUnit().then(UNIT => {
       TILES = buildTiles(UNIT);
-      const t = UNIT.boardTitle || { zh: '大富翁', py: 'dà fù wēng', en: 'Board Game' };
+      const t = UNIT.boardTitle || { zh: '走一走', py: 'zǒu yi zǒu', en: 'Board Game' };
       document.title = `${t.en} - ${t.zh}`;
       document.getElementById('boardTitleEn').textContent = t.en;
       document.getElementById('boardTitleZh').textContent = t.zh;

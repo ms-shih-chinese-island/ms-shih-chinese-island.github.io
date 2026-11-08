@@ -1,4 +1,4 @@
-// 家庭大富翁（games/board.html）的 Tailwind 设定。改了 board.html 的样式以后，要重新做一次 games/board.css：
+// 家人走一走（games/board.html）的 Tailwind 设定。改了 board.html 的样式以后，要重新做一次 games/board.css：
 //   npx tailwindcss@3 -c tools/tailwind.board.config.js -o games/board.css --minify
 module.exports = {
   content: ['./games/board.html'],

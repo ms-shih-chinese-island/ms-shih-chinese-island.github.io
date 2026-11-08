@@ -10,7 +10,7 @@
 (function () {
   const HAN = /[㐀-鿿]/;
   const LIGHT = new Set(Array.from('吗么嘛的地得了呢吧子们啊呀着哦喔啦'));
-  const TW = { 谁: 'shéi', 期: 'qí', 垃圾: 'lè sè', 研究: 'yán jiù', 企: 'qì', 危: 'wéi', 液: 'yì', 携: 'xī', 质: 'zhí', 微: 'wéi', 垃: 'lè', 圾: 'sè' };
+  const TW = { 谁: 'shéi', 意思: 'yì si', 期: 'qí', 垃圾: 'lè sè', 研究: 'yán jiù', 企: 'qì', 危: 'wéi', 液: 'yì', 携: 'xī', 质: 'zhí', 微: 'wéi', 垃: 'lè', 圾: 'sè' };
   const toned = s => /[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]/.test(s);
   function base(hans) {
     const P = window.pinyinPro;
@@ -27,14 +27,15 @@
       return p;
     });
   }
-  function overlay(hans, out, dict) {
-    const keys = Object.keys(dict);
+  // minLen = 2：网站字典里的单字（例如图书馆的「还 huán」）不拿来用，只用词
+  function overlay(hans, out, dict, minLen) {
+    const keys = Object.keys(dict).filter(k => Array.from(k).length >= (minLen || 1));
     let max = 1; keys.forEach(k => { max = Math.max(max, Array.from(k).length); });
     for (let i = 0; i < hans.length;) {
       let hit = 0;
       for (let n = Math.min(max, hans.length - i); n >= 1; n--) {
         const w = hans.slice(i, i + n).join('');
-        if (dict[w]) {
+        if (n >= (minLen || 1) && dict[w]) {
           const syl = dict[w].split(' ');
           if (syl.length === n) { syl.forEach((s, j) => { out[i + j] = s; }); hit = n; break; }
         }
@@ -48,7 +49,7 @@
     if (!hans.length) return '';
     const out = base(hans);
     overlay(hans, out, TW);
-    if (window.SHIH_PY) overlay(hans, out, window.SHIH_PY);
+    if (window.SHIH_PY) overlay(hans, out, window.SHIH_PY, 2);
     return out.map(s => s || '').join(' ');
   }
   // 老师打的拼音优先；音节数对不上（打错、打一半）也照用老师的

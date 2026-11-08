@@ -13,7 +13,7 @@ OUT = os.path.join(SITE, 'shared', 'fonts')
 # 网站上所有用到的中文字和全形符号
 chars = set()
 for path in glob.glob(os.path.join(SITE, '**', '*.*'), recursive=True):
-    if '/.git/' in path or not path.endswith(('.html', '.js', '.css', '.md')) or '/tools/' in path:
+    if '/.git/' in path or not path.endswith(('.html', '.js', '.css', '.md')) or '/tools/' in path or '/vendor/' in path:
         continue
     text = open(path, encoding='utf-8', errors='ignore').read()
     chars.update(c for c in text if ord(c) > 0x2E7F)
