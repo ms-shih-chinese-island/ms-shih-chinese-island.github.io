@@ -322,7 +322,7 @@ table.rec tr:nth-child(even) td { background: #F6FAFB; }
   <header>
     <div class="brand">
       <span class="ruby" id="brandRuby"></span>
-      <span class="en" id="brandEn">Ms. Shih's Chinese Island</span>
+      <span class="en" id="brandEn">Ms. Shih's Chinese Island<sup class="tm">™</sup></span>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       <span class="coins" id="coins" title="Coins"><svg class="coinIc" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17" fill="#F5C531" stroke="#2B2B2B" stroke-width="3"/><circle cx="20" cy="20" r="11.5" fill="none" stroke="#D99A1E" stroke-width="2.5"/><path d="M20 12.5 L22.2 17.4 L27.5 17.9 L23.5 21.4 L24.7 26.6 L20 23.9 L15.3 26.6 L16.5 21.4 L12.5 17.9 L17.8 17.4 Z" fill="#FFF3C2" stroke="#D99A1E" stroke-width="1.5" stroke-linejoin="round"/></svg> <b id="coinNum">0</b></span>
@@ -651,12 +651,12 @@ table.rec tr:nth-child(even) td { background: #F6FAFB; }
 </div>
 
   <div class="list" id="list" hidden></div>
-  <footer class="siteFoot"><span class="privacy">This website does not collect any personal information.</span><br>© 2026 Ms. Shih · <a href="mailto:msshih.chineseisland@gmail.com">msshih.chineseisland@gmail.com</a></footer>
+  <footer class="siteFoot"><span class="privacy">This website does not collect any personal information.</span><br>© 2026 Ms. Shih · <a href="mailto:msshih.chineseisland@gmail.com">msshih.chineseisland@gmail.com</a><br>Ms. Shih's Chinese Island™ is a trademark of Ms. Shih.</footer>
 </div>
 
 <div id="home" hidden>
   <div class="homeCard" role="dialog" aria-modal="true" aria-label="Main menu">
-    <div class="homeTitle"><span class="ruby" id="homeBrand"></span><span class="en">Ms. Shih's Chinese Island</span></div>
+    <div class="homeTitle"><span class="ruby" id="homeBrand"></span><span class="en">Ms. Shih's Chinese Island<sup class="tm">™</sup></span></div>
     <div class="stage" id="homeStage"></div>
     <div id="homeRight"></div>
   </div>
@@ -793,7 +793,7 @@ function showIsland(id, animate) {
   current = id;
   const I = ISLANDS[id];
   brandRuby.innerHTML = rubyHTML(I.zh, I.py);
-  brandEn.textContent = I.en;
+  brandEn.innerHTML = String(I.en).replace(/&/g, '&amp;').replace(/</g, '&lt;') + '<sup class="tm">™</sup>';
   Object.keys(ISLANDS).forEach(k => {
     const sc = document.getElementById('scene-' + k);
     sc.hidden = (k !== id) || !list.hidden;
