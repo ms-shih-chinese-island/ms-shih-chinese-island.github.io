@@ -1,5 +1,6 @@
 // 岛上的其他大人（跟史老师同一个画风）：发糖的邻居、中秋节的奶奶
 // window.NPC_ART.neighbor()  window.NPC_ART.grandma()
+// window.NPC_ART.relative('爷爷')  春节来拜年的亲戚（拿着红包）；NPC_ART.relatives = 全部的名字
 (function () {
   const INK = '#2B2B2B', SKIN = '#F4CDAE', CHEEK = '#F29BA6';
   const sw = (w = 3.5) => `stroke="${INK}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"`;
@@ -46,7 +47,29 @@
     `<ellipse rx="9" ry="4.5" fill="#E9B05A" stroke="${INK}" stroke-width="1.8"/></g>`;
   const mooncakePlate = `<ellipse cx="100" cy="176" rx="38" ry="10" fill="#FFFFFF" ${sw(3)}/>` + cake(86, 168) + cake(114, 168) + cake(100, 160);
 
+
+  // 红包（拿在手上）
+  const redEnvelope = `<rect x="86" y="150" width="28" height="40" rx="4" fill="#D6453A" ${sw(3)}/><path d="M86 160 Q100 170 114 160" fill="none" ${sw(2.5)}/><circle cx="100" cy="174" r="6" fill="#F5C531" ${sw(2)}/>`;
+  // 春节来拜年的亲戚：都拿着红包（红包大放送）
+  const RELATIVES = {
+    爷爷: () => person({ top: '#8A5A2B', top2: '#6E4520', bottom: '#4A4A55', glasses: true,
+      hairFront: `<path d="M60 76 Q58 58 70 52 Q66 66 72 72 Z M140 76 Q142 58 130 52 Q134 66 128 72 Z" fill="#E6E6E6" ${sw()}/>`,
+      hat: `<path d="M84 104 Q100 112 116 104" fill="none" stroke="#E6E6E6" stroke-width="6" stroke-linecap="round"/>`, holding: redEnvelope }),
+    奶奶: () => person({ top: '#D9603B', top2: '#B4471C', bottom: '#2F3E66', glasses: true,
+      hairBack: `<circle cx="100" cy="34" r="17" fill="#E6E6E6" ${sw()}/>`,
+      hairFront: `<path d="M58 84 Q52 40 100 38 Q148 40 142 84 Q136 62 116 56 Q100 64 84 56 Q64 62 58 84 Z" fill="#E6E6E6" ${sw()}/>`, holding: redEnvelope }),
+    叔叔: () => person({ top: '#5B9BD5', top2: '#3F7FBF', bottom: '#2F3E66',
+      hairFront: `<path d="M58 80 Q56 40 100 38 Q144 40 142 80 Q132 58 110 58 Q90 52 72 62 Q62 68 58 80 Z" fill="#2E2838" ${sw()}/>`, holding: redEnvelope }),
+    阿姨: () => person({ top: '#EC8FB3', top2: '#D46F98', bottom: '#7E6DAA', skirt: true,
+      hairBack: `<path d="M56 82 Q52 40 100 36 Q148 40 144 82 L146 128 Q134 134 126 124 L74 124 Q66 134 54 128 Z" fill="#4A3424" ${sw()}/>`,
+      hairFront: `<path d="M58 80 Q60 48 100 46 Q140 48 142 80 Q124 60 100 62 Q76 60 58 80 Z" fill="#4A3424" ${sw()}/>`, holding: redEnvelope }),
+    姑姑: () => person({ top: '#8CC7A0', top2: '#6FAE85', bottom: '#2F3E66',
+      hairBack: `<path d="M58 84 Q52 40 100 38 Q148 40 142 84 L142 104 L58 104 Z" fill="#2E2838" ${sw()}/>`,
+      hairFront: `<path d="M58 82 Q58 46 100 44 Q142 46 142 82 Q138 64 120 60 L80 60 Q62 64 58 82 Z" fill="#2E2838" ${sw()}/>`, holding: redEnvelope })
+  };
+
   window.NPC_ART = {
+    relatives: Object.keys(RELATIVES), relative: name => RELATIVES[name](),
     // 邻居：戴巫婆帽，捧着一碗糖
     neighbor: () => person({
       top: '#9B8BC4', top2: '#7E6DAA', bottom: '#2F3E66',

@@ -19,7 +19,8 @@
     'lost|clothes': 3, 'find|clothes': [0, 2, 3],
     'doctor|body': [1, 2], 'waiting|body': [1, 2],
     'stock|fruits': [1, 2], 'buy|fruits': [1, 2], 'calc|fruits': [1, 2, 3],
-    'give|restaurant': [1, 2], 'serve|restaurant': [1, 2, 3], 'likes|restaurant': [1, 2, 3], 'menu|restaurant': [1, 2, 3], 'pay|restaurant': [1, 2, 3], 'dine|restaurant': [1, 2, 3]
+    'give|restaurant': [1, 2], 'serve|restaurant': [1, 2, 3], 'likes|restaurant': [1, 2, 3], 'menu|restaurant': [1, 2, 3], 'pay|restaurant': [1, 2, 3], 'dine|restaurant': [1, 2, 3],
+    'zodiac|cny': [1, 2, 3], 'ask|cny': [1, 2, 3], 'hongbao|cny': [1, 2, 3], 'riddle|cny': [1, 2, 3], 'feast|cny': [1, 2, 3]
   };
   const COIN = '<svg class="coinIc" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17" fill="#F5C531" stroke="#2B2B2B" stroke-width="3"/><circle cx="20" cy="20" r="11.5" fill="none" stroke="#D99A1E" stroke-width="2.5"/><path d="M20 12.5 L22.2 17.4 L27.5 17.9 L23.5 21.4 L24.7 26.6 L20 23.9 L15.3 26.6 L16.5 21.4 L12.5 17.9 L17.8 17.4 Z" fill="#FFF3C2" stroke="#D99A1E" stroke-width="1.5" stroke-linejoin="round"/></svg>';
   window.ShihCoins = {

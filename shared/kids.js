@@ -98,10 +98,13 @@
 
   // ---- props around the kid ----
   const hand = (x, y, skin) => `<circle cx="${x}" cy="${y}" r="7.5" fill="${skin}" ${sw}/>`;
-  function props(state, skin) {
+  // 挥手的手臂：画在身体后面，袖子从肩膀长出来
+  const waveArm = (skin) =>
+    `<path d="M101 122 L112 98" stroke="${INK}" stroke-width="15" stroke-linecap="round"/><path d="M101 122 L112 98" stroke="${skin}" stroke-width="9" stroke-linecap="round"/>` +
+    `<circle cx="113" cy="94" r="8.5" fill="${skin}" ${sw}/>`;   // 手掌：一颗圆圆的球，没有手指
+  function props(state, skin, shirt) {
     switch (state) {
-      case 'wave': return `<path d="M104 112 Q112 98 114 84" fill="none" stroke="${INK}" stroke-width="9" stroke-linecap="round"/><path d="M104 112 Q112 98 114 84" fill="none" stroke="${skin}" stroke-width="5" stroke-linecap="round"/>` + hand(115, 80, skin) +
-        line('M124 70 Q128 76 126 84') + line('M130 66 Q136 76 132 88');
+      case 'wave': return line('M128 82 Q133 90 129 98') + line('M134 76 Q141 89 135 102');
       case 'great': return `<g transform="translate(104 22) rotate(-8)"><rect x="-28" y="-13" width="56" height="26" rx="13" fill="#F5C531" ${sw}/>` +
         `<text x="0" y="6" text-anchor="middle" font-family="Andika, Arial, sans-serif" font-weight="700" font-size="16" fill="${INK}">Great!</text></g>` +
         star(24, 36, 7, '#F5C531') + star(18, 74, 4.5, '#F5C531') + star(122, 72, 5, '#F5C531');
@@ -146,7 +149,7 @@
     const coldTint = state === 'cold' ? `<circle cx="70" cy="62" r="27" fill="#BFE3EE" opacity=".22"/>` : '';
     const tummy = state === 'hungry' ? '' : '';
     return `<svg viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">` +
-      hairBack(p.hair, hc) +
+      hairBack(p.hair, hc) + (state === 'wave' ? waveArm(skin) : '') +
       `<path d="M28 140 Q28 104 70 101 Q112 104 112 140 Z" fill="${p.shirt}" ${sw}/>` +
       `<rect x="63" y="84" width="14" height="19" fill="${skin}" ${sw}/>` +
       `<circle cx="42" cy="64" r="6" fill="${skin}" ${sw}/><circle cx="98" cy="64" r="6" fill="${skin}" ${sw}/>` +
@@ -154,7 +157,7 @@
       hairFront(p.hair, hc) + face(state) +
       (p.lashes ? `<path d="M55 61 L52 58 M85 61 L88 58" ${sw}/>` : '') +   // 女生：小睫毛（自己做的角色才有）
       (p.glasses ? `<g fill="none" ${sw}><circle cx="60" cy="64" r="8"/><circle cx="80" cy="64" r="8"/><path d="M68 64 L72 64 M52 63 L43 60 M88 63 L97 60"/></g>` : '') +
-      tummy + props(state, skin) +
+      tummy + props(state, skin, p.shirt) +
       `</svg>`;
   }
 
