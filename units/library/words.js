@@ -38,7 +38,9 @@ window.LIBRARY = {
     { id: 'colors', zh: '颜色', py: 'yán sè', en: 'Colors', from: 'colors' },
     { id: 'clothes', zh: '衣服', py: 'yī fu', en: 'Clothes', from: 'clothes' },
     { id: 'body', zh: '身体', py: 'shēn tǐ', en: 'Body', from: 'body' },
-    { id: 'fruits', zh: '水果', py: 'shuǐ guǒ', en: 'Fruits', from: 'fruits' }
+    { id: 'fruits', zh: '水果', py: 'shuǐ guǒ', en: 'Fruits', from: 'fruits', kind: 'fruit' },
+    { id: 'veggies', zh: '蔬菜', py: 'shū cài', en: 'Vegetables', from: 'fruits', kind: 'veg' },
+    { id: 'restaurant', zh: '餐厅', py: 'cān tīng', en: 'Restaurant', from: 'restaurant' }
   ]
 };
 

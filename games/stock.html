@@ -24,6 +24,8 @@ body.game { background: #EEF7EA; }
 .store .shelf.full .check { opacity: 1; }
 .store .tag-py { font: 700 18px var(--f-latin); fill: #2B2B2B; }
 .store .tag-zh { font: 700 40px var(--f-zh); fill: #2B2B2B; }
+.store .tag-alt { font: 700 18px var(--f-zh); fill: #6B6B6B; }
+.store .sale text { font: 700 17px var(--f-zh); fill: #FFFFFF; }
 .store .shelf.bye { transition: opacity .35s; opacity: 0; }
 .store .fruit { cursor: grab; }
 .store .fruit .glow { opacity: 0; fill: var(--pick-soft); stroke: var(--pick); stroke-width: 6; }
@@ -62,7 +64,7 @@ body.game { background: #EEF7EA; }
   <div class="playArea waiting" id="playArea">
     <div class="playInner">
       <div class="stage">
-        <svg class="store" id="store" viewBox="0 0 1000 620" aria-label="Supermarket shelves and a fruit belt">
+        <svg class="store" id="store" viewBox="0 0 1000 620" aria-label="Supermarket shelves and a food belt">
           <defs><clipPath id="frame"><rect x="2" y="2" width="996" height="616" rx="22"/></clipPath></defs>
           <g clip-path="url(#frame)">
             <!-- 超市的墙和地板 -->
@@ -74,6 +76,8 @@ body.game { background: #EEF7EA; }
             <rect x="26" y="30" width="948" height="300" rx="14" fill="#F2D6A8" stroke="#2B2B2B" stroke-width="4"/>
             <rect x="26" y="314" width="948" height="22" rx="6" fill="#C98B4E" stroke="#2B2B2B" stroke-width="4"/>
             <g id="shelves"></g>
+            <!-- 综合促销区：上面挂一个促销的牌子 -->
+            <g class="sale" id="sale" style="display:none"><rect x="806" y="-4" width="170" height="30" rx="8" fill="#E5483B" stroke="#2B2B2B" stroke-width="3"/><text x="891" y="18" text-anchor="middle">🏷️ 促销 SALE</text></g>
             <!-- 输送带 -->
             <rect x="-10" y="512" width="1020" height="46" fill="#4A4F57" stroke="#2B2B2B" stroke-width="4"/>
             <path id="belt" d="M-40 535 L1040 535" stroke="#6B717A" stroke-width="30" stroke-dasharray="26 26"/>
@@ -118,8 +122,10 @@ Shih.loadUnit().then(UNIT => {
 
   // ---- 东西（水果＋颜色） ----
   const W = Shih.wordMap(UNIT);
-  const FRUITS = UNIT.words.filter(w => w.shelf !== false);
-  const fruitsAt = lv => FRUITS.filter(w => (w.level || 1) <= lv);
+  // 这一区（水果区／青菜区／综合促销区）、这一级可以用的东西（规则在 units/fruits/words.js 的 UNIT.pool）
+  const ZONES = UNIT.zones || [];
+  let zone = (ZONES.find(z => z.id === Shih.get('superZone', '')) || ZONES[0] || {}).id;
+  const fruitsAt = lv => UNIT.pool ? UNIT.pool(lv, zone) : UNIT.words.filter(w => w.shelf !== false && (w.level || 1) <= lv);
   // Level 1 只看水果（颜色用本来的）；Level 2 看颜色＋水果
   const same = (a, b) => a.f === b.f && (level === 1 || a.c === b.c);
   const keyOf = it => level === 1 ? it.f : it.f + '|' + it.c;
@@ -159,6 +165,7 @@ Shih.loadUnit().then(UNIT => {
     el('rect', { x: x - COL_W / 2, y: TAG_Y, width: COL_W, height: 90, rx: 8, fill: '#FFFFFF', stroke: '#2B2B2B', 'stroke-width': 4 }, g);
     el('rect', { x: x - COL_W / 2 + 2, y: TAG_Y + 2, width: COL_W - 4, height: 12, rx: 6, fill: '#F5C531' }, g);
     const L = label(s.item), zh = Array.from(L.zh), py = L.py.split(' ');
+    const alt = W[s.item.f] && W[s.item.f].alt;
     const step = Math.min(56, (COL_W - 24) / zh.length), x0 = x - (zh.length - 1) * step / 2;
     zh.forEach((c, k) => {
       el('text', { x: x0 + k * step, y: TAG_Y + 40, 'text-anchor': 'middle', class: 'tag-py' }, g).textContent = py[k] || '';
@@ -166,6 +173,10 @@ Shih.loadUnit().then(UNIT => {
     });
     // 放水果的格子
     el('rect', { x: x - COL_W / 2, y: BOX_Y, width: COL_W, height: BOX_H, rx: 14, class: 'box' }, g);
+    // 另一个说法（菠萝 → 凤梨）：格子左上角小字
+    if (alt) {
+      el('text', { x: x - COL_W / 2 + 14, y: BOX_Y + 24, class: 'tag-alt' }, g).textContent = `（${alt.zh} ${alt.py}）`;
+    }
     for (let k = 0; k < C.need && k < 2; k++) { const p = SPOT(i, k); el('ellipse', { cx: p.x, cy: p.y - 2, rx: 34, ry: 8, fill: 'rgba(43,43,43,.12)' }, g); }
     s.inner = el('g', {}, g);
     const ck = el('g', { class: 'check', transform: `translate(${x + COL_W / 2 - 22} ${BOX_Y + 22})` }, g);
@@ -196,6 +207,7 @@ Shih.loadUnit().then(UNIT => {
 
   // ---- 游戏 ----
   let level = Shih.startLevel('stockLevel', LEVELS.length);
+  const paintZones = ZONES.length ? Shih.choiceRow(ZONES, zone, id => { zone = id; Shih.set('superZone', id); setup(); }, 'Zone') : () => {};
   const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('stockLevel', lv); setup(); });
   const wait = Shih.startCover($('playArea'), start);
   const P = () => C.levels[level - 1] || C.levels[C.levels.length - 1];
@@ -236,7 +248,7 @@ Shih.loadUnit().then(UNIT => {
     const b = { item: it, x: 1060, state: 'belt' };
     b.g = fruitG(it, $('fruits'));
     b.g.setAttribute('role', 'button');
-    b.g.setAttribute('aria-label', `fruit: ${it.c ? it.c : ''}${it.f}`);
+    b.g.setAttribute('aria-label', `food: ${it.c ? it.c : ''}${it.f}`);
     b.g.addEventListener('pointerdown', e => down(e, b));
     put(b.g, b.x, BELT_Y);
     belt.push(b);
@@ -360,7 +372,8 @@ Shih.loadUnit().then(UNIT => {
   }
 
   function setup() {
-    paintLevels(level);
+    paintLevels(level); paintZones(zone);
+    $('sale').style.display = zone === 'mix' ? '' : 'none';
     playing = false; cancelAnimationFrame(raf); picked = null; armed = -1; placed = 0; drag = null;
     $('shelves').innerHTML = ''; $('fruits').innerHTML = ''; $('fly').innerHTML = '';
     belt = []; recent = []; made = 0;
@@ -371,7 +384,7 @@ Shih.loadUnit().then(UNIT => {
     $('help').textContent = (C.help[level - 1] || C.help[0]).replace('{s}', C.seconds);
     $('clock').textContent = fmt(C.seconds); $('clock').classList.remove('low');
     $('winMsg').hidden = true; $('endMsg').hidden = true;
-    window.__stock = { shelves: () => shelves, belt: () => belt, level: () => level, made: () => made, label, same };
+    window.__stock = { shelves: () => shelves, belt: () => belt, level: () => level, zone: () => zone, made: () => made, label, same };
     wait();
   }
   // 第 i 格放一张新的价签（跟旁边那格比）

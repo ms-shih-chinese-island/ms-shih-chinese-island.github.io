@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>菜单填一填 Fill in the Menu</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 菜单填一填：菜单上有菜的图，下面是空格。把中文菜名拉到对的图下面。
+   Level 1：6 道菜，字卡有拼音
+   Level 2：8 道菜，没有拼音
+   Level 3：8 道菜，没有拼音，多 2 张不在菜单上的字卡
+   拉对了，字会停在格子里、念出来；拉错了弹回去（不算错）。
+   倒数计时：Level 1 是 90 秒，Level 2、3 是 2 分钟。时间内全部填对就有金币；时间到了没填完就没有。
+   哪一级有哪些菜：units/restaurant/words.js 每个的 lv */
+body.game { background: #FFF3E6; }
+.menuWrap { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.menuBoard { background: #FFFBEF; border: 4px solid #2B2B2B; border-radius: 24px; padding: 10px 14px 14px; box-shadow: 0 6px 0 #C98B4E; }
+.menuBoard .head { text-align: center; display: flex; justify-content: center; align-items: flex-end; gap: 10px; margin-bottom: 8px; border-bottom: 3px double #C98B4E; padding-bottom: 6px; }
+.menuBoard .head .ruby .py { font-size: 14px; } .menuBoard .head .ruby .zh { font-size: 32px; color: #B4471C; }
+.menuBoard .head b { font: 800 20px var(--f-latin); color: #B4471C; }
+.dishes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.dishes.six { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 760px) { .dishes, .dishes.six { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.dish { display: flex; flex-direction: column; align-items: center; gap: 4px; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 6px 6px 8px; position: relative; }
+.dish svg { width: 92px; height: 92px; }
+.dish .price { position: absolute; top: 6px; right: 8px; font: 800 18px var(--f-latin); color: #B4471C; }
+.dish .slot { width: 100%; min-height: 58px; border: 3px dashed #C98B4E; border-radius: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: #FFFBEF; }
+.dish .slot.hover, .dish .slot.armed { border-style: solid; border-color: var(--pick); background: var(--pick-soft); }
+.dish .slot.filled { border-style: solid; border-color: var(--me-ink); background: var(--me-done); cursor: default; }
+.dish .slot .ruby .py { font-size: 12px; } .dish .slot .ruby .zh { font-size: 24px; }
+.bank { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.bank .wcard { padding: 6px 14px; }
+.bank .wcard .py { font-size: 13px; } .bank .wcard .zh { font-size: 26px; font-weight: 700; }
+.bank .wcard.used { visibility: hidden; }
+.bank .wcard.oops { animation: shake .35s; border-color: var(--bad); }
+.timer.low { background: #FCE3E0; border-color: var(--bad); }
+.timeUp { text-align: center; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 10px; margin: 0 auto 10px; max-width: 640px; font: 700 18px var(--f-latin); display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.timeUp .ruby .py { font-size: 12px; } .timeUp .ruby .zh { font-size: 26px; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill timer" id="timer">0:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+
+  <div class="timeUp" id="timeUp" hidden><span class="ruby" id="timeUpRuby"></span><span id="timeUpTxt"></span><button class="ctl" id="again2" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="menuWrap">
+        <div class="menuBoard">
+          <div class="head"><span class="ruby" id="menuRuby"></span><b>Menu</b></div>
+          <div class="dishes" id="dishes"></div>
+        </div>
+        <div class="bank" id="bank"></div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../units/restaurant/art.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.menu, RART = window.RART;
+  const $ = id => document.getElementById(id);
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  $('menuRuby').innerHTML = Shih.ruby('菜单', 'cài dān');
+  // 时间：倒数，时间内全部填对就有金币（填错没关系，字卡弹回去再试）
+  const timerEl = $('timer');
+  const LIMIT = lv => [90, 120, 120][lv - 1] * 1000;
+  let left = 0, lastT = 0, tick = 0, running = false;
+  const fmt = ms => { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  function loop() {
+    if (!running) return;
+    const now = performance.now(); left -= now - lastT; lastT = now;
+    timerEl.textContent = '⏱ ' + fmt(Math.max(0, left)); timerEl.classList.toggle('low', left < 15000);
+    if (left <= 0) { running = false; $('timeUpTxt').textContent = `Time's up! ${done} of ${total} filled. Try again!`; $('timeUp').hidden = false; Shih.speak('时间到了'); return; }
+    tick = requestAnimationFrame(loop);
+  }
+  $('timeUpRuby').innerHTML = Shih.ruby('时间到了', 'shí jiān dào le');
+  Shih.soundButton($('soundBtn'));
+  const LEVELS = [{ note: '6 dishes + pinyin' }, { note: '8 dishes' }, { note: '8 dishes + 2 extra words' }];
+  let level = Shih.startLevel('menuLevel', 3);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('menuLevel', lv); setup(); });
+  const HELP = ['Drag each name under the right picture. Or tap a name, then tap a blank.',
+                'Drag each name under the right picture. No pinyin this time!',
+                'Drag each name under the right picture. Careful: 2 names are NOT on the menu!'];
+
+  let done = 0, total = 0;
+  function setup() {
+    paintLevels(level);
+    $('help').textContent = HELP[level - 1] + ` Finish in ${fmt(LIMIT(level))} to get coins!`;
+    const n = level === 1 ? 6 : 8;
+    const all = UNIT.pool(level, 'food').concat(UNIT.pool(level, 'drink'));
+    // 至少 1 种饮料，其他都是菜
+    const drinks = shuffle(UNIT.pool(level, 'drink')).slice(0, level === 1 ? 1 : 2);
+    const foods = shuffle(UNIT.pool(level, 'food')).slice(0, n - drinks.length);
+    const dishes = shuffle(foods.concat(drinks));
+    const extra = level === 3 ? shuffle(all.filter(w => !dishes.includes(w))).slice(0, 2) : [];
+    total = dishes.length; done = 0;
+    const showPy = level === 1;
+    $('dishes').className = 'dishes' + (n === 6 ? ' six' : '');
+    $('dishes').innerHTML = dishes.map(w => `<div class="dish">${RART.svg(w.zh)}<span class="price">$${w.drink ? rnd(1, 3) : rnd(4, 12)}</span>` +
+      `<div class="slot dropSlot" data-zh="${w.zh}" aria-label="blank"></div></div>`).join('');
+    $('bank').innerHTML = '';
+    const cards = shuffle(dishes.concat(extra)).map(w => {
+      const el = document.createElement('div');
+      el.className = 'wcard'; el.dataset.zh = w.zh;
+      el.innerHTML = showPy ? `<span class="ruby">${Shih.ruby(w.zh, w.py)}</span>` : `<span class="zh">${w.zh}</span>`;
+      $('bank').appendChild(el);
+      return el;
+    });
+    const dnd = Shih.dragCards(cards, {
+      slots: () => [...$('dishes').querySelectorAll('.slot:not(.filled)')],
+      accept(card, slot) {
+        if (!running) return true;
+        if (card.dataset.zh !== slot.dataset.zh) { card.classList.remove('oops'); void card.offsetWidth; card.classList.add('oops'); return true; }   // 填错：摇一摇（不算错）
+        const w = dishes.find(x => x.zh === card.dataset.zh);
+        card.classList.add('used');
+        slot.classList.add('filled');
+        slot.innerHTML = `<span class="ruby">${Shih.ruby(w.zh, w.py)}</span>`;
+        Shih.speak(w.zh);
+        done++; update();
+        if (done >= total) {
+          running = false; cancelAnimationFrame(tick);
+          $('winTime').textContent = 'Time left: ' + fmt(Math.max(0, left));
+          setTimeout(() => { $('winMsg').hidden = false; Shih.speak('太棒了'); }, 500);
+        }
+        return true;
+      }
+    });
+    $('dishes').querySelectorAll('.slot').forEach(s => s.addEventListener('click', () => { if (!s.classList.contains('filled')) dnd.tapSlot(s); }));
+    running = false; cancelAnimationFrame(tick); left = LIMIT(level); timerEl.textContent = '⏱ ' + fmt(left); timerEl.classList.remove('low');
+    $('winMsg').hidden = true; $('timeUp').hidden = true; update();
+    window.__menu = { dishes: () => dishes.map(w => w.zh), extra: () => extra.map(w => w.zh) };
+    wait();
+  }
+  function update() { $('score').textContent = `${done} / ${total}`; }
+  const wait = Shih.startCover($('playArea'), () => { running = true; lastT = performance.now(); tick = requestAnimationFrame(loop); });
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

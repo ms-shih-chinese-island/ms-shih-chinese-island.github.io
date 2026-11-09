@@ -119,7 +119,7 @@ async function unitWords(id) {
 }
 let HART = {}, MART = {}, TART = {}, FART = {};
 async function loadAll() {
-  for (const c of LIBRARY.chapters) if (c.from) c.list = await unitWords(c.from); else c.list = c.words;
+  for (const c of LIBRARY.chapters) if (c.from) { c.list = await unitWords(c.from); if (c.kind) c.list = c.list.filter(w => w.kind === c.kind || (!w.kind && w.zh === c.zh)); } else c.list = c.words;   // kind：同一个单元分成两格（水果、蔬菜）
   // 形容词（聪明、勇敢……）是「家」那一课教的，书里放在「家」那一章
   const ch = id => LIBRARY.chapters.find(c => c.id === id);
   if (ch('school') && ch('family')) {
@@ -131,6 +131,7 @@ async function loadAll() {
   window.ART = undefined; await loadScript('../units/moon/art.js'); MART = window.ART || {};
   window.ART = undefined; await loadScript('../units/thanksgiving/art.js'); TART = window.ART || {};
   window.ART = undefined; await loadScript('../units/fruits/art.js'); FART = window.ART || {};
+  await loadScript('../units/restaurant/art.js');   // 餐厅的图放在 window.RART
   window.ART = KIDS;
 }
 // ---- 每个字的小图（岛上本来就有的图才放） ----
@@ -142,6 +143,7 @@ function picOf(w) {
     if (HART.items && HART.items[w.zh]) return HART.items[w.zh];
     if (FART.items && FART.items[w.zh]) return FART.items[w.zh];
     if (TART.items && TART.items[w.zh]) return TART.items[w.zh];
+    if (window.RART && RART.items[w.zh]) return RART.items[w.zh];
     if (w.feel && KIDS.kid) return KIDS.kid(PERSON(), w.feel);
     if (w.zh === '早上好' && KIDS.time) return KIDS.time('morning');
     if (w.zh === '下午好' && KIDS.time) return KIDS.time('afternoon');

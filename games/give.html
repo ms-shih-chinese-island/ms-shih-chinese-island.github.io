@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>请给我 Please Give Me</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<link rel="stylesheet" href="../shared/serve-game.css">
+<!-- 玩法在 shared/serve-game.js（give.html 跟 serve.html 共用）；字在 units/restaurant/words.js -->
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill" id="timer">0:00</span>
+      <button class="ctl" id="timerBtn" type="button"></button>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="rest">
+        <div class="counter">
+          <div class="cust" id="cust"></div>
+          <div class="talk" id="talk"></div>
+          <button class="ctl hear" id="hear" type="button" aria-label="Listen">🔊</button>
+        </div>
+        <div class="yesno" id="yesno" hidden><button type="button" id="yesBtn"></button><button type="button" id="noBtn"></button></div>
+        <div class="floor">
+          <div class="kitchen" id="kitchen"><div class="cap" id="kitchenCap"></div></div>
+          <div class="traybox">
+            <div class="tray" id="tray" aria-label="Tray"></div>
+            <button class="serveBtn" id="serveBtn" type="button"></button>
+            <div class="mark" id="mark"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/kids.js"></script>
+<script src="../units/restaurant/art.js"></script>
+<script src="../shared/rest.js"></script>
+<script>window.SERVE_MODE = 'give';</script>
+<script src="../shared/serve-game.js"></script>
+</body>
+</html>

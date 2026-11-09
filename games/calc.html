@@ -25,6 +25,9 @@ body.game { background: #FFF6E5; }
 .say .sym { font: 700 clamp(24px, 3.4vw, 34px) var(--f-latin); line-height: 1.1; padding: 0 2px; }
 .say .sym.en { font-size: clamp(18px, 2.2vw, 22px); color: var(--muted); padding-bottom: 4px; }
 .say .ask { color: var(--pick); }
+.say .alt { display: flex; align-items: flex-end; font: 700 18px var(--f-zh); color: var(--muted); }
+.say .alt .ruby .py { font-size: 11px; } .say .alt .ruby .zh { font-size: 20px; color: var(--muted); }
+.say .mwNote { flex-basis: 100%; text-align: center; }
 .say.small .ruby .zh, .say.small .sym { font-size: clamp(20px, 2.6vw, 26px); } .say.small .ruby .py { font-size: 13px; }
 .lines { display: flex; flex-direction: column; gap: 12px; }
 
@@ -116,12 +119,19 @@ Promise.all([Shih.loadUnit(), Shih.loadArt()]).then(([UNIT, ART]) => {
   let level = Shih.startLevel('calcLevel', LEVELS.length);
   const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('calcLevel', lv); setup(); });
   const L = () => C.levels[level - 1] || C.levels[C.levels.length - 1];
+  // 超市有三区（水果区／青菜区／综合促销区）；感恩节市场没有
+  const ZONES = UNIT.zones || [];
+  let zone = (ZONES.find(z => z.id === Shih.get('superZone', '')) || ZONES[0] || {}).id;
+  const paintZones = ZONES.length ? Shih.choiceRow(ZONES, zone, id => { zone = id; Shih.set('superZone', id); setup(); }, 'Zone') : () => {};
 
   // ---- 字：会出「几个」的（量词在 UNIT.calc.countMW，没写就只有「个」）、只当干扰的 ----
-  const MWPY = { '个': 'gè', '根': 'gēn', '串': 'chuàn', '只': 'zhī', '片': 'piàn' };
+  const MWPY = { '个': 'gè', '根': 'gēn', '串': 'chuàn', '只': 'zhī', '片': 'piàn', '颗': 'kē', '把': 'bǎ' };
+  const NEWMW = {}; Object.keys(UNIT.mw || {}).forEach(k => { if (UNIT.mw[k].isNew) NEWMW[k] = UNIT.mw[k].py; });   // 课纲没学过的量词：句子下面注明
+  const WM = Shih.wordMap(UNIT);
   const COUNT_MW = C.countMW || ['个'];
   const mwOf = w => COUNT_MW.includes(w.mw) ? w.mw : '个';
-  const inLevel = w => (w.level || 1) <= level && ART.pic(w.zh);
+  const inPool = w => !UNIT.pool || UNIT.pool(level, zone).includes(w);
+  const inLevel = w => (UNIT.pool ? inPool(w) : (w.level || 1) <= level) && ART.pic(w.zh);
   const countable = () => UNIT.words.filter(w => inLevel(w) && COUNT_MW.includes(w.mw));
   const decoys = () => UNIT.words.filter(w => inLevel(w) && w.mw && !COUNT_MW.includes(w.mw));
 
@@ -131,10 +141,14 @@ Promise.all([Shih.loadUnit(), Shih.loadArt()]).then(([UNIT, ART]) => {
   const ge = (n, w) => [...num(n), [mwOf(w), MWPY[mwOf(w)]], [w.zh, w.py]];       // 三个苹果、三根香蕉
   const T = (zh, py) => [[zh, py]];
   function say(bits, cls = '') {
-    const html = bits.map(b => Array.isArray(b)
-      ? `<span class="ruby">${Shih.ruby(b[0], b[1])}</span>`
-      : `<span class="sym${b === '？' ? ' ask' : /[a-z]/.test(b) ? ' en' : ''}">${Shih.esc(b)}</span>`).join('');
-    return `<div class="say ${cls}">${html}</div>`;
+    let note = '';
+    const html = bits.map(b => {
+      if (!Array.isArray(b)) return `<span class="sym${b === '？' ? ' ask' : /[a-z]/.test(b) ? ' en' : ''}">${Shih.esc(b)}</span>`;
+      if (NEWMW[b[0]] && !note) note = `<span class="mwNote">${b[0]} ${NEWMW[b[0]]} = measure word</span>`;
+      const alt = WM[b[0]] && WM[b[0]].alt;     // 菠萝（凤梨）
+      return `<span class="ruby">${Shih.ruby(b[0], b[1])}</span>` + (alt ? `<span class="alt">（<span class="ruby">${Shih.ruby(alt.zh, alt.py)}</span>）</span>` : '');
+    }).join('');
+    return `<div class="say ${cls}">${html}${note}</div>`;
   }
   const zhText = bits => bits.map(b => Array.isArray(b) ? b[0] : b).join('');
   const usd = n => '$' + n;
@@ -369,7 +383,7 @@ Promise.all([Shih.loadUnit(), Shih.loadArt()]).then(([UNIT, ART]) => {
   addEventListener('resize', fitEq);
   const wait = Shih.startCover($('playArea'), () => { if (timerOn()) timer.start(); });
   function setup() {
-    paintLevels(level);
+    paintLevels(level); paintZones(zone);
     qs = makeRound(); qi = 0; firstTry = 0;
     timer.reset(); winMsg.hidden = true; update();
     show();

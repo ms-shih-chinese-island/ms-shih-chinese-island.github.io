@@ -1,14 +1,18 @@
 /* =====================================================================
-   单元：水果 Fruits（主岛 → 超市）
+   单元：超市 Supermarket（主岛 → 超市）：水果＋青菜（资料夹名字还是 fruits，金币、统计才不会乱）
    ---------------------------------------------------------------------
-   快手摆一摆 games/stock.html?unit=fruits、水果买一买 games/buy.html?unit=fruits、超市算一算 games/calc.html?unit=fruits 读这一份。图在 units/fruits/art.js。
-   拼音照台湾的念法。课纲：二年级（中文一）4 月 9 种水果；三年级（中文三）4 月多了蓝莓。
+   快手摆一摆 games/stock.html?unit=fruits、超市买一买 games/buy.html?unit=fruits、超市算一算 games/calc.html?unit=fruits 读这一份。图在 units/fruits/art.js。
+   拼音照台湾的念法。课纲：
+     二年级（中文二）4 月：12 种水果、11 种青菜（Level 1 全部都有）
+     三年级（中文三）4 月：7 种水果、7 种青菜＋我想买（Level 2 只用这几种，加颜色，比较难）
 
-   水果（words）每个一行：
+   每个一行：
      zh / py / en   中文、拼音、英文（英文给老师看的）
-     level          1 = 二年级、2 = 三、四年级（每一级都包含前面的字）
-     colors         Level 2 的价签可以写哪些颜色（例如「绿色的苹果」）；空的 = Level 2 不出这种水果的价签
+     kind           'fruit' 水果、'veg' 青菜（三区：水果区、青菜区、综合促销区）
+     l2             三年级也有（Level 2 以上用）
+     colors         Level 2 的价签可以写哪些颜色（例如「绿色的苹果」）；空的 = Level 2 不出它的价签（只当干扰）
      mw             量词：买一买的购物清单会写「＿个苹果」「＿根香蕉」「＿串葡萄」（西瓜一片只当干扰）
+     alt            另一个说法（菠萝 → 凤梨）：牌子上用小字写在旁边
      shelf: false   不上架子（只放在图书馆）
    注意每行最后的逗号。
    ===================================================================== */
@@ -16,26 +20,60 @@ window.UNIT = {};
 
 /* 每一级的说明（Level 按钮上的小字）：两级就好 */
 UNIT.levels = [
-  { note: 'Fruits' },
-  { note: 'Colors + fruits' }
+  { note: 'Name the food' },
+  { note: 'Colors + food' }
 ];
 
-/* 水果 */
+/* 三区：进游戏先选一区（每一区分开算金币） */
+UNIT.zones = [
+  { id: 'fruit', zh: '水果区', py: 'shuǐ guǒ qū', en: 'Fruit', icon: '🍎' },
+  { id: 'veg',   zh: '青菜区', py: 'qīng cài qū', en: 'Vegetables', icon: '🥕' },
+  { id: 'mix',   zh: '综合促销区', py: 'zòng hé cù xiāo qū', en: 'Mix & Sale', icon: '🏷️' }
+];
+
 UNIT.words = [
   { zh: '水果',   py: 'shuǐ guǒ',   en: 'fruit',       level: 1, shelf: false },
-  // ---- Level 1（二年级） ----
-  { zh: '苹果',   py: 'píng guǒ',   en: 'apple',       level: 1, colors: ['红色', '绿色', '黄色'], mw: '个', trad: '蘋果' },
-  { zh: '草莓',   py: 'cǎo méi',    en: 'strawberry',  level: 1, colors: ['红色'], mw: '个' },
-  { zh: '橘子',   py: 'jú zi',      en: 'orange',      level: 1, colors: ['橙色', '绿色'], mw: '个' },
-  { zh: '香蕉',   py: 'xiāng jiāo', en: 'banana',      level: 1, colors: ['黄色', '绿色'], mw: '根' },
-  { zh: '葡萄',   py: 'pú táo',     en: 'grapes',      level: 1, colors: ['紫色', '绿色'], mw: '串' },
-  { zh: '西瓜',   py: 'xī guā',     en: 'watermelon',  level: 1, colors: [], mw: '片' },      // 画的是一片西瓜（红色的），Level 2 不出它的价签
-  { zh: '梨子',   py: 'lí zi',      en: 'pear',        level: 1, colors: ['黄色', '绿色'], mw: '个' },
-  { zh: '菠萝',   py: 'bō luó',     en: 'pineapple',   level: 1, colors: ['黄色', '绿色'], mw: '个', trad: '菠蘿' },
-  { zh: '桃子',   py: 'táo zi',     en: 'peach',       level: 1, colors: [], mw: '个' },      // 桃子是粉红色（四年级才学），Level 2 不出它的价签
-  // ---- Level 2（三年级） ----
-  { zh: '蓝莓',   py: 'lán méi',    en: 'blueberry',   level: 2, colors: ['蓝色'], mw: '个', trad: '藍莓' }
+  { zh: '蔬菜',   py: 'shū cài',    en: 'vegetables',  level: 1, shelf: false },
+  // ---- 水果 ----
+  { zh: '苹果',   py: 'píng guǒ',   en: 'apple',       kind: 'fruit', l2: true, colors: ['红色', '绿色', '黄色'], mw: '个', trad: '蘋果' },
+  { zh: '草莓',   py: 'cǎo méi',    en: 'strawberry',  kind: 'fruit', l2: true, colors: ['红色'], mw: '个' },
+  { zh: '橘子',   py: 'jú zi',      en: 'orange',      kind: 'fruit', colors: ['橙色', '绿色'], mw: '个' },
+  { zh: '香蕉',   py: 'xiāng jiāo', en: 'banana',      kind: 'fruit', l2: true, colors: ['黄色', '绿色'], mw: '根' },
+  { zh: '葡萄',   py: 'pú táo',     en: 'grapes',      kind: 'fruit', l2: true, colors: ['紫色', '绿色'], mw: '串' },
+  { zh: '西瓜',   py: 'xī guā',     en: 'watermelon',  kind: 'fruit', l2: true, colors: [], mw: '片' },      // 画的是一片西瓜（红色的），Level 2 不出它的价签
+  { zh: '梨子',   py: 'lí zi',      en: 'pear',        kind: 'fruit', colors: ['黄色', '绿色'], mw: '个' },
+  { zh: '菠萝',   py: 'bō luó',     en: 'pineapple',   kind: 'fruit', l2: true, colors: ['黄色', '绿色'], mw: '个', trad: '菠蘿', alt: { zh: '凤梨', py: 'fèng lí' } },
+  { zh: '桃子',   py: 'táo zi',     en: 'peach',       kind: 'fruit', colors: [], mw: '个' },      // 桃子是粉红色（四年级才学），Level 2 不出它的价签
+  { zh: '芒果',   py: 'máng guǒ',   en: 'mango',       kind: 'fruit', colors: ['黄色', '绿色', '橙色'], mw: '个' },
+  { zh: '李子',   py: 'lǐ zi',      en: 'plum',        kind: 'fruit', colors: ['紫色', '红色'], mw: '个' },
+  { zh: '蓝莓',   py: 'lán méi',    en: 'blueberry',   kind: 'fruit', l2: true, colors: ['蓝色'], mw: '个', trad: '藍莓' },
+  // ---- 青菜 ----
+  { zh: '生菜',   py: 'shēng cài',  en: 'lettuce',     kind: 'veg', l2: true, colors: ['绿色', '紫色'], mw: '颗' },
+  { zh: '菠菜',   py: 'bō cài',     en: 'spinach',     kind: 'veg', l2: true, colors: ['绿色'], mw: '把' },
+  { zh: '芹菜',   py: 'qín cài',    en: 'celery',      kind: 'veg', colors: ['绿色'], mw: '根' },
+  { zh: '芥兰',   py: 'jiè lán',    en: 'Chinese broccoli', kind: 'veg', l2: true, colors: ['绿色'], mw: '把', trad: '芥藍' },
+  { zh: '马铃薯', py: 'mǎ líng shǔ', en: 'potato',     kind: 'veg', l2: true, colors: [], mw: '个', trad: '馬鈴薯' },
+  { zh: '胡萝卜', py: 'hú luó bo',  en: 'carrot',      kind: 'veg', l2: true, colors: ['橙色', '紫色', '黄色'], mw: '根', trad: '胡蘿蔔' },
+  { zh: '番茄',   py: 'fān qié',    en: 'tomato',      kind: 'veg', l2: true, colors: ['红色', '绿色', '黄色'], mw: '个' },
+  { zh: '玉米',   py: 'yù mǐ',      en: 'corn',        kind: 'veg', l2: true, colors: ['黄色'], mw: '根' },
+  { zh: '蘑菇',   py: 'mó gū',      en: 'mushroom',    kind: 'veg', colors: [], mw: '个' },
+  { zh: '青椒',   py: 'qīng jiāo',  en: 'bell pepper', kind: 'veg', colors: ['绿色', '红色', '黄色'], mw: '个' },
+  { zh: '茄子',   py: 'qié zi',     en: 'eggplant',    kind: 'veg', colors: ['紫色'], mw: '根' }
 ];
+UNIT.words.forEach(w => { if (!w.level) w.level = 1; });
+
+/* 量词：课纲没学过的（颗、把）在句子下面注明 measure word */
+UNIT.mw = {
+  '个': { py: 'gè' }, '根': { py: 'gēn' }, '串': { py: 'chuàn' }, '片': { py: 'piàn' },
+  '颗': { py: 'kē', isNew: true }, '把': { py: 'bǎ', isNew: true }
+};
+
+/* 这一区、这一级可以用的东西（三个游戏都用这个）
+   Level 1：二年级全部；Level 2 以上：三年级那几种（l2） */
+UNIT.pool = function (level, zone) {
+  return UNIT.words.filter(w => w.shelf !== false && w.kind &&
+    (zone === 'mix' || !zone || w.kind === zone) && (level <= 1 || w.l2));
+};
 
 /* 价签上的颜色（二、三年级学过的） */
 UNIT.colors = {
@@ -64,8 +102,8 @@ UNIT.stock = {
   done:  { zh: '摆好了！', py: 'bǎi hǎo le!', en: 'All stocked!' },
   // {s} 会换成秒数
   help: [
-    'Read the signs on the shelves and fill them in {s} seconds! Drag a fruit to its shelf, or tap a fruit and its shelf.',
-    'Read the color and the fruit on each sign, and fill the shelves in {s} seconds! Drag a fruit to its shelf, or tap a fruit and its shelf.'
+    'Read the signs on the shelves and fill them in {s} seconds! Drag the food to its shelf, or tap the food and its shelf.',
+    'Read the color and the food on each sign, and fill the shelves in {s} seconds! Drag the food to its shelf, or tap the food and its shelf.'
   ],
   seconds: 90,
   target: [16, 16],   // Level 1、Level 2 都摆 16 格
@@ -76,7 +114,7 @@ UNIT.stock = {
   ]
 };
 
-/* ---------------- 水果买一买（超市买水果，凑数量） ----------------
+/* ---------------- 超市买一买（以前叫水果买一买：超市买东西，凑数量） ----------------
    上面一张购物清单「＿个（颜色的）＿＿」，架上是一袋一袋装好的水果（袋子上不写数字，要自己数）。
    点袋子放进购物车（再点一下拿出来），挑袋子（一袋、两袋、三袋都可以），刚好是要买的数量就按「结帐」。
    有的题目一袋就刚好（single 的机会），有的要两袋加起来；对的水果有好几袋，乱试很慢，要算。
@@ -87,7 +125,7 @@ UNIT.stock = {
    每一级：nums 要买的数量（不出 2，因为要说「两个」）、bag 一袋最多几个、bags 架上几袋、right 对的水果几袋
 */
 UNIT.buy = {
-  title: { zh: '水果买一买', py: 'shuǐ guǒ mǎi yi mǎi', en: 'Shopping List' },
+  title: { zh: '超市买一买', py: 'chāo shì mǎi yi mǎi', en: 'Shopping List' },
   done:  { zh: '买好了！', py: 'mǎi hǎo le!', en: 'All bought!' },
   // {s} 会换成秒数
   help: [
@@ -102,10 +140,10 @@ UNIT.buy = {
   ]
 };
 
-/* ---------------- 超市算一算（跟感恩节市场的「市场算一算」一模一样，换成水果） ----------------
+/* ---------------- 超市算一算（跟感恩节市场的「市场算一算」一模一样，换成水果、青菜） ----------------
    题型和感恩节市场一样：Level 1 数一数、图形加法、是／不是；Level 2 图形加减、价钱、是／不是；Level 3 两样东西的价钱、够不够钱。
    levelList  这个游戏自己的三个等级（水果单元别的游戏只有两级）
-   countMW    会出题的量词：一个苹果、一根香蕉、一串葡萄（西瓜一片只当干扰）
+   countMW    会出题的量词：一个苹果、一根香蕉、一串葡萄、一颗生菜、一把菠菜（西瓜一片只当干扰）
    levels     每一级：max 数字最大多少、noTwo 不出 2（二、三年级还没学「两」）、budget 够不够钱的钱
 */
 UNIT.calc = {
@@ -115,7 +153,7 @@ UNIT.calc = {
     { note: '+ prices' },
     { note: '+ Do I have enough?' }
   ],
-  countMW: ['个', '根', '串'],
+  countMW: ['个', '根', '串', '颗', '把'],
   count: 8,
   levels: [
     { max: 10, noTwo: true },

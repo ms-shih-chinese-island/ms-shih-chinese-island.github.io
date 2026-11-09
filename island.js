@@ -43,9 +43,9 @@ window.ISLANDS = {
         ] },
       { id: 'supermarket', zh: '超市', py: 'chāo shì', en: 'Supermarket', x: 352, y: 492, color: 'me',
         games: [
-          { zh: '快手摆一摆', py: 'kuài shǒu bǎi yi bǎi', en: 'Stock the Shelves', note: 'Read the signs on the shelves and fill them in 90 seconds! Drag a fruit to its shelf, or tap a fruit and its shelf.', href: 'games/stock.html?unit=fruits' },
-          { zh: '水果买一买', py: 'shuǐ guǒ mǎi yi mǎi', en: 'Shopping List', note: "Fill the cart with what's on the shopping list. Tap 1 or more bags, then check out!", href: 'games/buy.html?unit=fruits' },
-          { zh: '超市算一算', py: 'chāo shì suàn yi suàn', en: 'Supermarket Math', note: 'Read the fruit words and do the math. Pick the right answer.', href: 'games/calc.html?unit=fruits' }
+          { zh: '快手摆一摆', py: 'kuài shǒu bǎi yi bǎi', en: 'Stock the Shelves', note: 'Pick a zone: fruit, vegetables or mix. Read the signs and fill the shelves in 90 seconds!', href: 'games/stock.html?unit=fruits' },
+          { zh: '超市买一买', py: 'chāo shì mǎi yi mǎi', en: 'Shopping List', note: "Fill the cart with what's on the shopping list. Tap 1 or more bags, then check out!", href: 'games/buy.html?unit=fruits' },
+          { zh: '超市算一算', py: 'chāo shì suàn yi suàn', en: 'Supermarket Math', note: 'Read the fruit and vegetable words and do the math. Pick the right answer.', href: 'games/calc.html?unit=fruits' }
         ] },
       { id: 'hospital', zh: '医院', py: 'yī yuàn', en: 'Hospital', x: 158, y: 548, color: 'mom',
         games: [
@@ -60,7 +60,15 @@ window.ISLANDS = {
         ] },
       { zh: '宠物店', py: 'chǒng wù diàn', en: 'Pet Shop', x: 1200, y: 132, color: 'mom', games: [] },
       { zh: '消防局', py: 'xiāo fáng jú', en: 'Fire Station', x: 1760, y: 132, color: 'dad', games: [] },
-      { zh: '餐厅', py: 'cān tīng', en: 'Restaurant', x: 1330, y: 526, color: 'dad', games: [] },
+      { id: 'restaurant', zh: '餐厅', py: 'cān tīng', en: 'Restaurant', x: 1330, y: 526, color: 'dad',
+        games: [
+          { zh: '请给我', py: 'qǐng gěi wǒ', en: 'Please Give Me', note: 'A customer asks for tableware. Read or listen, then give the right things.', href: 'games/give.html?unit=restaurant' },
+          { zh: '爱吃不爱吃', py: 'ài chī bú ài chī', en: 'Yummy or Yucky?', note: 'Look at 👍 👎 and build the sentence: 我爱吃饺子。', href: 'games/likes.html?unit=restaurant' },
+          { zh: '快手出菜', py: 'kuài shǒu chū cài', en: 'Speedy Server', note: 'Customers line up! Drag the food or tableware each one asks for. Try ⚡ 90 seconds or 🐢 practice.', href: 'games/serve.html?unit=restaurant' },
+          { zh: '菜单填一填', py: 'cài dān tián yi tián', en: 'Fill in the Menu', note: 'Drag each Chinese name under the right picture on the menu.', href: 'games/menu.html?unit=restaurant' },
+          { zh: '点菜算一算', py: 'diǎn cài suàn yi suàn', en: 'Order & Add Up', note: 'See (or hear) what friends want, type it into the order machine, and add up the bill.', href: 'games/pay.html?unit=restaurant' },
+          { zh: '餐厅对话框', py: 'cān tīng duì huà kuàng', en: 'Restaurant Chat', note: 'Fill in the chat between the server and the customer.', href: 'games/dine.html?unit=restaurant' }
+        ] },
       { zh: '公安局', py: 'gōng ān jú', en: 'Police Station', x: 1620, y: 564, color: 'sea', games: [] },
       { zh: '邮政局', py: 'yóu zhèng jú', en: 'Post Office', x: 1910, y: 510, color: 'me', games: [] },
       // 旅客中心：在码头旁边，坐船来的人先到这里

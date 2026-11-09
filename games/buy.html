@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="../shared/gate.js"></script>
-<title>水果买一买 Shopping List</title>
+<title>超市买一买 Shopping List</title>
 <link rel="stylesheet" href="../shared/fonts.css">
 <link rel="stylesheet" href="../shared/common.css">
 <style>
-/* 水果买一买：上面一张购物清单「＿个（颜色的）＿＿」，架上是一袋一袋的水果（袋子上不写数字）。
+/* 超市买一买（以前叫水果买一买）：上面一张购物清单「＿个（颜色的）＿＿」，架上是一袋一袋的水果（袋子上不写数字）。
    点袋子放进篮子（再点一下拿出来），一袋或两袋刚好就按「结帐」。
    买错了篮子上出现红色圆圈＋白色 ✗、摇一摇，袋子再飞回架上，不扣分；时间内全部买对就有金币。
    用法：buy.html?unit=fruits（题目设定在 units/fruits/words.js 的 UNIT.buy；水果的图在 units/fruits/art.js） */
@@ -21,6 +21,9 @@ body.game { background: #EEF7EA; }
 .say .ruby .py { font-size: 15px; } .say .ruby .zh { font-size: clamp(26px, 3.6vw, 36px); }
 .say .ruby.hot .zh { color: var(--pick); }
 .say .sym { font: 700 clamp(26px, 3.6vw, 36px) var(--f-zh); line-height: 1.1; }
+.say .alt { display: flex; align-items: flex-end; font: 700 18px var(--f-zh); color: var(--muted); }
+.say .alt .ruby .py { font-size: 11px; } .say .alt .ruby .zh { font-size: 20px; color: var(--muted); }
+.say .mwNote { flex-basis: 100%; text-align: center; }
 .ask .hear { min-width: 48px; min-height: 48px; font-size: 22px; }
 .stage svg.store { display: block; width: 100%; height: auto; max-height: calc(100vh - 320px); min-height: 260px; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
 .store .bag { cursor: pointer; }
@@ -116,14 +119,18 @@ Shih.loadUnit().then(UNIT => {
 
   // ---- 水果 ----
   const W = Shih.wordMap(UNIT);
-  const FRUITS = UNIT.words.filter(w => w.shelf !== false);
-  const at = lv => FRUITS.filter(w => (w.level || 1) <= lv);
+  // 这一区（水果区／青菜区／综合促销区）、这一级可以用的东西（规则在 units/fruits/words.js 的 UNIT.pool）
+  const ZONES = UNIT.zones || [];
+  let zone = (ZONES.find(z => z.id === Shih.get('superZone', '')) || ZONES[0] || {}).id;
+  const at = lv => UNIT.pool ? UNIT.pool(lv, zone) : UNIT.words.filter(w => w.shelf !== false && (w.level || 1) <= lv);
   const same = (a, b) => a.f === b.f && (level === 1 || a.c === b.c);
   // Level 2 所有的（水果，颜色）；colors 空的就用本来的颜色（c = null）
   const variants = (list) => list.flatMap(w => (w.colors || []).length ? w.colors.map(c => ({ f: w.zh, c })) : [{ f: w.zh, c: null }]);
 
-  // 量词（照水果换）
-  const MW = { '个': 'gè', '根': 'gēn', '串': 'chuàn' };
+  // 量词（照东西换）：会出在清单上的量词；颗、把是新的，句子下面注明 measure word
+  const MWINFO = UNIT.mw || { '个': { py: 'gè' }, '根': { py: 'gēn' }, '串': { py: 'chuàn' } };
+  const MW = {};
+  Object.keys(MWINFO).filter(k => k !== '片').forEach(k => { MW[k] = MWINFO[k].py; });
   // ---- 购物清单：＿个／根／串（颜色的）＿＿ ----
   function sentence(q) {
     const bits = [];
@@ -133,7 +140,10 @@ Shih.loadUnit().then(UNIT => {
     if (level > 1 && q.t.c) bits.push([q.t.c, UNIT.colors[q.t.c].py, 'hot'], ['的', 'de']);
     bits.push([q.t.f, W[q.t.f].py, 'hot']);
     const zh = bits.map(b => b[0]).join('');
-    const html = bits.map(b => `<span class="ruby${b[2] ? ' hot' : ''}">${Shih.ruby(b[0], b[1])}</span>`).join('');
+    let html = bits.map(b => `<span class="ruby${b[2] ? ' hot' : ''}">${Shih.ruby(b[0], b[1])}</span>`).join('');
+    const alt = W[q.t.f].alt;
+    if (alt) html += `<span class="alt">（<span class="ruby">${Shih.ruby(alt.zh, alt.py)}</span>）</span>`;
+    if (MWINFO[mw] && MWINFO[mw].isNew) html += `<span class="mwNote">${mw} ${MWINFO[mw].py} = measure word</span>`;
     return { zh, html };
   }
 
@@ -201,7 +211,7 @@ Shih.loadUnit().then(UNIT => {
     return Array.from({ length: count }, (_, i) => ({ x: x0 + (i % cols) * step, y: bottoms[Math.floor(i / cols)], s }));   // 袋子底部中间、大小
   }
   // 有些水果画得比较细（葡萄、香蕉、草莓），放进袋子时放大一点，看起来才跟苹果一样大
-  const ZOOM = { '葡萄': 1.15, '香蕉': 1.08, '草莓': 1.25, '菠萝': 1.1, '梨子': 1.1 };
+  const ZOOM = { '葡萄': 1.15, '香蕉': 1.08, '草莓': 1.25, '菠萝': 1.1, '梨子': 1.1, '芹菜': 1.05, '胡萝卜': 1.08, '玉米': 1.05, '茄子': 1.05 };
   // 一袋水果（原点 = 袋子底部中间）
   function bagArt(it, k) {
     const g = document.createElementNS(NS, 'g');
@@ -263,6 +273,7 @@ Shih.loadUnit().then(UNIT => {
 
   // ---- 游戏 ----
   let level = Shih.startLevel('buyLevel', LEVELS.length);
+  const paintZones = ZONES.length ? Shih.choiceRow(ZONES, zone, id => { zone = id; Shih.set('superZone', id); setup(); }, 'Zone') : () => {};
   const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('buyLevel', lv); setup(); });
   const wait = Shih.startCover($('playArea'), start);
   let qs = [], qi = 0, bags = [], basket = [], done = 0, playing = false, busy = false, startT = 0, raf = 0;
@@ -356,7 +367,7 @@ Shih.loadUnit().then(UNIT => {
   }
 
   function setup() {
-    paintLevels(level);
+    paintLevels(level); paintZones(zone);
     playing = false; busy = false; cancelAnimationFrame(raf); done = 0; qi = 0;
     qs = [];
     for (let i = 0; i < C.rounds; i++) { const prev = qs[qs.length - 1]; qs.push(makeRound(prev && prev.t.f, prev && prev.n)); }
@@ -365,7 +376,7 @@ Shih.loadUnit().then(UNIT => {
     $('help').textContent = (C.help[level - 1] || C.help[0]).replace('{s}', C.seconds);
     $('clock').textContent = fmt(C.seconds); $('clock').classList.remove('low');
     $('winMsg').hidden = true; $('endMsg').hidden = true;
-    window.__buy = { q: () => qs[qi], bags: () => bags, basket: () => basket, qs: () => qs, level: () => level, same };
+    window.__buy = { q: () => qs[qi], bags: () => bags, basket: () => basket, qs: () => qs, level: () => level, zone: () => zone, same };
     wait();
   }
   function start() {

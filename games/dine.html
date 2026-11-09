@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>餐厅对话框 Restaurant Chat</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 餐厅对话框：服务生（左）和顾客（右）的对话，把句子卡拖进空的泡泡（跟学校的对话框一样）。
+   看上面的太阳：早上好还是下午好？看帐单：一共几块？
+   Level 1（二年级）：早上好！你有没有＿＿？有。请给我＿＿。谢谢你！不客气！一共几块钱？一共＿块。（Level 2、3 问「一共多少钱？」）
+   顺序：打招呼 → 先要餐具（请给我＿＿。好，给你。）→ 点菜 → 上菜 → 谢谢 → 🍽️ 吃完了 → 帐单、一共多少钱 → 再见
+   Level 2（三年级）：你想吃什么？我想吃 A 和 B。你想喝什么？我不知道……请给我＿＿。
+   Level 3（四年级）：你要吃什么小菜／主菜／米饭？我要吃＿＿。多少钱？（旁边有分三栏的图片小菜单；陷阱是同一栏但帐单上没有的菜）
+   托盘：顾客那句是空格的话，托盘上先放好他要的图（提示学生该填哪一句）；顾客那句写出来了，学生就要自己拉图
+   上菜托盘：顾客点了东西，服务生那边出现托盘，把对的菜、饮料、餐具的图拉进去（图片里有一两样不对的）
+   👂 听：别的泡泡只有 🔊，点一下听（多一颗金币）
+   用法：dine.html?unit=restaurant */
+body.game { background: #FFF3E6; }
+.wrap { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 14px; align-items: start; }
+.wrap .side { position: sticky; top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.wrap .bank { flex-direction: column; align-items: stretch; gap: 7px; padding: 8px; }
+@media (max-width: 760px) { .wrap { grid-template-columns: 1fr; } .wrap .bank { flex-direction: row; } .wrap .side { position: static; } }
+.chatBox { background: var(--card); border: 3px solid var(--ink); border-radius: 22px; padding: 8px 14px; display: flex; flex-direction: column; gap: 2px; position: relative; max-width: 660px; width: 100%; justify-self: center; }
+.clock { width: 92px; position: absolute; left: 50%; top: 6px; transform: translateX(-50%); }
+.clock svg { width: 100%; height: auto; display: block; }
+.row { display: flex; align-items: flex-end; gap: 8px; min-width: 0; }
+.row.B { flex-direction: row-reverse; }
+.row.A + .row.B, .row.B + .row.A { margin-top: -14px; }
+.who { display: flex; flex-direction: column; align-items: center; width: 54px; flex: none; }
+.who svg { width: 44px; height: 44px; }
+.who .nm { font: 700 11px var(--f-latin); line-height: 1; text-align: center; }
+.say { display: flex; flex-direction: column; min-width: 0; max-width: 78%; }
+.row.B .say { align-items: flex-end; }
+.bub { position: relative; border-radius: 18px; padding: 3px 12px; border: 3px solid; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 2px 4px; }
+.row.A .bub { background: #D6EEF5; border-color: #7FC4D8; }
+.row.B .bub { background: #FFF6D6; border-color: #E9B949; }
+.bub .ruby .py { font-size: 11px; } .bub .ruby .zh { font-size: 21px; }
+.bub > .ruby { flex-wrap: wrap; }
+.bub .ear { font-size: 22px; cursor: pointer; padding: 0 6px; }
+.say .en { display: none !important; } /* 不给英文（给了就不用读中文了） */
+.say .en0 { font-size: 11px; color: var(--muted); padding: 0 6px; min-height: 13px; line-height: 1.2; }
+.bub .dropSlot { min-width: 130px; min-height: 40px; border-color: #7FC4D8; background: #fff; }
+.bub .dropSlot.filled { border-color: var(--me); background: var(--me-done); }
+.bub.slotted { padding: 4px; }
+.top { background: var(--card); border: 2px solid var(--line); border-radius: 18px; padding: 6px 12px; display: flex; flex-direction: column; gap: 4px; }
+.qnum { font-weight: 700; color: var(--sea-ink); background: #D6EEF5; border: 2px solid #7FC4D8; border-radius: 999px; padding: 2px 12px; font-size: 15px; align-self: flex-start; }
+.bill { border: 2px dashed #2B2B2B; border-radius: 8px; padding: 4px 8px; background: #FFFFFF; }
+.bill .ttl { font: 700 13px var(--f-latin); display: flex; align-items: flex-end; gap: 6px; }
+.bill .ttl .ruby .py { font-size: 10px; } .bill .ttl .ruby .zh { font-size: 16px; }
+.bill .r { display: flex; align-items: center; gap: 6px; }
+.bill .r svg { width: 30px; height: 30px; flex: none; }
+.bill .r .ruby { flex: 1; } .bill .r .ruby .py { font-size: 9px; } .bill .r .ruby .zh { font-size: 15px; }
+.bill .r b { font: 800 18px var(--f-latin); }
+.bank .wcard { min-height: 48px; padding: 4px 10px; }
+.bank .wcard .zh { font-size: 20px; } .bank .wcard .py { font-size: 10px; }
+.bank .wcard .ruby { flex-wrap: wrap; justify-content: center; gap: 1px; }
+.bank .wcard.long .zh { font-size: 16px; } .bank .wcard.long .py { font-size: 9px; }
+.playAll { align-self: flex-start; }
+.divider { display: flex; align-items: center; gap: 10px; margin: 10px 0 4px; font: 700 13px var(--f-latin); color: var(--muted); }
+.divider::before, .divider::after { content: ''; flex: 1; border-top: 3px dashed #C9C2B4; }
+.divider > span { display: flex; align-items: flex-end; gap: 4px; white-space: nowrap; }
+.divider .ruby .py { font-size: 10px; } .divider .ruby .zh { font-size: 17px; color: var(--ink); }
+.mini { border: 2px solid #C98B4E; border-radius: 10px; background: #FFFBEF; padding: 4px 6px; }
+.mini .ttl { font: 700 12px var(--f-latin); display: flex; align-items: flex-end; gap: 4px; color: #B4471C; }
+.mini .ttl .ruby .py { font-size: 9px; } .mini .ttl .ruby .zh { font-size: 15px; color: #B4471C; }
+.mini .sec { border-top: 1px dashed #E2C08A; padding: 2px 0; }
+.mini .h { display: flex; align-items: flex-end; gap: 4px; } .mini .h .ruby .py { font-size: 9px; } .mini .h .ruby .zh { font-size: 15px; } .mini .h small { font: 600 10px var(--f-latin); color: var(--muted); }
+.mini .its { display: flex; flex-wrap: wrap; gap: 4px; padding: 2px 0 4px; }
+.mini .it { display: flex; align-items: center; justify-content: center; background: #FFFFFF; border: 2px solid #F2D6A8; border-radius: 10px; width: 52px; height: 52px; } .mini .it svg { width: 46px; height: 46px; }
+/* 上菜托盘：服务生那边一个托盘，把菜和餐具的图拉进去 */
+.tray { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; align-self: flex-start; background: #C98B4E; border: 3px solid #2B2B2B; border-radius: 26px; padding: 6px 12px; }
+.tray .cap { font: 700 12px var(--f-latin); color: #FFF6E5; display: flex; align-items: flex-end; gap: 4px; width: 100%; }
+.tray .cap .ruby .py { font-size: 9px; color: #FFE7C2; } .tray .cap .ruby .zh { font-size: 15px; color: #FFFFFF; }
+.tray .dropSlot { width: 56px; height: 56px; min-width: 0; min-height: 0; padding: 0; flex: none; border: 3px dashed #FFE7C2; border-radius: 50%; background: rgba(255,255,255,.25); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.tray .dropSlot.hover, .tray .dropSlot.armed { border-style: solid; border-color: #F5C531; background: rgba(255,255,255,.5); }
+.tray .dropSlot.filled { border-style: solid; border-color: #FFFFFF; background: #FFFFFF; }
+.tray .dropSlot svg, .tray .given svg { width: 48px; height: 48px; }
+.tray .given { width: 56px; height: 56px; border: 3px solid #FFFFFF; border-radius: 50%; background: #FFFFFF; display: flex; align-items: center; justify-content: center; }
+.pics { background: var(--card); border: 2px solid var(--line); border-radius: 18px; padding: 6px 8px 8px; }
+.pics .cap { font: 700 12px var(--f-latin); color: var(--muted); display: flex; align-items: flex-end; gap: 4px; margin-bottom: 4px; }
+.pics .cap .ruby .py { font-size: 9px; } .pics .cap .ruby .zh { font-size: 15px; }
+.pics .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.pics .wcard { padding: 2px; min-height: 0; min-width: 0; width: auto; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; }
+.pics .wcard svg { width: 100%; height: 100%; pointer-events: none; }
+@media (min-width: 900px) and (max-height: 720px) {
+  .who { width: 46px; } .who svg { width: 36px; height: 36px; }
+  .bub .ruby .py { font-size: 10px; } .bub .ruby .zh { font-size: 18px; } .bub .dropSlot { min-height: 34px; }
+  .say .en { font-size: 10px; min-height: 11px; } .clock { width: 58px; }
+  .bank .wcard { min-height: 40px; } .bank .wcard .zh { font-size: 18px; }
+}
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill" id="timer">0:00</span>
+      <button class="ctl" id="timerBtn" type="button"></button>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="wrap">
+        <div class="chatBox" id="chat"></div>
+        <div class="side"><div class="top" id="sideTop"></div><div class="bank" id="bank"></div><div class="pics" id="pics" hidden><div class="cap"><span class="ruby" id="picsCap"></span> Serve: drag to the tray</div><div class="grid" id="picGrid"></div></div></div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/numbers.js"></script>
+<script src="../shared/kids.js"></script>
+<script src="../units/restaurant/art.js"></script>
+<script src="../shared/rest.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const KIDS = window.ART, RART = window.RART, N = window.ShihNum;
+  const C = UNIT.dine;
+  const $ = id => document.getElementById(id);
+  const { list, pick, take, shuffle } = Rest;
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  const chat = $('chat'), bank = $('bank');
+  $('picsCap').innerHTML = Shih.ruby('上菜', 'shàng cài');
+  const timerEl = $('timer'), timer = Shih.timer(timerEl);
+  const timerOn = Shih.toggle($('timerBtn'), 'timer', '⏱ Timer on', '⏱ Timer off', true, on => { timerEl.hidden = !on; });
+  Shih.soundButton($('soundBtn'));
+  const mode = Rest.modeRow(() => { buildLevels(); setup(); });
+  let level = Shih.startLevel('dineLevel', UNIT.levels.length);
+  let paintLevels = () => {};
+  function buildLevels() { paintLevels = Shih.levelButtons($('levels'), UNIT.levels, level, null, lv => { level = lv; Shih.set('dineLevel', lv); setup(); }); }
+  buildLevels();
+  const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+
+  // 一句话：{ zh, py, en }
+  const T = (zh, py, en) => ({ zh, py, en });
+  const kuaiP = n => (n === 2 ? [['两', 'liǎng']] : N.parts(n));
+  const total = n => { const p = kuaiP(n); return T(`一共${p.map(x => x[0]).join('')}块。`, `yí gòng ${p.map(x => x[1]).join(' ')} kuài`, `It's $${n} in all.`); };
+  const give = ws => { const L = list(ws); return T(`请给我${L.zh}。`, `qǐng gěi wǒ ${L.py}`, `Please give me ${ws.map(w => w.en).join(' and ')}.`); };
+  const pool = k => UNIT.pool(level, k), tools = () => UNIT.pool(1, 'tool');
+  const THANKS = T('谢谢你！', 'xiè xie nǐ', 'Thank you!'), WELCOME = T('不客气！', 'bú kè qi', "You're welcome!"), OK = T('好。', 'hǎo', 'OK.');
+
+  // ---- 一段对话：A = 服务生、B = 顾客 ----
+  function makeChat() {
+    const [A, B] = shuffle(KIDS.people);
+    const morning = Math.random() < 0.5;
+    const g = KIDS.GREET[morning ? 'morning' : 'afternoon'], g2 = KIDS.GREET[morning ? 'afternoon' : 'morning'];
+    const greet = T(g.zh + '！', g.py, g.en + '!');
+    const lines = [], extra = [];
+    let bill = [];
+    const add = (who, t, o) => { lines.push(Object.assign({ who, t }, o || {})); return lines.length - 1; };
+    if (level === 1) {
+      const f = pick(pool('food')), d = pick(pool('drink')), u = pick(tools());
+      add('A', greet, { blank: true }); add('B', greet, { echo: true });
+      // 一坐下来先要餐具
+      add('B', give([u])); add('A', T('好，给你。', 'hǎo gěi nǐ', 'OK, here you go.')); add('A', null, { tray: [u] });
+      const q = add('B', T(`你有没有${f.zh}？`, `nǐ yǒu méi yǒu ${f.py}`, `Do you have ${f.en}?`));
+      add('A', T('有。', 'yǒu', 'Yes.'));
+      const o = add('B', give([f])); add('B', give([d]));   // 二年级不用「和」：分两句
+      add('A', OK); const tr = add('A', null, { tray: [f, d] });   // 上菜
+      add('B', THANKS); add('A', WELCOME);
+      bill = [{ w: f, p: rnd(2, 6) }, { w: d, p: rnd(1, 3) }];
+      add('X', null, { divider: true }); add('B', T('请给我帐单。', 'qǐng gěi wǒ zhàng dān', 'The bill, please.')); add('A', OK);
+      add('B', T('一共几块钱？', 'yí gòng jǐ kuài qián', 'How much is it in all?'));
+      add('A', total(bill[0].p + bill[1].p), { blank: true, sum: true });
+      add('B', T('谢谢你！再见！', 'xiè xie nǐ zài jiàn', 'Thank you! Bye!')); add('A', T('再见！', 'zài jiàn', 'Bye!'));
+      // 还要空：问「有没有」、请给我（食物）
+      lines[q].blank = Math.random() < 0.5;
+      if (lines[q].blank) { const o2 = pick(pool('food').filter(x => x !== f)); extra.push(T(`你有没有${o2.zh}？`, `nǐ yǒu méi yǒu ${o2.py}`, '')); }
+      if (!lines[q].blank) { lines[o].blank = true; extra.push(give([pick(pool('food').filter(x => x !== f))])); }
+      extra.push(T(g2.zh + '！', g2.py, ''), total(bill[0].p + bill[1].p + 1));
+      // 顾客说的那句是空格（要学生填）→ 托盘上那样东西先放好，当作提示
+      lines[tr].given = lines[o].blank ? [f.zh] : [];
+    } else if (level === 2) {
+      const fs = take(pool('food').filter(w => w.menu !== '汤'), 2), d = pick(pool('drink')), us = take(tools(), 2);
+      add('A', T(`${g.zh}！`, g.py, `${g.en}!`), { blank: true }); add('B', greet, { echo: true });
+      // 一坐下来先要餐具
+      add('B', give(us)); add('A', T('好，给你。', 'hǎo gěi nǐ', 'OK, here you go.')); add('A', null, { tray: us });
+      add('A', T('你想吃什么？', 'nǐ xiǎng chī shén me', 'What would you like to eat?'));
+      const L = list(fs);
+      const ans = add('B', T(`我想吃${L.zh}。`, `wǒ xiǎng chī ${L.py}`, `I'd like ${fs[0].en} and ${fs[1].en}.`));
+      add('A', T('好。你想喝什么？', 'hǎo nǐ xiǎng hē shén me', 'OK. What would you like to drink?'));
+      const dunno = Math.random() < 0.5;
+      const dl = add('B', dunno ? T(`我不知道……请给我${d.zh}。`, `wǒ bù zhī dào qǐng gěi wǒ ${d.py}`, `I don't know... Please give me ${d.en}.`) : give([d]));
+      add('A', OK); const tr = add('A', null, { tray: fs.concat([d]) });
+      add('B', THANKS); add('A', WELCOME, { blank: Math.random() < 0.5 });
+      bill = fs.map(w => ({ w, p: rnd(4, 15) })).concat([{ w: d, p: rnd(1, 4) }]);
+      add('X', null, { divider: true }); add('B', T('请给我帐单。', 'qǐng gěi wǒ zhàng dān', 'The bill, please.')); add('A', OK);
+      add('B', T('一共多少钱？', 'yí gòng duō shǎo qián', 'How much is it in all?'));
+      add('A', total(bill.reduce((s, x) => s + x.p, 0)), { blank: true, sum: true });
+      add('B', T('谢谢你！再见！', 'xiè xie nǐ zài jiàn', 'Thank you! Bye!')); add('A', T('再见！', 'zài jiàn', 'Bye!'));
+      lines[ans].blank = true;
+      const other = take(pool('food').filter(x => !fs.includes(x) && x.menu !== '汤'), 2);
+      extra.push(T(`${g2.zh}！`, g2.py, ''), T(`我想吃${list(other).zh}。`, `wǒ xiǎng chī ${list(other).py}`, ''), total(bill.reduce((s, x) => s + x.p, 0) + 2));
+      if (!lines.some(l => l.blank && l.t === WELCOME)) lines[dl].blank = Math.random() < 0.5;
+      lines[tr].given = fs.map(w => w.zh).concat(lines[dl].blank ? [d.zh] : []);
+    } else {
+      // 点菜的顺序：小菜 → 主菜 → 米饭（三个里面挑两个，顺序不变）
+      const cols3 = UNIT.menuCols.filter(c => c.zh !== '汤'), skip = Math.floor(Math.random() * cols3.length);
+      const cats = cols3.filter((c, k) => k !== skip);
+      const us = take(tools(), 2);
+      add('A', T(`${g.zh}！`, g.py, `${g.en}!`), { blank: true }); add('B', greet, { echo: true });
+      // 一坐下来先要餐具
+      add('B', give(us)); add('A', T('好，给你。', 'hǎo gěi nǐ', 'OK, here you go.')); add('A', null, { tray: us });
+      cats.forEach((c, i) => {
+        const inCat = pool('food').filter(w => w.menu === c.zh);
+        const order = take(inCat, Math.min(inCat.length, i === 0 ? 1 : 2));
+        add('A', i === 0 ? T(`请问你要吃什么${c.zh}？`, `qǐng wèn nǐ yào chī shén me ${c.py}`, `What ${c.en.toLowerCase()} would you like?`) : T(`你要吃什么${c.zh}？`, `nǐ yào chī shén me ${c.py}`, `What ${c.en.toLowerCase()} would you like?`), { blank: i === 1 && Math.random() < 0.4 });
+        const L = list(order);
+        add('B', T(`我要吃${L.zh}。`, `wǒ yào chī ${L.py}`, `I want ${order.map(w => w.en).join(' and ')}.`), { blank: i === 0 });
+        add('A', OK);   // 服务生听到了：好。
+        add('A', null, { tray: order, given: i === 0 ? order.map(w => w.zh) : [] });   // 顾客那句是空格 → 托盘先放好图（提示）
+        bill.push(...order.map(w => ({ w, p: rnd(5, 18) })));
+        // 陷阱：同一栏、但帐单上没有的菜（看帐单就知道，不用懂分类）
+        if (i === 0) { const same = inCat.filter(w => !order.includes(w)); const wrong = pick(same.length ? same : pool('food').filter(w => !order.includes(w))); extra.push(T(`我要吃${wrong.zh}。`, `wǒ yào chī ${wrong.py}`, '')); }
+      });
+      add('B', THANKS); add('A', WELCOME);
+      const sum = bill.reduce((s, x) => s + x.p, 0);
+      add('X', null, { divider: true }); add('B', T('请给我帐单。', 'qǐng gěi wǒ zhàng dān', 'The bill, please.')); add('A', OK);
+      add('B', T('一共多少钱？', 'yí gòng duō shǎo qián', 'How much is it in all?'));
+      add('A', total(sum), { blank: true, sum: true });
+      add('B', T('谢谢你！再见！', 'xiè xie nǐ zài jiàn', 'Thank you! Bye!')); add('A', T('再见！', 'zài jiàn', 'Bye!'));
+      extra.push(total(sum + 10));
+      if (!lines.some(l => l.blank && l.t && /你要吃什么/.test(l.t.zh))) extra.push(T(`${g2.zh}！`, g2.py, ''));
+    }
+    // 多余的字卡：一定有一张「错的一共几块」（两个钱数选一个），再加一张别的
+    const wt = extra.filter(t => /^一共/.test(t.zh)), other = shuffle(extra.filter(t => !/^一共/.test(t.zh)));
+    return { A, B, morning, lines, bill, extra: wt.slice(0, 1).concat(other.slice(0, 1)) };
+  }
+
+  let chats = [], ci = 0, done = 0, all = 0, busy = false;
+  const listen = () => mode() === 'listen';
+  const trayHTML = (L, i) => `<div class="tray"><div class="cap"><span class="ruby">${Shih.ruby('上菜', 'shàng cài')}</span> Serve</div>` +
+    L.tray.map((w, k) => (L.given || []).includes(w.zh) ? `<span class="given">${RART.svg(w.zh)}</span>` : `<span class="dropSlot" data-i="${i}" data-k="${k}"></span>`).join('') + `</div>`;
+  const lineHTML = (L, i) => L.tray ? trayHTML(L, i) : L.blank ? `<span class="dropSlot" data-i="${i}"></span>`
+    : L.echo ? `<span class="echo" data-i="${i}">…</span>`
+    : listen() ? `<span class="ear" data-say="${i}" aria-label="Listen">🔊</span>` : Rest.say(L.t.zh, L.t.py) + altOf(L.t);
+  const altOf = t => UNIT.words.filter(w => w.alt && t.zh.includes(w.zh)).map(Rest.alt).join('');
+  // Level 3：小菜单，分成小菜、主菜、米饭三栏，每栏有图（分类用看的）
+  function miniMenu() {
+    return `<div class="mini"><div class="ttl"><span class="ruby">${Shih.ruby('菜单', 'cài dān')}</span> Menu</div>` +
+      UNIT.menuCols.filter(col => col.zh !== '汤').map(col => `<div class="sec"><span class="h"><span class="ruby">${Shih.ruby(col.zh, col.py)}</span><small>${col.en}</small></span>` +
+        `<div class="its">${UNIT.pool(3, 'food').filter(w => w.menu === col.zh).map(w => `<span class="it" aria-label="${Shih.esc(w.en)}">${RART.svg(w.zh)}</span>`).join('')}</div></div>`).join('') + `</div>`;
+  }
+  function show() {
+    const c = chats[ci];
+    busy = false;
+    chat.innerHTML = `<div class="clock">${KIDS.time(c.morning ? 'morning' : 'afternoon')}</div><div style="height:70px"></div>`;
+    $('sideTop').innerHTML = `<span class="qnum">${ci + 1} / ${chats.length}</span>` +
+      `<div class="bill"><div class="ttl"><span class="ruby">${Shih.ruby('帐单', 'zhàng dān')}</span> Bill</div>` +
+      c.bill.map(x => `<div class="r">${RART.svg(x.w.zh)}<span class="ruby">${Shih.ruby(x.w.zh, x.w.py)}</span><b>$${x.p}</b></div>`).join('') + `</div>` +
+      (level === 3 ? miniMenu() : '') +
+      (listen() ? `<button class="ctl playAll" id="playAll" type="button">▶ Play the chat</button>` : '');
+    if (listen()) $('playAll').addEventListener('click', () => Rest.speak(c.lines.filter(L => !L.blank && !L.tray && L.t).map(L => L.t.zh).join('')));
+    c.lines.forEach((L, i) => {
+      if (L.divider) {
+        const d = document.createElement('div'); d.className = 'divider';
+        d.innerHTML = `<span>🍽️ <span class="ruby">${Shih.ruby('吃完了', 'chī wán le')}</span> After the meal</span>`;
+        chat.appendChild(d); return;
+      }
+      const p = L.who === 'A' ? c.A : c.B;
+      const row = document.createElement('div');
+      row.className = 'row ' + L.who;
+      row.innerHTML = `<div class="who">${KIDS.kid(p, i < 2 ? 'wave' : 'good')}<span class="nm">${L.who === 'A' ? 'Server' : Shih.esc(p.first)}</span></div>` +
+        (L.tray ? `<div class="say">${trayHTML(L, i)}</div>` :
+        `<div class="say"><div class="bub${L.blank ? ' slotted' : ''}">${lineHTML(L, i)}</div><span class="en" data-en="${i}">${L.blank || L.echo || listen() ? '' : Shih.esc(L.t.en)}</span></div>`);
+      chat.appendChild(row);
+    });
+    chat.querySelectorAll('.ear').forEach(e => e.addEventListener('click', () => Rest.speak(c.lines[+e.dataset.say].t.zh)));
+    const need = c.lines.filter(L => L.blank).map(L => L.t);
+    bank.innerHTML = '';
+    const cards = shuffle(need.concat(c.extra)).map(t => {
+      const el = document.createElement('div');
+      el.className = 'wcard' + (Array.from(t.zh).length > 9 ? ' long' : ''); el.dataset.zh = t.zh;
+      el.innerHTML = `<span class="ruby">${Shih.rubyText(t.zh, t.py)}</span>`;
+      bank.appendChild(el);
+      return el;
+    });
+    const dnd = Shih.dragCards(cards, {
+      slots: () => [...chat.querySelectorAll('.bub .dropSlot:not(.filled)')],
+      accept(card, slot) {
+        const i = +slot.dataset.i, L = c.lines[i];
+        if (card.dataset.zh !== L.t.zh) return false;
+        card.classList.add('used');
+        slot.classList.add('filled');
+        slot.innerHTML = Rest.say(L.t.zh, L.t.py);
+        chat.querySelector(`[data-en="${i}"]`).textContent = L.t.en;
+        // 打招呼填好了，顾客才回话
+        const echo = c.lines.findIndex(x => x.echo);
+        if (i === 0 && echo >= 0) {
+          chat.querySelector(`.echo[data-i="${echo}"]`).outerHTML = Rest.say(c.lines[echo].t.zh, c.lines[echo].t.py);
+          chat.querySelector(`[data-en="${echo}"]`).textContent = c.lines[echo].t.en;
+        }
+        Rest.speak(L.t.zh);
+        done++; update();
+        checkDone();
+        return true;
+      }
+    });
+    chat.querySelectorAll('.bub .dropSlot').forEach(s => s.addEventListener('click', () => dnd.tapSlot(s)));
+    // ---- 上菜：图片拉进托盘 ----
+    const trays = c.lines.map((L, i) => L.tray ? i : -1).filter(i => i >= 0);
+    const wantAll = trays.flatMap(i => c.lines[i].tray.filter(w => !(c.lines[i].given || []).includes(w.zh)));
+    $('pics').hidden = !wantAll.length;
+    const placed = {};
+        const pool = UNIT.pool(level, 'food').concat(UNIT.pool(level, 'drink'), UNIT.pool(1, 'tool'));
+    const wrong = shuffle(pool.filter(w => !trays.some(i => c.lines[i].tray.includes(w)))).slice(0, wantAll.length > 4 ? 3 : 2);
+    $('picGrid').innerHTML = '';
+    const pcards = shuffle(wantAll.concat(wrong)).map(w => {
+      const el = document.createElement('div');
+      el.className = 'wcard'; el.dataset.zh = w.zh; el.setAttribute('aria-label', w.en);
+      el.innerHTML = RART.svg(w.zh);
+      $('picGrid').appendChild(el);
+      return el;
+    });
+    const pdnd = Shih.dragCards(pcards, {
+      slots: () => [...chat.querySelectorAll('.tray .dropSlot:not(.filled)')],
+      accept(card, slot) {
+        const i = +slot.dataset.i, gv = c.lines[i].given || [], want = c.lines[i].tray.map(w => w.zh).filter(z => !gv.includes(z)), got = placed[i] || (placed[i] = []);
+        const zh = card.dataset.zh;
+        if (want.filter(z => z === zh).length <= got.filter(z => z === zh).length) return false;
+        got.push(zh); card.classList.add('used');
+        slot.classList.add('filled'); slot.innerHTML = RART.svg(zh);
+        Rest.speak(zh);
+        done++; update();
+        checkDone();
+        return true;
+      }
+    });
+    chat.querySelectorAll('.tray .dropSlot').forEach(s => s.addEventListener('click', () => pdnd.tapSlot(s)));
+    function checkDone() {
+        if (!chat.querySelector('.dropSlot:not(.filled)') && !busy) {
+          busy = true;
+          ci++;
+          if (ci === chats.length) {
+            const ms = timer.stop();
+            $('winTime').textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
+            setTimeout(() => { $('winMsg').hidden = false; }, 500);
+          } else setTimeout(show, 1200);
+        }
+    }
+  }
+  function update() { $('score').textContent = `${done} / ${all}`; }
+
+  const wait = Shih.startCover($('playArea'), () => { if (timerOn()) timer.start(); });
+  function setup() {
+    paintLevels(level);
+    $('help').textContent = (listen() ? 'Tap 🔊 to hear each bubble. ' : '') + 'Look at the sun ☀️ and the bill 🧾. Drag the cards into the empty bubbles. When the customer orders, drag the food and tableware onto the tray 🍽️.';
+    chats = Array.from({ length: C.rounds || 3 }, makeChat);
+    all = chats.reduce((s, c) => s + c.lines.filter(L => L.blank).length + c.lines.reduce((t, L) => t + (L.tray ? L.tray.filter(w => !(L.given || []).includes(w.zh)).length : 0), 0), 0);
+    ci = 0; done = 0;
+    timer.reset(); $('winMsg').hidden = true; update();
+    show();
+    window.__dine = { chat: () => chats[ci], level: () => level, mode };
+    wait();
+  }
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>
