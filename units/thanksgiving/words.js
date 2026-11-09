@@ -1,5 +1,5 @@
 /* =====================================================================
-   单元：感恩节 Thanksgiving（节日岛 → 感恩节市场）
+   单元：感恩节 Thanksgiving（节日岛 → 感恩节）
    ---------------------------------------------------------------------
    快手买一买 games/shop.html?unit=thanksgiving、市场算一算 games/calc.html?unit=thanksgiving 读这一份。
    图在 units/thanksgiving/art.js（每个字一张图，名字要跟 zh 一模一样）。

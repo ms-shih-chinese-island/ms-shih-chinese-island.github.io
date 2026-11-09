@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>猜灯谜</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 猜灯谜：上面挂一排灯笼，每个灯笼一个谜语；下面架子上坐着生肖动物。
+   点一个灯笼，谜语会打开（也会念）；再点对的动物，圈圈就飞过去套上；点错了圈圈掉下去（不扣分，只是浪费时间）。
+   谜语只用学过的字（颜色、身体部位、数字、第几个生肖），游戏会自己挑线索，保证只有一个答案。
+   时间内套中的数量达标就有金币。设定在 units/cny/words.js 的 UNIT.riddle */
+body.game { background: #FFF1EC; }
+.stage { max-width: 980px; margin: 0 auto; background: #FFF6E8; border: 4px solid #2B2B2B; border-radius: 24px; padding: 10px 16px 14px; box-shadow: 0 6px 0 #C0392B; }
+.lamps { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+.lamps button { position: relative; width: 66px; height: 78px; border: none; background: none; cursor: pointer; padding: 0; }
+.lamps button svg { width: 100%; height: 100%; display: block; }
+.lamps button.on > svg { filter: drop-shadow(0 0 8px #F5C531); transform: scale(1.12); }
+.lamps button.done { cursor: default; }
+.lamps button.done > svg { opacity: .45; }
+.lamps button .solved { position: absolute; left: 12%; top: 22%; width: 76%; }
+.lamps button .solved svg { width: 100%; height: auto; }
+.lamps button .n { position: absolute; left: 0; right: 0; top: 30px; text-align: center; font: 800 20px var(--f-latin); color: #FFE27A; }
+.riddle { background: #D6453A; border: 4px solid #2B2B2B; border-radius: 22px; padding: 10px 18px; margin: 0 auto 10px; max-width: 760px; text-align: center; color: #FFFFFF; font-size: 26px; font-weight: 700; min-height: 54px; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.riddle .ruby .py { font-size: 13px; color: #FFE7A3; } .riddle .ruby .zh { font-size: 26px; color: #FFFFFF; }
+.riddle .again { background: #FFF6D6; border: 2px solid #2B2B2B; border-radius: 10px; font-size: 18px; cursor: pointer; }
+.shelf { display: grid; gap: 8px 10px; }
+.shelf.c3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.shelf.c4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.shelf.c6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.pet { position: relative; background: #FFFFFF; border: 3px solid #2B2B2B; border-bottom-width: 8px; border-bottom-color: #8A5A2B; border-radius: 14px; cursor: pointer; display: flex; justify-content: center; }
+.pet svg { width: 100%; max-width: 120px; height: auto; display: block; }
+.shelf.c6 .pet svg { max-width: 100px; }
+.pet:hover { background: #FFF6D6; }
+.pet.oops { animation: shake .35s; }
+.pet.got { cursor: default; background: #E4F3E6; }
+.pet .hoop { position: absolute; left: 50%; bottom: 10%; width: 70%; max-width: 130px; aspect-ratio: 3 / 1; transform: translateX(-50%); border: 6px solid #F5C531; border-radius: 50%; box-shadow: 0 0 0 2px #2B2B2B, inset 0 0 0 2px #2B2B2B; pointer-events: none; }
+.rings { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; font: 700 18px var(--f-latin); }
+.rings .r { width: 34px; height: 14px; border: 5px solid #F5C531; border-radius: 50%; box-shadow: 0 0 0 2px #2B2B2B, inset 0 0 0 2px #2B2B2B; }
+.rings .r.used { opacity: .25; }
+.fly { position: fixed; width: 60px; height: 22px; border: 6px solid #F5C531; border-radius: 50%; box-shadow: 0 0 0 2px #2B2B2B, inset 0 0 0 2px #2B2B2B; z-index: 60; pointer-events: none; transition: left .45s ease-out, top .45s ease-out, transform .45s, opacity .4s; }
+.timer.low { background: #FCE3E0; border-color: var(--bad); }
+.timeUp { text-align: center; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 10px; margin: 0 auto 10px; max-width: 640px; font: 700 18px var(--f-latin); display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.timeUp .ruby .py { font-size: 12px; } .timeUp .ruby .zh { font-size: 26px; }
+@media (max-width: 760px) { .shelf.c4, .shelf.c6 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .riddle, .riddle .ruby .zh { font-size: 20px; } .lamps button { width: 48px; height: 58px; } }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill timer" id="timer">0:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="timeUp" id="timeUp" hidden><span class="ruby" id="timeUpRuby"></span><span id="timeUpTxt"></span><button class="ctl" id="again2" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="stage">
+        <div class="lamps" id="lamps"></div>
+        <div class="riddle" id="q"></div>
+        <div class="shelf" id="shelf"></div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../units/cny/art.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.riddle, Z = UNIT.zodiac, ORD = UNIT.ordinals, ZART = window.ZART;
+  const $ = id => document.getElementById(id);
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  $('timeUpRuby').innerHTML = Shih.ruby('时间到了', 'shí jiān dào le');
+  Shih.soundButton($('soundBtn'));
+
+  const timerEl = $('timer');
+  const LIMIT = lv => C.time[lv - 1] * 1000;
+  let left = 0, lastT = 0, tick = 0, running = false;
+  const fmt = ms => { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  function loop() {
+    if (!running) return;
+    const now = performance.now(); left -= now - lastT; lastT = now;
+    timerEl.textContent = '⏱ ' + fmt(Math.max(0, left)); timerEl.classList.toggle('low', left < 15000);
+    if (left <= 0) { running = false; $('timeUpTxt').textContent = `Time's up! You got ${hits} of ${goal}. Try again!`; $('timeUp').hidden = false; Shih.speak('时间到了'); return; }
+    tick = requestAnimationFrame(loop);
+  }
+
+  const LEVELS = [{ note: '8 animals + pinyin' }, { note: '8 animals · 2 clues + pinyin' }, { note: '12 animals · which one?' }];
+  let level = Shih.startLevel('riddleLevel', 3);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('riddleLevel', lv); setup(); });
+  const HELP = ['Read the riddle. Tap the right animal to throw a ring! (Tap a lantern to pick another riddle.)',
+                'Read BOTH clues. Tap the right animal to throw a ring!',
+                'Which zodiac animal is it? Tap it to throw a ring!'];
+  const oops = el => { el.classList.remove('oops'); void el.offsetWidth; el.classList.add('oops'); setTimeout(() => el.classList.remove('oops'), 400); };
+
+  let pets = [], hits = 0, goal = 0, lamps = [], cur = null, busy = false;
+  const ordClue = w => { const i = Z.indexOf(w); return { zh: `我是${ORD[i].zh}生肖。`, py: `wǒ shì ${ORD[i].py} shēng xiào.`, who: [w.zh], ord: true }; };
+  const fits = (c, w) => c.who.includes(w.zh);
+  // 在架子上的动物里，这几句线索一起看，只有 w 符合
+  const unique = (cs, w) => cs.every(c => fits(c, w)) && pets.filter(p => cs.every(c => fits(c, p.w))).length === 1;
+  function riddleFor(w) {
+    const mine = shuffle(C.clues.filter(c => fits(c, w)));
+    let cs;
+    if (level === 1) cs = [mine.find(c => unique([c], w)) || ordClue(w)];
+    else if (level === 2) {
+      // 两句：最好每一句自己都猜不出来，合起来才猜得出来
+      const pairs = [];
+      const sub = (a, b) => a.who.every(z => b.who.includes(z));
+      const same = (a, b) => sub(a, b) || sub(b, a);   // 一句已经包含在另一句里（例如「两只脚」跟「两只手、两只脚」），不要一起出
+      mine.forEach((a, i) => mine.slice(i + 1).forEach(b => { if (!same(a, b)) pairs.push([a, b]); }));
+      cs = pairs.find(p => unique(p, w) && !unique([p[0]], w) && !unique([p[1]], w)) || pairs.find(p => unique(p, w));
+      if (!cs) cs = [mine[0], ordClue(w)].filter(Boolean);
+    } else cs = mine.length ? [ordClue(w), mine[0]] : [ordClue(w)];
+    return { clue: cs.map(c => c.zh).join(''), zh: cs.map(c => c.zh).join('') + '我是＿＿？', py: cs.map(c => c.py).join(' ') + ' wǒ shì' };
+  }
+  const lampSvg = () => `<svg viewBox="0 0 66 78"><path d="M33 0 L33 8" stroke="#2B2B2B" stroke-width="3"/><rect x="21" y="7" width="24" height="7" rx="2" fill="#F5C531" stroke="#2B2B2B" stroke-width="3"/>` +
+    `<ellipse cx="33" cy="40" rx="30" ry="27" fill="#D6453A" stroke="#2B2B2B" stroke-width="3.5"/><path d="M33 13 Q14 40 33 67 M33 13 Q52 40 33 67" fill="none" stroke="#B5302A" stroke-width="2"/>` +
+    `<rect x="21" y="64" width="24" height="7" rx="2" fill="#F5C531" stroke="#2B2B2B" stroke-width="3"/><path d="M33 71 L33 78" stroke="#F5C531" stroke-width="3"/></svg>`;
+  function paintLamps() {
+    $('lamps').innerHTML = '';
+    lamps.forEach((L, i) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = (L.done ? 'done' : '') + (L === cur ? ' on' : '');
+      b.setAttribute('aria-label', 'Riddle ' + (i + 1));
+      b.innerHTML = lampSvg() + (L.done ? `<span class="solved">${ZART.svg(L.w.zh)}</span>` : `<span class="n">${i + 1}</span>`);
+      b.addEventListener('click', () => { if (!L.done && !busy) open(L); });
+      $('lamps').appendChild(b);
+    });
+  }
+  function open(L) {
+    cur = L; paintLamps();
+    paintRiddle(L);
+    if (running) Shih.speak(L.r.clue);
+    window.__rd = { ans: L.w.zh, q: L.r.zh, hits };
+  }
+  // 谜语：最后是「我是＿＿？」；答对了空格填上答案
+  function paintRiddle(L, ans) {
+    const zh = ans ? L.r.zh.replace('＿＿？', ans.one + '！') : L.r.zh, py = ans ? L.r.py + ' ' + ans.onePy : L.r.py;
+    $('q').innerHTML = (level < 3 ? `<span class="ruby">${Shih.rubyText(zh, py)}</span>` : `<span>${zh}</span>`) +
+      `<button type="button" class="again" id="again" aria-label="Listen again">🔊</button>`;
+    $('again').addEventListener('click', () => Shih.speak(L.r.clue));
+  }
+  function nextLamp() { const L = lamps.find(x => !x.done); if (L) open(L); }
+  // 圈圈从谜语那边飞过去
+  function throwRing(el, good, done) {
+    const from = $('q').getBoundingClientRect(), to = el.getBoundingClientRect();
+    const f = document.createElement('div'); f.className = 'fly';
+    f.style.left = (from.left + from.width / 2 - 30) + 'px'; f.style.top = from.bottom + 'px';
+    document.body.appendChild(f);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      f.style.left = (to.left + to.width / 2 - 30) + 'px'; f.style.top = (to.top + to.height * (good ? .7 : .4)) + 'px';
+      f.style.transform = 'rotate(720deg)';
+    }));
+    setTimeout(() => {
+      if (!good) { f.style.top = (to.bottom + 40) + 'px'; f.style.opacity = '0'; setTimeout(() => f.remove(), 450); }
+      else f.remove();
+      done();
+    }, 470);
+  }
+  function tap(p, el) {
+    if (!running || busy || p.got || !cur) return;
+    busy = true;
+    const good = p.w === cur.w;
+    throwRing(el, good, () => {
+      busy = false;
+      if (!good) { oops(el); return; }
+      p.got = true; el.classList.add('got'); el.insertAdjacentHTML('beforeend', '<span class="hoop"></span>');
+      cur.done = true; hits++; update();
+      paintRiddle(cur, p.w); Shih.speak('我是' + p.w.one + '！');
+      paintLamps();
+      if (hits >= goal) {
+        running = false; cancelAnimationFrame(tick);
+        $('winTime').textContent = 'Time left: ' + fmt(Math.max(0, left));
+        setTimeout(() => { $('winMsg').hidden = false; Shih.speak('太棒了'); }, 500);
+      } else setTimeout(nextLamp, 1200);
+    });
+  }
+
+  function setup() {
+    paintLevels(level);
+    goal = C.target[level - 1]; hits = 0; busy = false;
+    $('help').textContent = HELP[level - 1] + ` Ring ${goal} animals in ${fmt(LIMIT(level))} to get coins!`;
+    pets = shuffle(Z).slice(0, C.animals[level - 1]).map(w => ({ w }));
+    lamps = shuffle(pets).slice(0, goal).map(p => ({ w: p.w, r: riddleFor(p.w) }));
+    $('shelf').className = 'shelf ' + (pets.length === 6 ? 'c3' : pets.length === 8 ? 'c4' : 'c6');
+    $('shelf').innerHTML = '';
+    pets.forEach(p => {
+      const el = document.createElement('div');
+      el.className = 'pet'; el.dataset.zh = p.w.zh;
+      el.innerHTML = ZART.svg(p.w.zh);
+      el.addEventListener('click', () => tap(p, el));
+      $('shelf').appendChild(el);
+    });
+    running = false; cancelAnimationFrame(tick); left = LIMIT(level); timerEl.textContent = '⏱ ' + fmt(left); timerEl.classList.remove('low');
+    $('winMsg').hidden = true; $('timeUp').hidden = true; update();
+    cur = null; nextLamp();
+    wait();
+  }
+  function update() { $('score').textContent = `${hits} / ${goal}`; }
+  const wait = Shih.startCover($('playArea'), () => { running = true; lastT = performance.now(); tick = requestAnimationFrame(loop); if (cur) Shih.speak(cur.r.clue); });
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

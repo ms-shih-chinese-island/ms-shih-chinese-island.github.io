@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>生肖排一排 Zodiac Line-Up</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 生肖排一排
+   Level 1：6 只动物（随便挑），下面是空格，把有拼音的名字卡拉到对的动物下面
+   Level 2：1～12 号的空位（第一个～第十二个），12 张动物卡（图 + 名字）是乱的，拉到对的号码
+   Level 3：跟 Level 2 一样（空位没有拼音），排完再答一题「第几个是什么？」
+   拉错了卡片摇一摇、弹回去（不算错）。
+   倒数计时：Level 1、2 是 60 秒，Level 3 是 90 秒（units/cny/words.js 的 time）。时间内做完就有金币。 */
+body.game { background: #FFF1EC; }
+.zWrap { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.board { background: #FFFBF3; border: 4px solid #2B2B2B; border-radius: 24px; padding: 12px 14px 14px; box-shadow: 0 6px 0 #C0392B; }
+.board .head { text-align: center; margin-bottom: 8px; border-bottom: 3px double #E8A39B; padding-bottom: 6px; }
+.board .head .ruby .py { font-size: 14px; } .board .head .ruby .zh { font-size: 30px; color: #B2261B; }
+.grid { display: grid; gap: 10px; }
+.grid.ring { display: block; position: relative; width: min(100%, calc(100vh - 290px), 680px); min-width: 300px; aspect-ratio: 1; margin: 0 auto; }
+/* Level 2、3：圈在左边，动物卡在右边 */
+.zWrap.side { flex-direction: row; align-items: flex-start; }
+.zWrap.side .board { flex: 1 1 auto; }
+.zWrap.side .bank { flex: 0 0 300px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; align-content: start; }
+@media (max-width: 900px) { .zWrap.side { flex-direction: column; } .zWrap.side .bank { flex-basis: auto; grid-template-columns: repeat(6, 1fr); } }
+/* 一圈：第一个在最上面，照时钟的方向排 */
+.ring .cell { position: absolute; box-sizing: border-box; width: 14%; transform: translate(-50%, -50%); padding: 4px 4px 6px; gap: 2px; border-radius: 16px; }
+.ring .slot { box-sizing: border-box; width: 100%; min-width: 0; padding: 2px; min-height: 0; aspect-ratio: 1; flex-direction: column; border-radius: 12px; gap: 0; overflow: hidden; }
+.ring .cell .num .ruby .zh { font-size: 14px; } .ring .cell .num .ruby .py { font-size: 9px; }
+.ring .slot svg { width: 66%; height: 66%; }
+.ring .slot .nm { font-size: 14px; line-height: 1; }
+.ring .center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 58%; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.ring .center .ruby .py { font-size: 15px; } .ring .center .ruby .zh { font-size: 38px; color: #B2261B; }
+.ring .center .round { width: 100%; aspect-ratio: 1; position: absolute; left: 0; top: 50%; transform: translateY(-50%); border: 3px dashed #F2C4BC; border-radius: 50%; z-index: -1; }
+/* Level 1 已经画好的（不用填） */
+.ring .slot.given { border: 3px solid #E8A39B; background: #FFF6F2; cursor: default; }
+.bank .wcard.pic .ruby .py { font-size: 11px; } .bank .wcard.pic .ruby .zh { font-size: 20px; }
+/* Level 3 问问题的时候：动物盖起来（红色的卡背） */
+.ring.covered .slot.filled { background: #D6453A; border-color: #2B2B2B; background-image: radial-gradient(circle, #F5C531 0 18%, transparent 19%); }
+.ring.covered .slot.filled > * { visibility: hidden; }
+@media (max-width: 760px) { .ring .slot .nm { font-size: 12px; } .ring .cell .num .ruby .zh { font-size: 12px; } .ring .cell .num .ruby .py { font-size: 8px; } .ring .center .ruby .zh { font-size: 24px; } }
+.cell { display: flex; flex-direction: column; align-items: center; gap: 4px; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 6px 6px 8px; }
+.cell > svg { width: 96px; height: 96px; }
+.cell .num { font: 800 15px var(--f-latin); color: #B2261B; text-align: center; line-height: 1.1; }
+.cell .num .ruby .py { font-size: 11px; } .cell .num .ruby .zh { font-size: 18px; color: #B2261B; }
+.slot { width: 100%; min-height: 58px; border: 3px dashed #E8A39B; border-radius: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: #FFF6F2; }
+.slot.hover, .slot.armed { border-style: solid; border-color: var(--pick); background: var(--pick-soft); }
+.slot.filled { border-style: solid; border-color: var(--me-ink); background: var(--me-done); cursor: default; }
+.slot .ruby .py { font-size: 12px; } .slot .ruby .zh { font-size: 24px; }
+.slot svg { width: 64px; height: 64px; }
+.slot .nm { font-size: 20px; font-weight: 700; }
+.bank { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.bank .wcard { padding: 6px 14px; }
+.bank .wcard .py { font-size: 13px; } .bank .wcard .zh { font-size: 26px; font-weight: 700; }
+.bank .wcard.pic { display: flex; flex-direction: column; align-items: center; padding: 4px 8px 6px; }
+.bank .wcard.pic svg { width: 58px; height: 58px; pointer-events: none; }
+.bank .wcard.pic .zh { font-size: 20px; }
+.bank .wcard.oops, .qBtn.oops { animation: shake .35s; border-color: var(--bad); }
+.timer.low { background: #FCE3E0; border-color: var(--bad); }
+.timeUp { text-align: center; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 10px; margin: 0 auto 10px; max-width: 640px; font: 700 18px var(--f-latin); display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.timeUp .ruby .py { font-size: 12px; } .timeUp .ruby .zh { font-size: 26px; }
+/* Level 3 最后一题 */
+.quiz { text-align: center; }
+.quiz .q { font-size: 28px; font-weight: 700; margin-bottom: 8px; color: #B2261B; }
+.quiz .opts { display: flex; gap: 10px; justify-content: center; }
+.qBtn { background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 16px; padding: 4px 8px 6px; cursor: pointer; display: flex; flex-direction: column; align-items: center; font-family: inherit; }
+.qBtn svg { width: 70px; height: 70px; }
+@media (max-width: 760px) { .quiz .q { font-size: 16px; } .qBtn svg { width: 36px; height: 36px; } .qBtn .zh { font-size: 14px; } }
+.qBtn .zh { font-size: 24px; font-weight: 700; }
+.qBtn.right { background: var(--me-done); border-color: var(--me-ink); }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill timer" id="timer">0:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+
+  <div class="timeUp" id="timeUp" hidden><span class="ruby" id="timeUpRuby"></span><span id="timeUpTxt"></span><button class="ctl" id="again2" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="zWrap">
+        <div class="board">
+          <div class="head"><span class="ruby" id="boardRuby"></span></div>
+          <div class="grid" id="grid"></div>
+        </div>
+        <div class="bank" id="bank"></div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../units/cny/art.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.zodiacGame, Z = UNIT.zodiac, ORD = UNIT.ordinals, ZART = window.ZART;
+  const $ = id => document.getElementById(id);
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  $('boardRuby').innerHTML = Shih.ruby('十二生肖', 'shí èr shēng xiào');
+  $('timeUpRuby').innerHTML = Shih.ruby('时间到了', 'shí jiān dào le');
+  Shih.soundButton($('soundBtn'));
+
+  // 时间：倒数，时间内做完就有金币（拉错没关系，卡片弹回去再试）
+  const timerEl = $('timer');
+  const LIMIT = lv => C.time[lv - 1] * 1000;
+  let left = 0, lastT = 0, tick = 0, running = false;
+  const fmt = ms => { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  function loop() {
+    if (!running) return;
+    const now = performance.now(); left -= now - lastT; lastT = now;
+    timerEl.textContent = '⏱ ' + fmt(Math.max(0, left)); timerEl.classList.toggle('low', left < 15000);
+    if (left <= 0) { running = false; $('timeUpTxt').textContent = `Time's up! ${done} of ${total} done. Try again!`; $('timeUp').hidden = false; Shih.speak('时间到了'); return; }
+    tick = requestAnimationFrame(loop);
+  }
+
+  const LEVELS = [{ note: '6 animals + pinyin' }, { note: '12 animals in order' }, { note: '12 in order + 1 question' }];
+  let level = Shih.startLevel('zodiacLevel', 3);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('zodiacLevel', lv); setup(); });
+  const HELP = ['6 animals are already in the circle. Drag the other 6 to their numbers (1st to 12th).',
+                'Put the 12 animals in order around the circle: drag each animal to its number (1st to 12th).',
+                'Put the 12 animals in order around the circle. Then the animals hide — answer one question from memory!'];
+
+  const oops = el => { el.classList.remove('oops'); void el.offsetWidth; el.classList.add('oops'); setTimeout(() => el.classList.remove('oops'), 400); };
+  let done = 0, total = 0, quizDone = false;
+  function finish() {
+    running = false; cancelAnimationFrame(tick);
+    $('winTime').textContent = 'Time left: ' + fmt(Math.max(0, left));
+    setTimeout(() => { $('winMsg').hidden = false; Shih.speak('太棒了'); }, 500);
+  }
+  // Level 3：排完了，问一题「第几个是什么？」
+  function askQuiz() {
+    const i = Math.floor(Math.random() * 12), ans = Z[i];
+    const opts = shuffle([ans].concat(shuffle(Z.filter(w => w !== ans)).slice(0, 2)));
+    const q = ORD[i].zh + '是什么？';
+    $('grid').classList.add('covered'); $('bank').hidden = true;
+    $('ringTitle').hidden = true; $('quiz').hidden = false;
+    $('quiz').innerHTML = `<div class="q">${q}</div><div class="opts">` +
+      opts.map(w => `<button type="button" class="qBtn" data-zh="${w.zh}">${ZART.svg(w.zh)}<span class="zh">${w.one}</span></button>`).join('') + '</div>';
+    Shih.speak(q);
+    $('quiz').querySelectorAll('.qBtn').forEach(b => b.addEventListener('click', () => {
+      if (!running || quizDone) return;
+      if (b.dataset.zh !== ans.zh) { oops(b); return; }
+      quizDone = true; b.classList.add('right');
+      Shih.speak(ORD[i].zh + '是' + ans.one);
+      finish();
+    }));
+    window.__zodiac.quiz = () => ({ n: i + 1, ans: ans.zh });
+  }
+
+  function setup() {
+    paintLevels(level);
+    document.querySelector('.board .head').hidden = true;
+    document.querySelector('.zWrap').classList.add('side');
+    $('help').textContent = HELP[level - 1] + ` Finish in ${fmt(LIMIT(level))} to get coins!`;
+    $('bank').hidden = false; quizDone = false;
+    $('bank').innerHTML = '';
+    // 十二个位置排成一圈（第一个在最上面，照时钟方向）
+    // Level 1：随便 6 个已经画好（不用填），学生只排另外 6 个；字卡有拼音
+    const given = level === 1 ? shuffle(Z.map((w, i) => i)).slice(0, 6) : [];
+    const todo = Z.filter((w, i) => !given.includes(i));
+    const showPy = level === 1;
+    total = todo.length;
+    $('grid').className = 'grid ring';
+    $('grid').innerHTML = `<div class="center"><div class="round"></div><span class="ruby" id="ringTitle">${Shih.ruby('十二生肖', 'shí èr shēng xiào')}</span><div class="quiz" id="quiz" hidden></div></div>` +
+      Z.map((w, i) => {
+        const a = (i * 30 - 90) * Math.PI / 180, x = 50 + 41 * Math.cos(a), y = 50 + 40 * Math.sin(a);
+        const num = level < 3 ? `<span class="ruby">${Shih.ruby(ORD[i].zh, ORD[i].py)}</span>` : `<span class="ruby"><span class="zh">${ORD[i].zh}</span></span>`;
+        const slot = given.includes(i)
+          ? `<div class="slot given">${ZART.svg(w.zh)}<span class="nm">${w.one}</span></div>`
+          : `<div class="slot dropSlot" data-zh="${w.zh}" aria-label="blank ${i + 1}"></div>`;
+        return `<div class="cell" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%"><div class="num">${num}</div>${slot}</div>`;
+      }).join('');
+    const cards = shuffle(todo).map(w => {
+      const el = document.createElement('div');
+      el.className = 'wcard pic'; el.dataset.zh = w.zh;
+      el.innerHTML = `${ZART.svg(w.zh)}` + (showPy ? `<span class="ruby">${Shih.ruby(w.one, w.onePy)}</span>` : `<span class="zh">${w.one}</span>`);
+      $('bank').appendChild(el); return el;
+    });
+    done = 0;
+    const dnd = Shih.dragCards(cards, {
+      slots: () => [...$('grid').querySelectorAll('.dropSlot:not(.filled)')],
+      accept(card, slot) {
+        if (!running) return true;
+        if (card.dataset.zh !== slot.dataset.zh) { oops(card); return true; }   // 放错：摇一摇（不算错）
+        const w = Z.find(x => x.zh === card.dataset.zh);
+        card.classList.add('used');
+        slot.classList.add('filled');
+        slot.innerHTML = `${ZART.svg(w.zh)}<span class="nm">${w.one}</span>`;
+        Shih.speak(w.one);
+        done++; update();
+        if (done >= total) { if (level === 3) setTimeout(askQuiz, 600); else finish(); }
+        return true;
+      }
+    });
+    $('grid').querySelectorAll('.dropSlot').forEach(s => s.addEventListener('click', () => { if (!s.classList.contains('filled')) dnd.tapSlot(s); }));
+    running = false; cancelAnimationFrame(tick); left = LIMIT(level); timerEl.textContent = '⏱ ' + fmt(left); timerEl.classList.remove('low');
+    $('winMsg').hidden = true; $('timeUp').hidden = true; update();
+    window.__zodiac = { slots: () => [...$('grid').querySelectorAll('.dropSlot')].map(s => s.dataset.zh) };
+    wait();
+  }
+  function update() { $('score').textContent = `${done} / ${total}`; }
+  const wait = Shih.startCover($('playArea'), () => { running = true; lastT = performance.now(); tick = requestAnimationFrame(loop); });
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

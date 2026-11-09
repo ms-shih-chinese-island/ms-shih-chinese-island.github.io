@@ -94,7 +94,7 @@ window.ISLANDS = {
     ]
   },
   holiday: {
-    zh: '节日岛', py: 'jié rì dǎo', en: 'Holiday Island', width: 1240,
+    zh: '史老师的节日岛', py: 'shǐ lǎo shī de jié rì dǎo', en: "Ms. Shih's Holiday Island", width: 1240,
     places: [
       { id: 'haunted-house', zh: '鬼屋', py: 'guǐ wū', en: 'Haunted House', x: 540, y: 110, color: 'night',
         games: [
@@ -108,10 +108,17 @@ window.ISLANDS = {
           { zh: '四格故事', py: 'sì gé gù shì', en: 'Story Panels', note: 'First put the 4 pictures in order. Then drag the words into the speech bubbles.', href: 'games/story.html?unit=moon' },
           { zh: '中秋小知识', py: 'zhōng qiū xiǎo zhī shì', en: 'Moon Festival Quiz', note: 'Read the question. Tap the right answer.', href: 'games/quiz.html?unit=moon' }
         ] },
-      { zh: '春节', py: 'chūn jié', en: 'Chinese New Year', x: 1030, y: 548, color: 'dad', games: [] },
+      { id: 'cny', zh: '春节', py: 'chūn jié', en: 'Chinese New Year', x: 1030, y: 548, color: 'dad',
+        games: [
+          { zh: '生肖排一排', py: 'shēng xiào pái yì pái', en: 'Zodiac Line-Up', note: 'Drag the names or animals to the right place. Finish in time to get coins!', href: 'games/zodiac.html?unit=cny' },
+          { zh: '你属什么？', py: 'nǐ shǔ shén me?', en: 'What Is Your Zodiac Animal?', note: 'Look at the birthday card. Answer: 我属＿＿。', href: 'games/ask.html?unit=cny' },
+          { zh: '红包大放送', py: 'hóng bāo dà fàng sòng', en: 'Red Envelope Time', note: 'Your relatives come to say Happy New Year. Answer them to get red envelopes!', href: 'games/hongbao.html?unit=cny' },
+          { zh: '猜灯谜', py: 'cāi dēng mí', en: 'Lantern Riddles', note: 'Read the riddle on the lantern. Tap the right animal to throw a ring!', href: 'games/riddle.html?unit=cny' },
+          { zh: '年夜饭找一找', py: 'nián yè fàn zhǎo yì zhǎo', en: 'New Year Feast Hunt', note: 'Tap a circle to see what is there. Drag the word into the sentence.', href: 'games/feast.html?unit=cny' }
+        ] },
       { zh: '七夕', py: 'qī xī', en: "Chinese Valentine's Day", x: 510, y: 578, color: 'mom', games: [] },
-      { zh: '端午节', py: 'duān wǔ jié', en: 'Dragon Boat Festival', x: 1050, y: 70, color: 'sea', games: [] },
-      { id: 'market', zh: '感恩节市场', py: 'gǎn ēn jié shì chǎng', en: 'Thanksgiving Market', x: 950, y: 170, color: 'dad',
+      { zh: '端午节', py: 'duān wǔ jié', en: 'Dragon Boat Festival', x: 1060, y: 52, color: 'sea', games: [] },
+      { id: 'market', zh: '感恩节', py: 'gǎn ēn jié', en: 'Thanksgiving', x: 950, y: 170, color: 'dad',
         games: [
           { zh: '快手买一买', py: 'kuài shǒu mǎi yi mǎi', en: 'Quick Shopper', note: 'Tap a falling food, then its word on the belt. Buy everything on your list!', href: 'games/shop.html?unit=thanksgiving' },
           { zh: '市场算一算', py: 'shì chǎng suàn yi suàn', en: 'Market Math', note: 'Read the food words and do the math. Pick the right answer.', href: 'games/calc.html?unit=thanksgiving' }

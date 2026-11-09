@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>红包大放送</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 红包大放送：亲戚一个一个来拜年，学生把对的话拉进「我说」的泡泡，红包就飞进口袋。
+   拜年话可以互相接：只要是拜年话都算对（错的卡是别的场合的话：生日快乐、再见……）
+   Level 1：亲戚说拜年话（有字、有拼音、会念），4 张卡：1 句拜年话 + 3 句不是（有拼音）
+   Level 2：亲戚只用说的（🔊），5 张卡：1 句拜年话 + 4 句不是（没有拼音）
+   Level 3：亲戚拿出春节东西的图（「这是…」），回答「这是＿＿。」，有吉祥话的还要配一句（这是鱼。年年有余！）
+   拉错了卡片摇一摇、弹回去（不算错）。时间内拿完红包就有金币（units/cny/words.js 的 UNIT.hongbao） */
+body.game { background: #FFF1EC; }
+.stage { max-width: 980px; margin: 0 auto; background: linear-gradient(#FFF6E8 0 70%, #F2D7B5 70%); border: 4px solid #2B2B2B; border-radius: 24px; padding: 12px 16px; box-shadow: 0 6px 0 #C0392B; position: relative; overflow: hidden; }
+.lanterns { position: absolute; top: 0; left: 0; right: 0; height: 40px; display: flex; justify-content: space-around; pointer-events: none; }
+.lanterns svg { width: 34px; height: 44px; }
+.scene { display: grid; grid-template-columns: 200px minmax(0, 1fr) 150px; gap: 12px; align-items: end; margin-top: 26px; min-height: 300px; }
+@media (max-width: 760px) { .scene { grid-template-columns: 120px minmax(0, 1fr); } .pocket { grid-column: 1 / -1; } }
+.who svg { width: 100%; height: auto; display: block; }
+.who { transition: transform .4s; }
+.who.arrive { animation: arrive .45s ease-out; }
+@keyframes arrive { from { transform: translateX(-120%); opacity: 0; } to { transform: none; opacity: 1; } }
+.talk { display: flex; flex-direction: column; gap: 14px; align-self: center; }
+.bub { position: relative; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 22px; padding: 10px 16px; display: flex; align-items: center; gap: 12px; min-height: 70px; flex-wrap: wrap; }
+.bub.them::before { content: ''; position: absolute; left: -16px; bottom: 18px; border: 8px solid transparent; border-right: 10px solid #2B2B2B; }
+.bub .ruby .py { font-size: 14px; } .bub .ruby .zh { font-size: 34px; }
+.bub .w { font-size: 32px; font-weight: 700; }
+.bub .thing { width: 110px; height: 110px; background: #FFF6E8; border: 3px solid #2B2B2B; border-radius: 16px; flex: none; }
+.bub .thing svg { width: 100%; height: 100%; }
+.listen { font-size: 34px; background: #FFF6D6; border: 3px solid #2B2B2B; border-radius: 16px; padding: 4px 16px; cursor: pointer; }
+.meRow { display: flex; align-items: flex-end; justify-content: flex-end; gap: 10px; }
+.meLines { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.meFace { width: 74px; flex: none; }
+.meFace svg { width: 74px; height: 74px; display: block; }
+.me { background: #E6F4F8; border-color: #7FC4D8; }
+.meLines .me:last-child::after { content: ''; position: absolute; right: -16px; bottom: 18px; border: 8px solid transparent; border-left: 10px solid #2B2B2B; }
+.me .dropSlot { min-width: 170px; min-height: 60px; border-color: #7FC4D8; background: #FFFFFF; }
+.me .dropSlot.wide { min-width: 200px; }
+.me .dropSlot.filled { border-color: var(--me-ink); background: var(--me-done); }
+.me .dropSlot .ruby .zh { font-size: 28px; } .me .dropSlot .ruby .py { font-size: 12px; }
+.pocket { background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 6px; text-align: center; align-self: start; }
+.pocket .lbl .ruby .zh { font-size: 20px; } .pocket .lbl .ruby .py { font-size: 11px; }
+.pocket .env { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 4px; }
+.pocket .env span { aspect-ratio: 3 / 4; border: 2px dashed #E8A39B; border-radius: 6px; }
+.pocket .env span.got { background: #D6453A; border: 2px solid #2B2B2B; background-image: radial-gradient(circle at 50% 58%, #F5C531 0 22%, transparent 23%); }
+.flyEnv { position: fixed; width: 34px; height: 46px; background: #D6453A; border: 2px solid #2B2B2B; border-radius: 5px; background-image: radial-gradient(circle at 50% 58%, #F5C531 0 22%, transparent 23%); z-index: 60; transition: left .6s ease-in, top .6s ease-in, transform .6s; pointer-events: none; }
+.bank { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 14px auto 0; max-width: 980px; }
+.bank .wcard .py { font-size: 13px; } .bank .wcard .zh { font-size: 26px; font-weight: 700; }
+.bank .wcard.oops { animation: shake .35s; border-color: var(--bad); }
+.timer.low { background: #FCE3E0; border-color: var(--bad); }
+.timeUp { text-align: center; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 10px; margin: 0 auto 10px; max-width: 640px; font: 700 18px var(--f-latin); display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.timeUp .ruby .py { font-size: 12px; } .timeUp .ruby .zh { font-size: 26px; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill timer" id="timer">0:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="timeUp" id="timeUp" hidden><span class="ruby" id="timeUpRuby"></span><span id="timeUpTxt"></span><button class="ctl" id="again2" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="stage">
+        <div class="lanterns" id="lanterns"></div>
+        <div class="scene">
+          <div class="who" id="who"></div>
+          <div class="talk" id="talk"></div>
+          <div class="pocket"><div class="lbl"><span class="ruby" id="pocketRuby"></span></div><div class="env" id="env"></div></div>
+        </div>
+      </div>
+      <div class="bank" id="bank"></div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/kids.js"></script>
+<script src="../shared/npcs.js"></script>
+<script src="../units/cny/art.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.hongbao, ZART = window.ZART, NPC = window.NPC_ART;
+  // 学生自己在地图上选的人物（没有选过就用预设的）
+  const ME = window.ART.kid(Object.assign({ boy: true, skin: 'light', long: false, hair: 'short', hairColor: 'brown', shirt: '#4A86D0' }, Shih.get('me', {}) || {}), 'good');
+  const $ = id => document.getElementById(id);
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  $('timeUpRuby').innerHTML = Shih.ruby('时间到了', 'shí jiān dào le');
+  $('pocketRuby').innerHTML = Shih.ruby('我的红包', 'wǒ de hóng bāo');
+  const lantern = `<svg viewBox="0 0 34 44"><path d="M17 0 L17 6" stroke="#2B2B2B" stroke-width="2"/><ellipse cx="17" cy="22" rx="13" ry="15" fill="#D6453A" stroke="#2B2B2B" stroke-width="2.5"/><rect x="11" y="5" width="12" height="4" fill="#F5C531" stroke="#2B2B2B" stroke-width="2"/><rect x="11" y="35" width="12" height="4" fill="#F5C531" stroke="#2B2B2B" stroke-width="2"/><path d="M17 39 L17 44" stroke="#F5C531" stroke-width="2.5"/></svg>`;
+  $('lanterns').innerHTML = lantern.repeat(6);
+  Shih.soundButton($('soundBtn'));
+
+  // 时间：倒数，时间内拿完红包就有金币
+  const timerEl = $('timer');
+  const LIMIT = lv => C.time[lv - 1] * 1000;
+  let left = 0, lastT = 0, tick = 0, running = false;
+  const fmt = ms => { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  function loop() {
+    if (!running) return;
+    const now = performance.now(); left -= now - lastT; lastT = now;
+    timerEl.textContent = '⏱ ' + fmt(Math.max(0, left)); timerEl.classList.toggle('low', left < 15000);
+    if (left <= 0) { running = false; $('timeUpTxt').textContent = `Time's up! You got ${qi} of ${qs.length} red envelopes. Try again!`; $('timeUp').hidden = false; Shih.speak('时间到了'); return; }
+    tick = requestAnimationFrame(loop);
+  }
+
+  const LEVELS = [{ note: 'New Year greeting + pinyin' }, { note: 'Listen and answer' }, { note: 'What is this?' }];
+  let level = Shih.startLevel('hongbaoLevel', 3);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('hongbaoLevel', lv); setup(); });
+  const HELP = ['Your relative says Happy New Year. Say a New Year greeting back to get a red envelope!',
+                'Listen to your relative (tap 🔊 to hear it again). Say a New Year greeting back!',
+                'Your relative shows you something. Say what it is (这是＿＿。) and add the lucky saying if it has one!'];
+  const oops = el => { el.classList.remove('oops'); void el.offsetWidth; el.classList.add('oops'); setTimeout(() => el.classList.remove('oops'), 400); };
+
+  let qs = [], qi = 0;
+  function makeQuestions() {
+    const who = shuffle(NPC.relatives);
+    const pool = level === 3 ? C.things : C.greet.filter(g => g.lv <= level);
+    // 每个答案都尽量出到，不要连续两题一样
+    let ans = [];
+    while (ans.length < C.rounds) ans = ans.concat(shuffle(pool));
+    ans = ans.slice(0, C.rounds);
+    for (let i = 1; i < ans.length; i++) if (ans[i] === ans[i - 1]) { const j = (i + 1) % ans.length; [ans[i], ans[j]] = [ans[j], ans[i]]; }
+    return ans.map((a, i) => ({ a, who: who[i % who.length], pool }));
+  }
+  function paintPocket() {
+    $('env').innerHTML = qs.map((q, i) => `<span class="${i < qi ? 'got' : ''}"></span>`).join('');
+  }
+  const say = q => { if (level < 3) Shih.speak(q.a.zh); };
+
+  function show() {
+    const q = qs[qi], showPy = level === 1;
+    $('who').innerHTML = NPC.relative(q.who);
+    $('who').classList.remove('arrive'); void $('who').offsetWidth; $('who').classList.add('arrive');
+    let them;
+    if (level === 1) them = `<span class="ruby">${Shih.ruby(q.a.zh + '！', q.a.py + '!')}</span>`;
+    else if (level === 2) them = `<button type="button" class="listen" id="listen" aria-label="Listen again">🔊</button>`;
+    else them = `<div class="thing">${ZART.svg(q.a.zh)}</div><span class="w">这是…</span>`;
+    $('talk').innerHTML = `<div class="bub them">${them}</div>` +
+      // 我（学生自己的人物）回话；Level 3 有吉祥话的话分两句：这是＿＿。／＿＿！
+      `<div class="meRow"><div class="meLines">` +
+      (level === 3 ? `<div class="bub me"><span class="w">这是</span><span class="dropSlot" data-zh="${q.a.zh}"></span><span class="w">。</span></div>` +
+        (q.a.lucky ? `<div class="bub me"><span class="dropSlot wide" data-zh="${q.a.lucky.zh}"></span><span class="w">！</span></div>` : '')
+        : `<div class="bub me"><span class="dropSlot"></span></div>`) +
+      `</div><div class="meFace">${ME}</div></div>`;
+    if ($('listen')) $('listen').addEventListener('click', () => say(q));
+    setTimeout(() => { if (running) say(q); }, 350);
+    // 字卡：Level 1 = 1 句拜年话 + 3 句不是；Level 2 = 1 句拜年话 + 4 句不是
+    //       Level 3 = 对的东西 + 3 个别的东西，再加 3 句吉祥话（有的话，对的那句一定在里面）
+    const greets = C.greet.filter(g => g.lv <= level);
+    const lucky = C.things.filter(x => x.lucky).map(x => x.lucky);
+    const opts = level === 3
+      ? [q.a].concat(shuffle(q.pool.filter(x => x !== q.a)).slice(0, 3))
+          .concat(q.a.lucky ? [q.a.lucky].concat(shuffle(lucky.filter(x => x !== q.a.lucky && x.zh !== q.a.also)).slice(0, 2)) : shuffle(lucky).slice(0, 3))
+      : shuffle(greets).slice(0, 1).concat(shuffle(C.notGreet).slice(0, level === 1 ? 3 : 4));
+    const ok = t => level === 3 ? (t === q.a || t === q.a.lucky) : C.greet.includes(t);
+    $('bank').innerHTML = '';
+    const cards = shuffle(opts).map(t => {
+      const el = document.createElement('div');
+      el.className = 'wcard'; el.dataset.zh = t.zh; if (ok(t)) el.dataset.ok = '1';
+      el.innerHTML = showPy ? `<span class="ruby">${Shih.ruby(t.zh, t.py)}</span>` : `<span class="zh">${t.zh}</span>`;
+      $('bank').appendChild(el); return el;
+    });
+    const dnd = Shih.dragCards(cards, {
+      slots: () => [...$('talk').querySelectorAll('.dropSlot:not(.filled)')],
+      accept(card, slot) {
+        if (!running) return true;
+        if (!card.dataset.ok || (level === 3 && card.dataset.zh !== slot.dataset.zh)) { oops(card); return true; }   // 拉错：摇一摇（不算错）
+        const t = opts.find(x => x.zh === card.dataset.zh);
+        card.classList.add('used');
+        slot.classList.add('filled');
+        slot.innerHTML = level === 1 ? `<span class="ruby">${Shih.ruby(t.zh, t.py)}</span>` : `<span class="w">${t.zh}</span>`;
+        if ($('talk').querySelector('.dropSlot:not(.filled)')) return true;     // Level 3 还有空格
+        Shih.speak(level === 3 ? '这是' + q.a.zh + '。' + (q.a.lucky ? q.a.lucky.zh : '') : t.zh);
+        flyEnvelope(() => {
+          qi++; paintPocket(); update();
+          if (qi >= qs.length) {
+            running = false; cancelAnimationFrame(tick);
+            $('winTime').textContent = 'Time left: ' + fmt(Math.max(0, left));
+            setTimeout(() => { $('winMsg').hidden = false; Shih.speak('太棒了'); }, 300);
+          } else if (running) show();
+        });
+        return true;
+      }
+    });
+    $('talk').querySelectorAll('.dropSlot').forEach(d => d.addEventListener('click', e => { if (!d.classList.contains('filled')) dnd.tapSlot(d); }));
+    window.__hb = { ans: level === 3 ? q.a.zh : opts.find(ok).zh, oks: opts.filter(ok).map(t => t.zh), qi, who: q.who };
+  }
+  // 红包从亲戚手上飞进口袋
+  function flyEnvelope(done) {
+    const from = $('who').getBoundingClientRect(), slot = $('env').children[qi], to = slot.getBoundingClientRect();
+    const f = document.createElement('div'); f.className = 'flyEnv';
+    f.style.left = (from.left + from.width / 2 - 17) + 'px'; f.style.top = (from.top + from.height * 0.62) + 'px';
+    document.body.appendChild(f);
+    requestAnimationFrame(() => requestAnimationFrame(() => { f.style.left = (to.left + to.width / 2 - 17) + 'px'; f.style.top = (to.top + to.height / 2 - 23) + 'px'; f.style.transform = 'rotate(360deg) scale(.7)'; }));
+    setTimeout(() => { f.remove(); done(); }, 750);
+  }
+
+  function setup() {
+    paintLevels(level);
+    $('help').textContent = HELP[level - 1] + ` Get all ${C.rounds} in ${fmt(LIMIT(level))} to win coins!`;
+    qs = makeQuestions(); qi = 0;
+    running = false; cancelAnimationFrame(tick); left = LIMIT(level); timerEl.textContent = '⏱ ' + fmt(left); timerEl.classList.remove('low');
+    $('winMsg').hidden = true; $('timeUp').hidden = true; update(); paintPocket();
+    show();
+    wait();
+  }
+  function update() { $('score').textContent = `${qi} / ${qs.length}`; }
+  const wait = Shih.startCover($('playArea'), () => { running = true; lastT = performance.now(); tick = requestAnimationFrame(loop); say(qs[qi]); });
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

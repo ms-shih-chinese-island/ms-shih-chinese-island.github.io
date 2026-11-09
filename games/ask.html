@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>你属什么？</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 你属什么？：左边的小朋友问「你属什么？」，右边的小朋友旁边有生日卡（年份 + 生肖图）。
+   学生看图，把字卡拉进泡泡里的空格。
+   Level 1：「我属＿。」只填动物，3 张字卡（有拼音）
+   Level 2：排「我／属／＿」，6 种动物里选（没有拼音）
+   Level 3：问句「你／属／什么」和回答「我／属／＿」都要排，多几张不相关的字卡
+   拉错了卡片摇一摇、弹回去（不算错）。时间内全部做完就有金币（units/cny/words.js 的 UNIT.ask） */
+body.game { background: #FFF1EC; }
+.wrap { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 14px; align-items: start; }
+@media (max-width: 760px) { .wrap { grid-template-columns: 1fr; } }
+.stage { background: #FFFBF3; border: 4px solid #2B2B2B; border-radius: 24px; padding: 14px 16px 18px; box-shadow: 0 6px 0 #C0392B; display: flex; flex-direction: column; gap: 10px; }
+.qnum { align-self: flex-start; font: 700 16px var(--f-latin); color: #B2261B; background: #FDE3DE; border: 2px solid #E8A39B; border-radius: 999px; padding: 2px 12px; }
+.row { display: flex; align-items: flex-end; gap: 10px; }
+.row.B { flex-direction: row-reverse; }
+.who { display: flex; flex-direction: column; align-items: center; width: 84px; flex: none; }
+.who svg { width: 80px; height: 80px; }
+.who .nm { font: 700 14px var(--f-latin); }
+.bub { position: relative; border-radius: 20px; padding: 8px 14px; border: 3px solid; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-height: 64px; }
+.row.A .bub { background: #E6F4F8; border-color: #7FC4D8; }
+.row.B .bub { background: #FFF6D6; border-color: #E9B949; }
+.bub .w { font-size: 30px; font-weight: 700; }
+.bub .ruby .py { font-size: 13px; } .bub .ruby .zh { font-size: 30px; }
+.bub .dropSlot { min-width: 64px; min-height: 56px; padding: 2px 8px; border-color: #C9A27A; background: #FFFFFF; }
+.bub .dropSlot.wide { min-width: 96px; }
+.bub .dropSlot.filled { border-color: var(--me-ink); background: var(--me-done); }
+.bub .dropSlot.hover, .bub .dropSlot.armed { border-style: solid; border-color: var(--pick); background: var(--pick-soft); }
+/* 生日卡：年份 + 生肖图 */
+.card { flex: none; width: 150px; background: #D6453A; border: 3px solid #2B2B2B; border-radius: 18px; padding: 6px; text-align: center; box-shadow: 0 4px 0 #8E2A22; }
+.card .yr { font: 800 26px var(--f-latin); color: #FFE27A; line-height: 1.1; }
+.card .yr small { font-size: 18px; }
+.card .pic { background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 12px; margin-top: 4px; }
+.card .pic svg { width: 100%; height: auto; display: block; }
+.Bline { display: flex; align-items: flex-end; gap: 10px; flex-direction: row-reverse; }
+.bank { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; background: #FFFFFF; border: 2px solid var(--line); border-radius: 18px; padding: 10px; }
+.bank .wcard { min-width: 64px; justify-content: center; }
+.bank .wcard .py { font-size: 13px; } .bank .wcard .zh { font-size: 28px; font-weight: 700; }
+.bank .wcard.oops { animation: shake .35s; border-color: var(--bad); }
+.timer.low { background: #FCE3E0; border-color: var(--bad); }
+.timeUp { text-align: center; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 10px; margin: 0 auto 10px; max-width: 640px; font: 700 18px var(--f-latin); display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.timeUp .ruby .py { font-size: 12px; } .timeUp .ruby .zh { font-size: 26px; }
+@media (max-width: 760px) { .who { width: 56px; } .who svg { width: 52px; height: 52px; } .card { width: 110px; } .bub .w, .bub .ruby .zh { font-size: 22px; } }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill timer" id="timer">0:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="timeUp" id="timeUp" hidden><span class="ruby" id="timeUpRuby"></span><span id="timeUpTxt"></span><button class="ctl" id="again2" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="wrap">
+        <div class="stage" id="stage"></div>
+        <div class="bank" id="bank"></div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/kids.js"></script>
+<script src="../units/cny/art.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.ask, Z = UNIT.zodiac, W = C.words, ART = window.ART, ZART = window.ZART;
+  const $ = id => document.getElementById(id);
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  $('timeUpRuby').innerHTML = Shih.ruby('时间到了', 'shí jiān dào le');
+  Shih.soundButton($('soundBtn'));
+
+  // 时间：倒数，时间内全部做完就有金币
+  const timerEl = $('timer');
+  const LIMIT = lv => C.time[lv - 1] * 1000;
+  let left = 0, lastT = 0, tick = 0, running = false;
+  const fmt = ms => { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  function loop() {
+    if (!running) return;
+    const now = performance.now(); left -= now - lastT; lastT = now;
+    timerEl.textContent = '⏱ ' + fmt(Math.max(0, left)); timerEl.classList.toggle('low', left < 15000);
+    if (left <= 0) { running = false; $('timeUpTxt').textContent = `Time's up! ${qi} of ${qs.length} done. Try again!`; $('timeUp').hidden = false; Shih.speak('时间到了'); return; }
+    tick = requestAnimationFrame(loop);
+  }
+
+  const LEVELS = [{ note: 'Fill in the animal + pinyin' }, { note: 'Make the answer' }, { note: 'Make the question + answer' }];
+  let level = Shih.startLevel('askLevel', 3);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('askLevel', lv); setup(); });
+  const HELP = ['Look at the birthday card. Drag the right animal into the answer.',
+                'Look at the birthday card. Put the cards in order to answer.',
+                'Make the question AND the answer. Careful: some cards are extra!'];
+
+  const zOf = y => Z[((y - 4) % 12 + 12) % 12];       // 2020 年是鼠年
+  const oops = el => { el.classList.remove('oops'); void el.offsetWidth; el.classList.add('oops'); setTimeout(() => el.classList.remove('oops'), 400); };
+  const showPy = () => level === 1;
+  const word = t => showPy() ? `<span class="ruby">${Shih.ruby(t.zh, t.py)}</span>` : `<span class="zh">${t.zh}</span>`;
+  const inBub = t => showPy() ? `<span class="ruby">${Shih.ruby(t.zh, t.py)}</span>` : `<span class="w">${t.zh}</span>`;
+
+  let qs = [], qi = 0;
+  function makeQuestions() {
+    const n = C.rounds[level - 1];
+    // 年份不重复、生肖也不重复
+    const years = shuffle(Array.from({ length: C.years[1] - C.years[0] + 1 }, (_, i) => C.years[0] + i));
+    const seen = new Set(), out = [];
+    for (const y of years) { const z = zOf(y); if (seen.has(z.zh)) continue; seen.add(z.zh); out.push(y); if (out.length === n) break; }
+    const kids = shuffle(ART.people);
+    return out.map((y, i) => ({ year: y, z: zOf(y), A: kids[(i * 2) % kids.length], B: kids[(i * 2 + 1) % kids.length] }));
+  }
+
+  function show() {
+    const q = qs[qi], a = { zh: q.z.one, py: q.z.onePy };
+    // 每一句：要填的空格 need（照顺序）、已经写好的字
+    const Aline = level === 3 ? [{ need: W.你 }, { need: W.属 }, { need: W.什么, wide: true }, { fix: '？' }]
+                              : [{ fix: W.你 }, { fix: W.属 }, { fix: W.什么 }, { fix: '？' }];
+    const Bline = level === 1 ? [{ fix: W.我 }, { fix: W.属 }, { need: a }, { fix: '。' }]
+                              : [{ need: W.我 }, { need: W.属 }, { need: a }, { fix: '。' }];
+    const part = (L, who) => L.map((x, k) => x.need
+      ? `<span class="dropSlot${x.wide ? ' wide' : ''}" data-zh="${x.need.zh}" data-who="${who}"></span>`
+      : typeof x.fix === 'string' ? `<span class="w">${x.fix}</span>` : inBub(x.fix)).join('');
+    $('stage').innerHTML = `<span class="qnum">${qi + 1} / ${qs.length}</span>` +
+      `<div class="row A"><div class="who">${ART.kid(q.A, 'wave')}<span class="nm">${Shih.esc(q.A.first)}</span></div><div class="bub">${part(Aline, 'A')}</div></div>` +
+      `<div class="Bline"><div class="card"><div class="yr">${q.year}<small>年</small></div><div class="pic">${ZART.svg(q.z.zh)}</div></div>` +
+      `<div class="row B"><div class="who">${ART.kid(q.B, 'good')}<span class="nm">${Shih.esc(q.B.first)}</span></div><div class="bub">${part(Bline, 'B')}</div></div></div>`;
+    // 字卡：要用的 + 别的动物（Level 1 两个、Level 2、3 五个）+ Level 3 不相关的字
+    const need = Aline.concat(Bline).filter(x => x.need).map(x => x.need);
+    const others = shuffle(Z.filter(w => w !== q.z)).slice(0, level === 1 ? 2 : 5).map(w => ({ zh: w.one, py: w.onePy }));
+    const extra = level === 3 ? C.extra.map(k => W[k]) : [];
+    $('bank').innerHTML = '';
+    const cards = shuffle(need.concat(others, extra)).map(t => {
+      const el = document.createElement('div');
+      el.className = 'wcard'; el.dataset.zh = t.zh;
+      el.innerHTML = word(t);
+      $('bank').appendChild(el); return el;
+    });
+    const dnd = Shih.dragCards(cards, {
+      slots: () => [...$('stage').querySelectorAll('.dropSlot:not(.filled)')],
+      accept(card, slot) {
+        if (!running) return true;
+        if (card.dataset.zh !== slot.dataset.zh) { oops(card); return true; }   // 放错：摇一摇（不算错）
+        card.classList.add('used');
+        slot.classList.add('filled');
+        const t = need.find(x => x.zh === card.dataset.zh);
+        slot.innerHTML = inBub(t);
+        const who = slot.dataset.who;
+        if (!$('stage').querySelector(`.dropSlot[data-who="${who}"]:not(.filled)`)) Shih.speak(who === 'A' ? '你属什么？' : '我属' + a.zh + '。');
+        if (!$('stage').querySelector('.dropSlot:not(.filled)')) {
+          qi++; update();
+          if (qi >= qs.length) {
+            running = false; cancelAnimationFrame(tick);
+            $('winTime').textContent = 'Time left: ' + fmt(Math.max(0, left));
+            setTimeout(() => { $('winMsg').hidden = false; Shih.speak('太棒了'); }, 900);
+          } else setTimeout(() => { if (running) show(); }, 1100);
+        }
+        return true;
+      }
+    });
+    $('stage').querySelectorAll('.dropSlot').forEach(s => s.addEventListener('click', () => { if (!s.classList.contains('filled')) dnd.tapSlot(s); }));
+    window.__ask = { year: q.year, ans: a.zh, need: need.map(t => t.zh), qi };
+  }
+
+  function setup() {
+    paintLevels(level);
+    $('help').textContent = HELP[level - 1] + ` Finish ${C.rounds[level - 1]} in ${fmt(LIMIT(level))} to get coins!`;
+    qs = makeQuestions(); qi = 0;
+    running = false; cancelAnimationFrame(tick); left = LIMIT(level); timerEl.textContent = '⏱ ' + fmt(left); timerEl.classList.remove('low');
+    $('winMsg').hidden = true; $('timeUp').hidden = true; update();
+    show();
+    wait();
+  }
+  function update() { $('score').textContent = `${qi} / ${qs.length}`; }
+  const wait = Shih.startCover($('playArea'), () => { running = true; lastT = performance.now(); tick = requestAnimationFrame(loop); });
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>
