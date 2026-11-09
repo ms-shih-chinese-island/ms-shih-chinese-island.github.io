@@ -19,14 +19,14 @@ window.ISLANDS = {
   main: {
     zh: '史老师的中文岛', py: 'shǐ lǎo shī de zhōng wén dǎo', en: "Ms. Shih's Chinese Island", width: 2480,
     places: [
-      { id: 'family', zh: '家', py: 'jiā', en: 'Family', x: 875, y: 132, color: 'dad',
+      { id: 'family', zh: '家', py: 'jiā', en: 'Family', x: 763, y: 92, color: 'dad',
         games: [
           { zh: '家人找一找', py: 'jiā rén zhǎo yi zhǎo', en: 'Family Find', note: 'Tap a Chinese word, then tap its English match. Match all the pairs.', href: 'games/match.html?unit=family' },
           { zh: '家族树', py: 'jiā zú shù', en: 'Family Tree', note: 'Drag each word to the right place on the family tree. You can also tap a word, then tap a box.', href: 'games/tree.html?unit=family' },
           { zh: '家人走一走', py: 'jiā rén zǒu yi zǒu', en: 'Family Board Game', note: 'Take turns rolling the dice and follow instructions on the board to get moving.', href: 'games/board.html?unit=family' },
           { zh: '唱一唱', py: 'chàng yi chàng', en: 'Sing Along', note: 'Watch the video and sing along!', href: 'games/sing.html?unit=family' }
         ] },
-      { id: 'school', zh: '学校', py: 'xué xiào', en: 'School', x: 410, y: 112, color: 'mom',
+      { id: 'school', zh: '学校', py: 'xué xiào', en: 'School', x: 265, y: 60, color: 'mom',
         games: [
           { zh: '认字对对碰', py: 'rèn zì duì duì pèng', en: 'Word Pairs', note: 'Tap a Chinese word, then tap its English match. Match all the pairs.', href: 'games/match.html?unit=school' },
           { zh: '对话框', py: 'duì huà kuàng', en: 'Chat Bubbles', note: 'Read the chat. Drag the cards into the empty bubbles. You can also tap a card, then tap a bubble.', href: 'games/chat.html?unit=school' },
@@ -37,7 +37,7 @@ window.ISLANDS = {
           { zh: '好朋友', py: 'hǎo péng yǒu', en: 'Best Friends', note: 'Look at the picture. Drag the names and words into the sentences.', href: 'games/friends.html?unit=school' },
           { zh: '套圈圈', py: 'tào quān quān', en: 'Ring Toss', note: "Match the color of the ring with the color word printed on the bottle. Don't be tricked by the bottle color!", href: 'games/ringtoss.html?unit=colors' }
         ] },
-      { id: 'library', zh: '图书馆', py: 'tú shū guǎn', en: 'Library', x: 615, y: 112, color: 'night',
+      { id: 'library', zh: '图书馆', py: 'tú shū guǎn', en: 'Library', x: 525, y: 138, color: 'night',
         games: [
           { zh: '图书馆', py: 'tú shū guǎn', en: 'Library', note: 'Read the book. Pick 2 to 12 words you want to practice, then start matching!', href: 'games/library.html?unit=library' }
         ] },
@@ -53,14 +53,20 @@ window.ISLANDS = {
           { zh: '候诊室', py: 'hòu zhěn shì', en: 'Waiting Room', note: 'Drag the right sentence into each speech bubble.', href: 'games/waiting.html?unit=body' }
         ] },
       // ---- 往右滑：城镇区 ----
-      { id: 'mall', zh: '购物中心', py: 'gòu wù zhōng xīn', en: 'Shopping Mall', x: 1470, y: 84, color: 'night',
+      { id: 'mall', zh: '购物中心', py: 'gòu wù zhōng xīn', en: 'Shopping Mall', x: 1016, y: 84, color: 'night',
         games: [
           { zh: '服务台', py: 'fú wù tái', en: 'Lost Kid Announcement', note: 'Tap 🔊 to hear the top and bottom of the lost kid. Then find the lost kid in the crowd.', href: 'games/lost.html?unit=clothes' },
           { zh: '找朋友', py: 'zhǎo péng yǒu', en: 'Find My Friends', note: "Read your friend's message to see their top and bottom. Then find your friend in the crowd.", href: 'games/find.html?unit=clothes' }
         ] },
-      { zh: '宠物店', py: 'chǒng wù diàn', en: 'Pet Shop', x: 1200, y: 132, color: 'mom', games: [] },
-      { zh: '消防局', py: 'xiāo fáng jú', en: 'Fire Station', x: 1760, y: 132, color: 'dad', games: [] },
-      { id: 'restaurant', zh: '餐厅', py: 'cān tīng', en: 'Restaurant', x: 1330, y: 526, color: 'dad',
+      { zh: '宠物店', py: 'chǒng wù diàn', en: 'Pet Shop', x: 1268, y: 132, color: 'mom', games: [] },
+      { zh: '消防局', py: 'xiāo fáng jú', en: 'Fire Station', x: 1918, y: 88, color: 'dad', games: [] },
+      { zh: '动物园', py: 'dòng wù yuán', en: 'Zoo & Farm', x: 1454, y: 46, color: 'me', games: [] },
+      { zh: '运动场', py: 'yùn dòng chǎng', en: 'Sports Field', x: 1758, y: 166, color: 'sun', games: [] },
+      { zh: '水族馆', py: 'shuǐ zú guǎn', en: 'Aquarium', x: 2194, y: 148, color: 'sea', games: [] },
+      { zh: '机场', py: 'jī chǎng', en: 'Airport', x: 1566, y: 412, color: 'night', games: [] },
+      { zh: '海滩', py: 'hǎi tān', en: 'Beach', x: 2110, y: 594, color: 'sun', games: [] },
+      { zh: '花园', py: 'huā yuán', en: 'Garden', x: 1250, y: 520, color: 'me', games: [] },
+      { id: 'restaurant', zh: '餐厅', py: 'cān tīng', en: 'Restaurant', x: 1076, y: 526, color: 'dad',
         games: [
           { zh: '请给我', py: 'qǐng gěi wǒ', en: 'Please Give Me', note: 'A customer asks for tableware. Read or listen, then give the right things.', href: 'games/give.html?unit=restaurant' },
           { zh: '爱吃不爱吃', py: 'ài chī bú ài chī', en: 'Yummy or Yucky?', note: 'Look at 👍 👎 and build the sentence: 我爱吃饺子。', href: 'games/likes.html?unit=restaurant' },
@@ -69,8 +75,8 @@ window.ISLANDS = {
           { zh: '点菜算一算', py: 'diǎn cài suàn yi suàn', en: 'Order & Add Up', note: 'See (or hear) what friends want, type it into the order machine, and add up the bill.', href: 'games/pay.html?unit=restaurant' },
           { zh: '餐厅对话框', py: 'cān tīng duì huà kuàng', en: 'Restaurant Chat', note: 'Fill in the chat between the server and the customer.', href: 'games/dine.html?unit=restaurant' }
         ] },
-      { zh: '公安局', py: 'gōng ān jú', en: 'Police Station', x: 1620, y: 564, color: 'sea', games: [] },
-      { zh: '邮政局', py: 'yóu zhèng jú', en: 'Post Office', x: 1910, y: 510, color: 'me', games: [] },
+      { zh: '公安局', py: 'gōng ān jú', en: 'Police Station', x: 1752, y: 540, color: 'sea', games: [] },
+      { zh: '邮政局', py: 'yóu zhèng jú', en: 'Post Office', x: 1920, y: 510, color: 'me', games: [] },
       // 旅客中心：在码头旁边，坐船来的人先到这里
       { id: 'hello', zh: '你好', py: 'nǐ hǎo', en: 'Hello', x: 2060, y: 88, color: 'sea',
         games: [
@@ -97,11 +103,14 @@ window.ISLANDS = {
           { zh: '化妆舞会', py: 'huà zhuāng wǔ huì', en: 'Costume Party', note: 'Look at each costume. Drag each name under the right kid.', href: 'games/dressup.html?unit=halloween' },
           { zh: '我怕／我不怕', py: 'wǒ pà / wǒ bú pà', en: "I'm afraid / I'm not afraid", note: 'Look at the picture. Put the word cards in order to make the sentence.', href: 'games/afraid.html?unit=halloween' }
         ] },
-      { id: 'moon', zh: '中秋节', py: 'zhōng qiū jié', en: 'Moon Festival', x: 950, y: 480, color: 'sun',
+      { id: 'moon', zh: '中秋节', py: 'zhōng qiū jié', en: 'Moon Festival', x: 800, y: 532, color: 'sun',
         games: [
           { zh: '四格故事', py: 'sì gé gù shì', en: 'Story Panels', note: 'First put the 4 pictures in order. Then drag the words into the speech bubbles.', href: 'games/story.html?unit=moon' },
           { zh: '中秋小知识', py: 'zhōng qiū xiǎo zhī shì', en: 'Moon Festival Quiz', note: 'Read the question. Tap the right answer.', href: 'games/quiz.html?unit=moon' }
         ] },
+      { zh: '春节', py: 'chūn jié', en: 'Chinese New Year', x: 1030, y: 548, color: 'dad', games: [] },
+      { zh: '七夕', py: 'qī xī', en: "Chinese Valentine's Day", x: 510, y: 578, color: 'mom', games: [] },
+      { zh: '端午节', py: 'duān wǔ jié', en: 'Dragon Boat Festival', x: 1050, y: 70, color: 'sea', games: [] },
       { id: 'market', zh: '感恩节市场', py: 'gǎn ēn jié shì chǎng', en: 'Thanksgiving Market', x: 950, y: 170, color: 'dad',
         games: [
           { zh: '快手买一买', py: 'kuài shǒu mǎi yi mǎi', en: 'Quick Shopper', note: 'Tap a falling food, then its word on the belt. Buy everything on your list!', href: 'games/shop.html?unit=thanksgiving' },
