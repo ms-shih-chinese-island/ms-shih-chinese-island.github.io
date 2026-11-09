@@ -184,3 +184,14 @@ svg.abacus .ab-en { font: 700 14px var(--f-latin); fill: var(--muted); }
 
 /* 商标符号 ™：小小的，在名字右上角 */
 .tm { font-size: .5em; vertical-align: super; line-height: 0; margin-left: .08em; font-weight: 700; }
+
+/* 一排选项（超市三区、餐厅 👀 看／👂 听） */
+.choices { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.choice { display: flex; align-items: center; gap: 8px; padding: 4px 14px 6px 10px; border-radius: 14px; border: 2px solid var(--line); background: var(--card); cursor: pointer; font: 700 15px var(--f-latin); color: var(--muted); }
+.choice .ic { font-size: 26px; line-height: 1; }
+.choice .ruby .py { font-size: 11px; } .choice .ruby .zh { font-size: 20px; }
+.choice small { font-size: 13px; }
+.choice[aria-pressed="true"] { border: 3px solid var(--pick); background: var(--pick-soft); color: var(--ink); }
+@media (orientation: landscape) and (max-height: 720px) { .choice { padding: 2px 10px 3px 8px; } .choice .ic { font-size: 20px; } .choice .ruby .zh { font-size: 17px; } }
+/* 新学的量词：句子下面的小注 */
+.mwNote { display: block; font: 600 13px var(--f-latin); color: var(--muted); margin-top: 2px; }

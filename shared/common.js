@@ -175,7 +175,8 @@
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'level'; b.dataset.level = k + 1;
       const n = countOf ? countOf(k + 1) : null;
-      const nC = window.ShihCoins ? ShihCoins.of(S.gameId(), S.unitId(), k + 1) : k + 1;   // 难度一律用金币表示（不给金币的就不放图）
+      let nC = window.ShihCoins ? ShihCoins.of(S.gameId(), S.unitId(), k + 1) : k + 1;   // 难度一律用金币表示（不给金币的就不放图）
+      if (nC) nC += S.coinBonus() || 0;
       if (nC) b.dataset.coins = nC;
       b.innerHTML = (nC ? `<span class="lvCoins" style="width:${nC === 4 ? 44 : Math.min(nC, 3) * 22}px" aria-label="${nC} coins">${S.coinSVG.repeat(nC)}</span>` : '') + `<span class="lv-text">Level ${k + 1}${L.note ? `<small>${S.esc(L.note)}</small>` : ''}</span>`;
       b.addEventListener('click', () => onPick(k + 1));
@@ -185,6 +186,29 @@
     if (btns.length === 1) box.hidden = true;   // 只有一级就不用选
     return lv => btns.forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.level === lv)));
   };
+  // ---- 一排选项（例如超市的三区、餐厅的 👀 看／👂 听）：放在 Level 按钮上面 ----
+  // options: [{ id, zh, py, en, icon }]；onPick(id)；回传 paint(id)
+  S.choiceRow = function (options, current, onPick, label) {
+    const box = document.createElement('div');
+    box.className = 'choices';
+    if (label) box.setAttribute('aria-label', label);
+    const lv = document.getElementById('levels');
+    if (lv) lv.before(box); else document.body.appendChild(box);
+    const btns = options.map(o => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'choice'; b.dataset.id = o.id;
+      b.innerHTML = (o.icon ? `<span class="ic" aria-hidden="true">${o.icon}</span>` : '') +
+        `<span class="ruby">${S.ruby(o.zh, o.py)}</span>` + (o.en ? `<small>${S.esc(o.en)}</small>` : '');
+      b.addEventListener('click', () => onPick(o.id));
+      box.appendChild(b);
+      return b;
+    });
+    const paint = id => btns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.id === id)));
+    paint(current);
+    return paint;
+  };
+  // 加给这一关的金币（例如听力关多一颗）：游戏自己设 Shih.coinBonus = () => 1
+  S.coinBonus = () => 0;
   // level from the link (#3) or from last time
   S.startLevel = function (key, max, min) {
     min = min || 1;
@@ -358,7 +382,8 @@
   // 这一关全对值几颗金币（难度 = 金币数，写在 shared/coins.js）
   function coinWorth() {
     const lv = document.querySelector('.level[aria-pressed="true"]');
-    return window.ShihCoins ? ShihCoins.of(S.gameId(), S.unitId(), lv ? +lv.dataset.level || 1 : 1) : 0;
+    const base = window.ShihCoins ? ShihCoins.of(S.gameId(), S.unitId(), lv ? +lv.dataset.level || 1 : 1) : 0;
+    return base ? base + (S.coinBonus() || 0) : 0;
   }
   // 没有分等级的游戏：标题旁边一个框，里面放这一关值几颗金币
   function setupCoinGoal() {
