@@ -10,7 +10,7 @@
 <style>
 /* 候诊室：一张图一个病人（人数在 words.js 的 people），头上一个对话泡泡，用拆开的字卡帮他排好句子
    （拖进空格、点卡片再点空格，或点空格再点卡片）。字卡里会多放几张长得像、位置靠近的部位当干扰。
-   Level 1 这是／我的／鼻子（健康检查，每个小朋友指着一个地方）、Level 2 我的／肚子／疼（每个病人有一个地方疼）。
+   Level 1 这是／我的／鼻子（健康检查，每个小朋友指着一个地方）、Level 2 我的／肚子／痛（疼）（每个病人有一个地方疼）。
    小病人的画法在 shared/patient.js。用法：waiting.html?unit=body */
 body.game { background: #F2F8FB; }
 .room { margin-bottom: 12px; display: grid; grid-template-columns: repeat(var(--n, 2), 1fr); gap: 10px; align-items: stretch; }
@@ -89,11 +89,11 @@ Shih.loadUnit().then(UNIT => {
 
   // 干扰卡：跟答案长得像、位置靠近、容易搞混的部位（没教到的会跳过，不够再随便补）
   const LIKE = {
-    '手': ['手臂', '手指', '脚'], '脚': ['脚趾头', '腿', '手'], '手指': ['手', '脚趾头', '手臂'], '脚趾头': ['脚', '手指', '膝盖'],
+    '手': ['手臂', '手指头', '脚'], '脚': ['脚趾头', '腿', '手'], '手指头': ['手', '脚趾头', '手臂'], '脚趾头': ['脚', '手指头', '膝盖'],
     '膝盖': ['腿', '脚', '肩膀'], '腿': ['膝盖', '脚', '手臂'], '手臂': ['手', '腿', '肩膀'], '肩膀': ['手臂', '脖子', '背'],
-    '脖子': ['肩膀', '头', '背'], '头': ['脸', '脖子', '耳朵'], '脸': ['头', '鼻子', '嘴巴'], '眼睛': ['耳朵', '鼻子', '嘴巴'],
+    '脖子': ['肩膀', '头', '背'], '头': ['头发', '脸', '脖子', '耳朵'], '脸': ['头', '鼻子', '嘴巴'], '眼睛': ['耳朵', '鼻子', '嘴巴'],
     '耳朵': ['眼睛', '鼻子', '头'], '鼻子': ['嘴巴', '眼睛', '脸'], '嘴巴': ['鼻子', '脸', '眼睛'], '肚子': ['背', '肩膀', '脖子'],
-    '背': ['肚子', '肩膀', '脖子']
+    '背': ['肚子', '肩膀', '脖子'], '头发': ['头', '耳朵', '脸']
   };
   function trapsFor(parts, n) {
     const ok = UNIT.words.filter(w => (w.level || 1) <= level).map(w => w.zh).filter(z => !parts.includes(z));
@@ -113,7 +113,8 @@ Shih.loadUnit().then(UNIT => {
   // 一张图好几个人时：部位都不一样；很像的一对（脚／脚趾头、手／手指、腿／膝盖）不会同时出现；脸上的部位最多一个
   const FACE = ['脸', '眼睛', '耳朵', '鼻子', '嘴巴'];
   const NEAR = { '腿': '膝盖', '膝盖': '腿' };
-  const at = lv => UNIT.words.filter(w => (w.level || 1) === lv).map(w => w.zh);
+  const askable = w => !(level >= 2 && w.noPain);       // Level 2（痛）：头发不出题
+  const at = lv => UNIT.words.filter(w => (w.level || 1) === lv && askable(w)).map(w => w.zh);
   const clash = (list, z) => list.includes(z) || list.some(x => PT.PAIR[x] === z || NEAR[x] === z) || (FACE.includes(z) && list.some(x => FACE.includes(x)));
   function pickParts(n) {
     const out = [];
@@ -121,12 +122,12 @@ Shih.loadUnit().then(UNIT => {
     // Level 2：每个人大约七成的机会用三年级新字
     if (level >= 2) add(at(2), Array.from({ length: n }, () => Math.random() < (C.newShare || 0.7)).filter(Boolean).length);
     add(at(1), n);
-    add(UNIT.words.filter(w => (w.level || 1) <= level).map(w => w.zh), n);
+    add(UNIT.words.filter(w => (w.level || 1) <= level && askable(w)).map(w => w.zh), n);
     return shuffle(out);
   }
-  // 句子拆成字卡：Level 1 这是／我的／部位；Level 2 我的／部位／疼
-  const PIECES = { '这是': 'zhè shì', '我的': 'wǒ de', '疼': 'téng' };
-  const piecesOf = z => level === 1 ? ['这是', '我的', z] : ['我的', z, '疼'];
+  // 句子拆成字卡：Level 1 这是／我的／部位；Level 2 我的／部位／痛（疼）
+  const PIECES = { '这是': 'zhè shì', '我的': 'wǒ de', '痛（疼）': 'tòng téng' };
+  const piecesOf = z => level === 1 ? ['这是', '我的', z] : ['我的', z, '痛（疼）'];
   const pyOf = z => PIECES[z] || W[z].py;
 
   // 挂着的木牌

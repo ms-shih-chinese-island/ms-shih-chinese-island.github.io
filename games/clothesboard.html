@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>衣服走一走</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 衣服走一走（购物中心）：一个学生自己玩。掷骰子，走到哪一格就说那一格的衣服。
+   Level 1「这是＿＿。」；Level 2「这是＿＿的＿＿。」；Level 3 字卡排成「我想买红色的T恤。」再按 Submit。
+   答对了才能再掷骰子；放错了摇一摇（不算错）。时间内走到终点就有金币。设定在 units/clothes/words.js 的 UNIT.board */
+body.game { background: #EEF0FA; }
+.box { max-width: 1060px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+.board { position: relative; display: grid; grid-template-columns: 92px repeat(7, 1fr); grid-template-rows: repeat(3, 86px); gap: 6px; background: #C9CFEA; border: 4px solid #2B2B2B; border-radius: 20px; padding: 8px; }
+.sq { position: relative; background: #FFFDF6; border: 3px solid #2B2B2B; border-radius: 14px; display: flex; align-items: center; justify-content: center; }
+.sq .n { position: absolute; top: 2px; left: 6px; font: 800 14px var(--f-latin); color: #666666; }
+.sq svg { width: 62px; height: 62px; display: block; }
+.sq.sp { background: #FFF1C9; flex-direction: column; text-align: center; padding: 2px; }
+.sq.sp .ruby .py { font-size: 10px; } .sq.sp .ruby .zh { font-size: 17px; font-weight: 700; }
+.sq.sp .en { font: 600 11px var(--f-latin); color: #555555; }
+.sq.end { background: #D9F2D0; }
+.sq.end .ruby .py { font-size: 12px; } .sq.end .ruby .zh { font-size: 24px; font-weight: 800; }
+.sq.start { background: #E3E8FA; flex-direction: column; }
+.sq.start .ruby .py { font-size: 12px; } .sq.start .ruby .zh { font-size: 22px; font-weight: 800; }
+.sq.here { box-shadow: 0 0 0 4px #F5C531; }
+.pawn { position: absolute; width: 44px; height: 54px; transition: left .22s, top .22s; pointer-events: none; z-index: 2; }
+.pawn svg { width: 100%; height: 100%; display: block; }
+.ctrl { display: flex; gap: 14px; align-items: stretch; }
+.dice { flex: none; width: 150px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 20px; padding: 8px; }
+.die { width: 70px; height: 70px; background: #FFFFFF; border: 4px solid #2B2B2B; border-radius: 14px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 6px; box-sizing: border-box; }
+.die i { width: 12px; height: 12px; border-radius: 50%; background: #2B2B2B; margin: auto; visibility: hidden; }
+.die i.on { visibility: visible; }
+.die.roll { animation: roll .5s; }
+@keyframes roll { 30% { transform: rotate(25deg) scale(1.1); } 60% { transform: rotate(-20deg); } }
+.rollBtn { font: 800 18px var(--f-latin); background: #5B6FD6; color: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 12px; padding: 4px 12px; cursor: pointer; }
+.rollBtn:disabled { opacity: .4; cursor: default; }
+.panel { flex: 1; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 20px; padding: 10px; display: flex; flex-direction: column; gap: 10px; justify-content: center; min-height: 150px; }
+.msg { text-align: center; font: 700 17px var(--f-latin); color: #555555; }
+.sent { display: flex; align-items: flex-end; justify-content: center; gap: 6px; flex-wrap: wrap; }
+.sent .ruby .py { font-size: 14px; } .sent .ruby .zh { font-size: 30px; font-weight: 700; }
+.sent .pic svg { width: 50px; height: 50px; display: block; }
+.sent .dropSlot { min-height: 58px; padding: 2px 8px; box-sizing: border-box; cursor: pointer; }
+.sent .dropSlot:not(.filled) { width: 80px; }
+.sent .dropSlot .ruby .zh { font-size: 26px; }
+.sent .dropSlot.bad { animation: shake .35s; border-color: var(--bad); background: #FCE3E0; }
+.bank { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.bank .wcard { min-width: 56px; justify-content: center; }
+.bank .wcard .py { font-size: 13px; } .bank .wcard .zh { font-size: 24px; font-weight: 700; }
+.bank .wcard.oops { animation: shake .35s; border-color: var(--bad); }
+.bank .wcard.used { display: none; }
+.go { align-self: center; font: 800 18px var(--f-latin); background: var(--me); color: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 12px; padding: 4px 22px; cursor: pointer; }
+.go[hidden] { display: none; }
+.timer.low { background: #FCE3E0; border-color: var(--bad); }
+.timeUp { text-align: center; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 10px; margin: 0 auto 10px; max-width: 640px; font: 700 18px var(--f-latin); display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.timeUp .ruby .py { font-size: 12px; } .timeUp .ruby .zh { font-size: 26px; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 21</span>
+      <span class="pill timer" id="timer">0:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="timeUp" id="timeUp" hidden><span class="ruby" id="timeUpRuby"></span><span id="timeUpTxt"></span><button class="ctl" id="again2" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="box">
+        <div class="board" id="board"></div>
+        <div class="ctrl">
+          <div class="dice"><div class="die" id="die"></div><button type="button" class="rollBtn" id="roll">🎲 Roll</button></div>
+          <div class="panel" id="panel"><div class="msg" id="msg"></div><div class="sent" id="sent"></div><div class="bank" id="bank"></div><button class="go" id="go" type="button" hidden>✓ Submit</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/clothes-art.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.board, CL = UNIT.clothes, CA = window.CLOTHES_ART, N = C.squares;
+  const $ = id => document.getElementById(id);
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.ruby('到终点了', 'dào zhōng diǎn le');
+  $('timeUpRuby').innerHTML = Shih.ruby('时间到了', 'shí jiān dào le');
+  Shih.soundButton($('soundBtn'));
+
+  // ---- 计时：时间内走到终点才有金币 ----
+  const timerEl = $('timer');
+  const LIMIT = lv => C.time[lv - 1] * 1000;
+  let left = 0, lastT = 0, tick = 0, running = false;
+  const fmt = ms => { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  function loop() {
+    if (!running) return;
+    const now = performance.now(); left -= now - lastT; lastT = now;
+    timerEl.textContent = '⏱ ' + fmt(Math.max(0, left)); timerEl.classList.toggle('low', left < 20000);
+    if (left <= 0) { finish(false); return; }
+    tick = requestAnimationFrame(loop);
+  }
+  function finish(won) {
+    running = false; cancelAnimationFrame(tick); $('roll').disabled = true;
+    if (won) { $('winTime').textContent = 'Time left: ' + fmt(Math.max(0, left)); $('winMsg').hidden = false; Shih.speak('到终点了！太棒了！'); }
+    else { $('timeUpTxt').textContent = `You got to square ${pos} of ${N}. Try again!`; $('timeUp').hidden = false; Shih.speak('时间到了'); }
+  }
+
+  const LEVELS = [{ note: '这是＿＿。' }, { note: '这是＿＿的＿＿。' }, { note: '我想买＿＿的＿＿。' }];
+  let level = Shih.startLevel('boardLevel:clothes', 3);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('boardLevel:clothes', lv); setup(); });
+  const HELP = ['Roll the dice. Say the clothes on your square: 这是＿＿。',
+                'Roll the dice. Say the color and the clothes: 这是＿＿的＿＿。',
+                'Roll the dice. Build the sentence: 我想买＿＿的＿＿。 Then press Submit.'];
+  const oops = el => { el.classList.remove('oops'); void el.offsetWidth; el.classList.add('oops'); setTimeout(() => el.classList.remove('oops'), 400); };
+  const card = w => `<span class="ruby">${Shih.ruby(w.zh, w.py)}</span>`;
+  const COLS = () => UNIT.colors.filter(c => (c.level || 2) <= Math.max(2, level) && c.zh !== '黑色');   // 黑色的衣服跟黑线混在一起看不清楚，棋盘不用
+
+  // ---- 棋盘：第 0 格是起点；1～21 蛇形排（第一排左到右、第二排右到左、第三排左到右）；21 是终点 ----
+  let squares = [], pos = 0, busy = false, q = null;
+  const cellOf = i => { if (i === 0) return [0, 0]; const r = Math.floor((i - 1) / 7), k = (i - 1) % 7; return [r, r === 1 ? 7 - k : k + 1]; };
+  function drawBoard() {
+    const cl = shuffle(CL.concat(CL)), co = COLS();
+    squares = Array.from({ length: N + 1 }, (_, i) => i === 0 || i === N || C.special[i] ? null : { w: cl.pop(), c: pick(co) });
+    $('board').innerHTML = '';
+    for (let i = 0; i <= N; i++) {
+      const [r, c] = cellOf(i), d = document.createElement('div');
+      d.className = 'sq'; d.style.gridRow = r + 1; d.style.gridColumn = c + 1; d.dataset.i = i;
+      if (i === 0) { d.classList.add('start'); d.innerHTML = `<span class="ruby">${Shih.ruby('起点', 'qǐ diǎn')}</span><span class="en">Start</span>`; }
+      else if (i === N) { d.classList.add('end'); d.innerHTML = `<span class="n">${i}</span><span class="ruby">${Shih.ruby('终点', 'zhōng diǎn')}</span>`; }
+      else if (C.special[i]) { const s = C.special[i]; d.classList.add('sp'); d.innerHTML = `<span class="n">${i}</span><span class="ruby">${Shih.ruby(s.zh, s.py)}</span><span class="en">${s.en}</span>`; }
+      else d.innerHTML = `<span class="n">${i}</span>` + CA.svg(squares[i].w.zh, squares[i].c.hex);
+      $('board').appendChild(d);
+    }
+    // 棋子（小朋友的头＋身体）
+    $('board').insertAdjacentHTML('beforeend', `<div class="pawn" id="pawn"><svg viewBox="0 0 44 54" aria-hidden="true"><path d="M6 52 Q6 30 22 30 Q38 30 38 52 Z" fill="#E2557A" stroke="#2B2B2B" stroke-width="3"/><circle cx="22" cy="17" r="13" fill="#F6D9B5" stroke="#2B2B2B" stroke-width="3"/><path d="M9 15 Q10 3 22 3 Q34 3 35 15 Q28 9 22 11 Q14 9 9 15 Z" fill="#4A3424" stroke="#2B2B2B" stroke-width="2.5"/><circle cx="17" cy="18" r="2" fill="#2B2B2B"/><circle cx="27" cy="18" r="2" fill="#2B2B2B"/><path d="M18 23 Q22 26 26 23" fill="none" stroke="#2B2B2B" stroke-width="2" stroke-linecap="round"/></svg></div>`);
+  }
+  function placePawn() {
+    const sq = $('board').querySelector(`.sq[data-i="${pos}"]`), pw = $('pawn');
+    pw.style.left = (sq.offsetLeft + sq.offsetWidth - 46) + 'px'; pw.style.top = (sq.offsetTop + sq.offsetHeight - 56) + 'px';
+    $('board').querySelectorAll('.sq.here').forEach(x => x.classList.remove('here')); sq.classList.add('here');
+    $('score').textContent = `${pos} / ${N}`;
+  }
+  const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+  const showDie = n => { $('die').innerHTML = Array.from({ length: 9 }, (_, i) => `<i class="${PIPS[n].includes(i) ? 'on' : ''}"></i>`).join(''); };
+  const msg = t => { $('msg').innerHTML = t; $('sent').innerHTML = ''; $('bank').innerHTML = ''; $('go').hidden = true; };
+
+  // 一格一格走（step = +1 或 -1）
+  function walk(n, done) {
+    const step = n > 0 ? 1 : -1;
+    let k = Math.abs(n);
+    const t = setInterval(() => {
+      if (!running) { clearInterval(t); return; }
+      pos = Math.max(0, Math.min(N, pos + step)); placePawn(); k--;
+      if (k <= 0 || pos === N) { clearInterval(t); setTimeout(done, 300); }
+    }, 260);
+  }
+  $('roll').addEventListener('click', () => {
+    if (!running || busy) return;
+    busy = true; $('roll').disabled = true;
+    const n = 1 + Math.floor(Math.random() * 6);
+    const d = $('die'); d.classList.remove('roll'); void d.offsetWidth; d.classList.add('roll');
+    let f = 0; const spin = setInterval(() => { showDie(1 + Math.floor(Math.random() * 6)); if (++f > 6) { clearInterval(spin); showDie(n); walk(n, land); } }, 70);
+    window.__b = { pos, roll: n };
+  });
+  function land() {
+    if (!running) return;
+    if (pos >= N) { finish(true); return; }
+    const s = C.special[pos];
+    if (s) {
+      msg(`<span class="ruby">${Shih.ruby(s.zh, s.py)}</span> ${s.en}!`); Shih.speak(s.zh);
+      if (s.again) { setTimeout(() => { busy = false; $('roll').disabled = false; msg('Roll again! 🎲'); }, 900); return; }
+      setTimeout(() => walk(s.move, land), 900); return;
+    }
+    ask(squares[pos]);
+  }
+  // ---- 问题：说出这一格的衣服 ----
+  function ask(sq) {
+    const w = sq.w, c = sq.c;
+    $('msg').textContent = '';
+    const pic = `<span class="pic">${CA.svg(w.zh, c.hex)}</span>`;
+    const others = shuffle(CL.filter(x => x !== w)), near = others.filter(x => x.kind === w.kind).concat(others.filter(x => x.kind !== w.kind));
+    const oCol = shuffle(COLS().filter(x => x !== c));
+    let parts, bank;
+    q = { w, c };
+    if (level === 1) {
+      parts = [{ zh: '这是', py: 'zhè shì' }, { want: w.zh }, { zh: '。', py: '' }];
+      bank = [w].concat(near.slice(0, 3));
+      q.say = `这是${w.zh}。`;
+    } else if (level === 2) {
+      parts = [{ zh: '这是', py: 'zhè shì' }, { want: c.zh }, { zh: '的', py: 'de' }, { want: w.zh }, { zh: '。', py: '' }];
+      bank = [w, c].concat(near.slice(0, 2), oCol.slice(0, 2));
+      q.say = `这是${c.zh}的${w.zh}。`;
+    } else {
+      q.need = ['我', '想', '买', c.zh, '的', w.zh];
+      parts = q.need.map(k => ({ any: k })).concat([{ zh: '。', py: '' }]);
+      bank = [{ zh: '我', py: 'wǒ' }, { zh: '想', py: 'xiǎng' }, { zh: '买', py: 'mǎi' }, c, { zh: '的', py: 'de' }, w, oCol[0], near[0], { zh: '卖', py: 'mài' }];
+      q.say = `我想买${c.zh}的${w.zh}。`;
+    }
+    $('sent').innerHTML = pic + parts.map(x => x.want || x.any ? `<span class="dropSlot" data-want="${x.want || ''}"></span>` : `<span class="ruby">${Shih.rubyText(x.zh, x.py)}</span>`).join('');
+    $('bank').innerHTML = '';
+    const cards = shuffle(bank).map((t, i) => { const el = document.createElement('div'); el.className = 'wcard'; el.dataset.zh = t.zh; el.dataset.id = i; el.innerHTML = card(t); $('bank').appendChild(el); return el; });
+    $('go').hidden = level !== 3;
+    const empty = () => [...$('sent').querySelectorAll('.dropSlot:not(.filled)')];
+    const put = (cd, slot) => { cd.classList.add('used'); slot.classList.add('filled'); slot.dataset.zh = cd.dataset.zh; slot.dataset.from = cd.dataset.id; slot.innerHTML = cd.innerHTML; };
+    const dnd = Shih.dragCards(cards, {
+      slots: empty,
+      accept(cd, slot) {
+        if (!running) return true;
+        if (level === 3) { put(cd, slot); return true; }                       // Level 3：先放，按 Submit 才检查
+        if (cd.dataset.zh !== slot.dataset.want) { oops(cd); return true; }    // 放错：摇一摇（不算错）
+        put(cd, slot);
+        if (!empty().length) right();
+        return true;
+      },
+      onTapCard: level === 3 ? cd => { if (!running) return; const s = empty()[0]; if (s) put(cd, s); } : undefined
+    });
+    $('sent').querySelectorAll('.dropSlot').forEach(d => d.addEventListener('click', () => {
+      if (!running) return;
+      if (d.classList.contains('filled')) {                                    // Level 3：点放好的字卡，拿回去
+        if (level !== 3) return;
+        const cd = $('bank').querySelector(`.wcard[data-id="${d.dataset.from}"]`); if (cd) cd.classList.remove('used');
+        d.classList.remove('filled'); d.innerHTML = ''; delete d.dataset.zh; return;
+      }
+      dnd.tapSlot(d);
+    }));
+    window.__b = { pos, w: w.zh, c: c.zh, level };
+  }
+  $('go').addEventListener('click', () => {
+    if (!running || level !== 3 || !q) return;
+    let ok = true;
+    [...$('sent').querySelectorAll('.dropSlot')].forEach((s, i) => {
+      if (s.dataset.zh === q.need[i]) return;
+      ok = false;
+      if (s.dataset.zh) { const cd = $('bank').querySelector(`.wcard[data-id="${s.dataset.from}"]`); if (cd) cd.classList.remove('used'); s.classList.remove('filled'); s.innerHTML = ''; delete s.dataset.zh; }
+      s.classList.remove('bad'); void s.offsetWidth; s.classList.add('bad'); setTimeout(() => s.classList.remove('bad'), 400);
+    });
+    if (ok) right();
+  });
+  function right() {
+    Shih.speak(q.say); q = null; $('go').hidden = true;
+    setTimeout(() => { if (!running) return; msg('👍 Roll the dice! 🎲'); busy = false; $('roll').disabled = false; }, 1200);
+  }
+  function setup() {
+    paintLevels(level);
+    $('help').textContent = HELP[level - 1] + ` Get to the end in ${fmt(LIMIT(level))} to get coins!`;
+    running = false; cancelAnimationFrame(tick); left = LIMIT(level); timerEl.textContent = '⏱ ' + fmt(left); timerEl.classList.remove('low');
+    $('winMsg').hidden = true; $('timeUp').hidden = true;
+    pos = 0; busy = false; q = null;
+    drawBoard(); showDie(1); msg('Roll the dice! 🎲'); $('roll').disabled = false;
+    requestAnimationFrame(placePawn);
+    wait();
+  }
+  const wait = Shih.startCover($('playArea'), () => { running = true; lastT = performance.now(); tick = requestAnimationFrame(loop); placePawn(); });
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2').addEventListener('click', setup);
+  window.addEventListener('resize', () => placePawn());
+  setup();
+});
+</script>
+</body>
+</html>

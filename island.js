@@ -56,7 +56,8 @@ window.ISLANDS = {
       { id: 'mall', zh: '购物中心', py: 'gòu wù zhōng xīn', en: 'Shopping Mall', x: 1016, y: 84, color: 'night',
         games: [
           { zh: '服务台', py: 'fú wù tái', en: 'Lost Kid Announcement', note: 'Tap 🔊 to hear the top and bottom of the lost kid. Then find the lost kid in the crowd.', href: 'games/lost.html?unit=clothes' },
-          { zh: '找朋友', py: 'zhǎo péng yǒu', en: 'Find My Friends', note: "Read your friend's message to see their top and bottom. Then find your friend in the crowd.", href: 'games/find.html?unit=clothes' }
+          { zh: '找朋友', py: 'zhǎo péng yǒu', en: 'Find My Friends', note: "Read your friend's message to see their top and bottom. Then find your friend in the crowd.", href: 'games/find.html?unit=clothes' },
+          { zh: '衣服走一走', py: 'yī fú zǒu yi zǒu', en: 'Clothes Board Game', note: 'Roll the dice and say the clothes on your square. Get to the end in time!', href: 'games/clothesboard.html?unit=clothes' }
         ] },
       { id: 'petshop', zh: '宠物店', py: 'chǒng wù diàn', en: 'Pet Shop', x: 1268, y: 132, color: 'mom', games: [
           { zh: '找宠物', py: 'zhǎo chǒng wù', en: 'Find the Pets', note: 'Read the sentence. Find the cat, dog, rabbit or bird in the right color!', href: 'games/animals.html?unit=petshop' }

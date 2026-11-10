@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="../shared/fonts.css">
 <link rel="stylesheet" href="../shared/common.css">
 <style>
-/* 看医生：身体部位。Level 1 这是我的＿＿、Level 2 我的＿＿疼。
+/* 看医生：身体部位。Level 1 这是我的＿＿、Level 2 我的＿＿痛（疼）。
    题型混着出：看图选字、读了点（贴 OK 绷）、听了点（贴 OK 绷）。小病人的画法在 shared/patient.js。
    用法：doctor.html?unit=body（字和题数都在 units/body/words.js） */
 body.game { background: #F2F8FB; }
@@ -105,11 +105,13 @@ Shih.loadUnit().then(UNIT => {
       const nNew = level >= 2 ? Math.round(n * (C.newShare || 0.7)) : 0;
       return shuffle(Array.from({ length: n }, (_, i) => i < nNew ? cands.filter(z => newOnes.includes(z)) : cands.filter(z => level < 2 || !newOnes.includes(z))));
     };
-    plan(K.pick, pool).forEach(c => {
+    // Level 2 是「我的＿＿痛（疼）」：noPain 的字（头发）不出题，只当干扰卡
+    const ask = level >= 2 ? pool.filter(z => !(UNIT.words.find(w => w.zh === z) || {}).noPain) : pool;
+    plan(K.pick, ask).forEach(c => {
       const z = fresh(c);
       list.push({ kind: 'pick', zh: z, opts: shuffle([z, ...shuffle(pool.filter(x => okWith(z, x))).slice(0, 3)]), look: PT.look() });
     });
-    ['read', 'listen'].forEach(kind => plan(K[kind], pool.filter(z => PT.CAN_TAP.includes(z))).forEach(c => list.push({ kind, zh: fresh(c), look: PT.look() })));
+    ['read', 'listen'].forEach(kind => plan(K[kind], ask.filter(z => PT.CAN_TAP.includes(z))).forEach(c => list.push({ kind, zh: fresh(c), look: PT.look() })));
     return shuffle(list);
   }
 
