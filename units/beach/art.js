@@ -26,5 +26,28 @@
   function icon(item, c) {
     return `<svg viewBox="40 130 120 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${ITEM[item](c)}</svg>`;
   }
-  window.BART = { kid, icon, items: Object.keys(ITEM), hat: c => `<svg viewBox="36 20 128 56" aria-hidden="true">${HAT(c)}</svg>`, glasses: `<svg viewBox="64 70 72 28" aria-hidden="true">${GLASSES}</svg>` };
+  // ---- 海滩找一找：沙滩上的东西（100 × 100）----
+  const FIND = {
+    // 贝壳：圆圆的扇形，上面一波一波，有放射的纹路，下面有两个小耳朵
+    贝壳: `<path d="M34 80 L26 90 L42 88 Z M66 80 L74 90 L58 88 Z" fill="#F7B79A" ${sw(2.5)}/>` +
+          `<path d="M50 88 L14 52 Q12 40 22 36 Q26 24 38 24 Q44 14 50 16 Q56 14 62 24 Q74 24 78 36 Q88 40 86 52 Z" fill="#F7B79A" ${sw()}/>` +
+          `<path d="M50 88 L22 40 M50 88 L36 28 M50 88 L50 18 M50 88 L64 28 M50 88 L78 40" fill="none" stroke="#D98A6A" stroke-width="2.5" stroke-linecap="round"/>`,
+    // 海星：五个角的星星，角是圆圆的（不尖），身上有小点点
+    海星: (() => {
+      const P = (r, deg) => { const t = (deg - 90) * Math.PI / 180; return [(50 + Math.cos(t) * r).toFixed(1), (54 + Math.sin(t) * r).toFixed(1)]; };
+      let d = 'M' + P(19, -36).join(' ');
+      for (let k = 0; k < 5; k++) { const c = P(66, k * 72), e = P(19, k * 72 + 36); d += ` Q${c[0]} ${c[1]} ${e[0]} ${e[1]}`; }
+      const dots = [0, 72, 144, 216, 288].map(g => { const p = P(26, g); return `<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="#FFE0B0"/>`; }).join('');
+      return `<path d="${d} Z" fill="#F28C28" ${sw()}/>${dots}<circle cx="50" cy="54" r="4" fill="#FFE0B0"/>`;
+    })(),
+    螃蟹: `<ellipse cx="50" cy="60" rx="26" ry="18" fill="#E5483B" ${sw()}/><path d="M28 54 Q14 44 18 30 M72 54 Q86 44 82 30" fill="none" ${sw(4)}/><path d="M12 30 Q18 18 26 28 Q20 30 18 36 Z M88 30 Q82 18 74 28 Q80 30 82 36 Z" fill="#E5483B" ${sw(2.5)}/>` +
+          `<path d="M30 70 L18 80 M36 74 L28 86 M70 70 L82 80 M64 74 L72 86" ${sw(3.5)}/><circle cx="42" cy="48" r="4" fill="#FFFFFF" ${sw(2)}/><circle cx="58" cy="48" r="4" fill="#FFFFFF" ${sw(2)}/><path d="M44 64 Q50 68 56 64" fill="none" ${sw(2)}/>`,
+    沙堡: `<path d="M14 88 L14 52 L24 52 L24 44 L34 44 L34 52 L44 52 L44 30 L56 30 L56 52 L66 52 L66 44 L76 44 L76 52 L86 52 L86 88 Z" fill="#E8C77E" ${sw()}/><path d="M44 88 L44 72 Q50 64 56 72 L56 88" fill="#B08A50" ${sw(2.5)}/>` +
+          `<path d="M50 30 L50 12" ${sw(2.5)}/><path d="M50 12 L64 17 L50 22 Z" fill="#E5483B" ${sw(2)}/>`,
+    太阳伞: `<path d="M50 30 L50 92" ${sw(4)}/><path d="M10 46 Q50 0 90 46 Z" fill="#FFFFFF" ${sw()}/><path d="M30 46 Q38 16 50 13 Q42 22 42 46 Z M58 46 Q58 22 50 13 Q62 16 70 46 Z" fill="#E5483B" ${sw(2.5)}/>`,
+    水桶: `<path d="M30 40 Q50 10 70 40" fill="none" ${sw(3.5)}/><path d="M24 40 L76 40 L68 90 L32 90 Z" fill="#3B78D8" ${sw()}/><path d="M27 54 L73 54" stroke="#FFFFFF" stroke-width="5"/>`
+  };
+  const findIcon = k => `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${FIND[k]}</svg>`;
+
+  window.BART = { find: findIcon, findList: Object.keys(FIND), kid, icon, items: Object.keys(ITEM), hat: c => `<svg viewBox="36 20 128 56" aria-hidden="true">${HAT(c)}</svg>`, glasses: `<svg viewBox="64 70 72 28" aria-hidden="true">${GLASSES}</svg>` };
 })();

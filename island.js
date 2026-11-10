@@ -69,12 +69,16 @@ window.ISLANDS = {
       { zh: '水族馆', py: 'shuǐ zú guǎn', en: 'Aquarium', x: 2194, y: 148, color: 'sea', games: [] },
       { id: 'airport', zh: '机场', py: 'jī chǎng', en: 'Airport', x: 1566, y: 412, color: 'night',
         games: [
-          { zh: '天气怎么样？', py: 'tiān qì zěn me yàng', en: "How's the Weather?", note: 'The pilot asks about the weather. Look out the window (or at the weather board) and answer!', href: 'games/weather.html?unit=airport' }
+          { zh: '涂国旗', py: 'tú guó qí', en: 'Color the Flag', note: 'Read the color words and color the flags of the world!', href: 'games/flags.html?unit=airport' },
+          { zh: '天气怎么样？', py: 'tiān qì zěn me yàng', en: "How's the Weather?", note: 'The pilot asks about the weather. Look out the window (or at the weather board) and answer!', href: 'games/weather.html?unit=airport' },
+          { zh: '几点起飞？', py: 'jǐ diǎn qǐ fēi', en: 'What Time Does It Leave?', note: 'Read the clock and the departure board. What time does the plane take off?', href: 'games/clock.html?unit=airport' },
+          { zh: '我想去', py: 'wǒ xiǎng qù', en: 'Where Do You Want to Go?', note: 'A traveler wants to go somewhere. Find the flag, the date and the price on the flight board!', href: 'games/trip.html?unit=airport' }
         ] },
       { id: 'beach', zh: '海滩', py: 'hǎi tān', en: 'Beach', x: 2110, y: 594, color: 'sun',
         games: [
           { zh: '能去海滩吗？', py: 'néng qù hǎi tān ma', en: 'Beach Day?', note: 'Listen to the weather report on the radio. Can we go to the beach today? (Listening: more coins!)', href: 'games/forecast.html?unit=beach' },
-          { zh: '我是谁？', py: 'wǒ shì shéi', en: 'Who Am I?', note: 'Listen: what does the kid have? Find the right kid on the beach! (Listening: more coins!)', href: 'games/whoami.html?unit=beach' }
+          { zh: '我是谁？', py: 'wǒ shì shéi', en: 'Who Am I?', note: 'Listen: what does the kid have? Find the right kid on the beach! (Listening: more coins!)', href: 'games/whoami.html?unit=beach' },
+          { zh: '海滩找一找', py: 'hǎi tān zhǎo yi zhǎo', en: 'Beach Hunt', note: 'Read the sentence and find the things on the beach!', href: 'games/beachfind.html?unit=beach' }
         ] },
       { zh: '花园', py: 'huā yuán', en: 'Garden', x: 1250, y: 520, color: 'me', games: [] },
       { id: 'restaurant', zh: '餐厅', py: 'cān tīng', en: 'Restaurant', x: 1076, y: 546, color: 'dad',

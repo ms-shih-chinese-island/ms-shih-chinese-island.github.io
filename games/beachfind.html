@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>海滩找一找</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 海滩找一找（像快手分信）：海滩的东西从上面掉下来，点牌子写对的篮子，东西就装进去。
+   篮子装满就收走，换一个新的。没接到的东西掉到沙滩上就不见了（不扣分）。点错了篮子摇一摇。
+   Level 1 三个篮子；Level 2 五个篮子；Level 3 篮子写两样东西和数量（两个贝壳和一个水桶）。
+   设定在 units/beach/words.js 的 UNIT.beachfind */
+body.game { background: #FBEFD5; }
+.stage { position: relative; max-width: 960px; margin: 0 auto; height: min(560px, calc(100vh - 230px)); min-height: 430px; background: linear-gradient(#9ED3F0 0 16%, #6FB7E0 16% 26%, #F2DDB0 26%); border: 4px solid #2B2B2B; border-radius: 22px; overflow: hidden; }
+.drop { position: absolute; width: 84px; height: 84px; left: 50%; margin-left: -42px; z-index: 3; }
+.drop svg { width: 100%; height: 100%; display: block; }
+.drop.fly { transition: left .35s ease-in, top .35s ease-in, transform .35s; transform: scale(.45); }
+.drop.lost { transition: opacity .3s; opacity: 0; }
+.bags { position: absolute; left: 0; right: 0; bottom: 8px; display: flex; justify-content: space-around; padding: 0 8px; gap: 6px; }
+.bag { flex: 0 1 220px; cursor: pointer; background: none; border: none; padding: 0; display: flex; flex-direction: column; align-items: center; font: inherit; }
+.bag .tag { background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 10px; padding: 2px 8px; margin-bottom: -6px; position: relative; z-index: 2; min-width: 70px; text-align: center; }
+.bag .tag .ruby { justify-content: center; } .bag .tag .ruby .py { font-size: 11px; } .bag .tag .ruby .zh { font-size: 22px; font-weight: 700; }
+.bag .tag .ruby.ln { display: flex; flex-direction: row; justify-content: center; white-space: nowrap; }
+.bag .basket { position: relative; width: 120px; }
+.bag .basket svg { width: 100%; display: block; }
+.bag .dots { position: absolute; left: 0; right: 0; top: 54%; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.bag .dots .r { display: flex; gap: 3px; align-items: center; }
+.bag .dots .r svg { width: 22px; height: 22px; }
+.bag .dots i { width: 13px; height: 13px; border-radius: 50%; border: 2px solid #2B2B2B; background: #FFFFFF; display: inline-block; }
+.bag .dots i.on { background: #45A852; }
+.bag.oops { animation: shake .35s; }
+.bag.oops .tag { border-color: var(--bad); }
+.bag.swap { animation: swapIn .45s ease-out; }
+@keyframes swapIn { from { transform: translateY(60px); opacity: 0; } to { transform: none; opacity: 1; } }
+.bag:hover .tag { background: #FFF6D6; }
+.timer.low { background: #FCE3E0; border-color: var(--bad); }
+.timeUp { text-align: center; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 10px; margin: 0 auto 10px; max-width: 640px; font: 700 18px var(--f-latin); display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.timeUp .ruby .py { font-size: 12px; } .timeUp .ruby .zh { font-size: 26px; }
+@media (max-width: 700px) { .bag .basket { width: 86px; } .bag .tag .ruby .zh { font-size: 17px; } }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill timer" id="timer">0:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="timeUp" id="timeUp" hidden><span class="ruby" id="timeUpRuby"></span><span id="timeUpTxt"></span><button class="ctl" id="again2" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="stage" id="stage">
+        <div class="bags" id="bags"></div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/npcs.js"></script>
+<script src="../units/beach/art.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.beachfind, W = C.words, BART = window.BART;
+  const $ = id => document.getElementById(id);
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  const byZh = zh => W.find(w => w.zh === zh);
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  $('timeUpRuby').innerHTML = Shih.ruby('时间到了', 'shí jiān dào le');
+  Shih.soundButton($('soundBtn'));
+
+  const timerEl = $('timer');
+  const LIMIT = lv => C.time[lv - 1] * 1000;
+  let left = 0, lastT = 0, tick = 0, running = false;
+  const fmt = ms => { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+
+  const LEVELS = [{ note: '3 baskets + pinyin' }, { note: '5 baskets + pinyin' }, { note: 'How many? (两个贝壳和一个水桶)' }];
+  let level = Shih.startLevel('beachfindLevel', 3);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('beachfindLevel', lv); setup(); });
+  const HELP = ['Things are falling! Tap the basket with the right word before it hits the sand.',
+                'Five baskets now! Tap the basket with the right word before it hits the sand.',
+                'Each basket wants two kinds of things and a number. Put in exactly that many — not more!'];
+  const oops = el => { el.classList.remove('oops'); void el.offsetWidth; el.classList.add('oops'); setTimeout(() => el.classList.remove('oops'), 400); };
+  // 篮子
+  const BASKET = `<svg viewBox="0 0 120 100" aria-hidden="true"><path d="M30 34 Q60 -6 90 34" fill="none" stroke="#2B2B2B" stroke-width="5"/><path d="M30 34 Q60 -6 90 34" fill="none" stroke="#C9963F" stroke-width="2"/>` +
+    `<path d="M10 34 L110 34 L98 96 L22 96 Z" fill="#E2B25A" stroke="#2B2B2B" stroke-width="4" stroke-linejoin="round"/>` +
+    `<path d="M14 52 L106 52 M17 70 L103 70" stroke="#C9963F" stroke-width="3"/><path d="M40 34 L44 96 M60 34 L60 96 M80 34 L76 96" stroke="#C9963F" stroke-width="3"/></svg>`;
+
+  // 一个篮子要装什么：need = { 贝壳: 3 }（Level 3：{ 贝壳: 2, 水桶: 1 }）
+  function makeNeed(used) {
+    if (level < 3) {
+      const free = W.filter(w => !used.includes(w.zh));
+      const w = pick(free.length ? free : W);
+      return { [w.zh]: C.fill };
+    }
+    const pool = shuffle(C.count);
+    return { [pool[0]]: rnd(1, 3), [pool[1]]: rnd(1, 2) };
+  }
+  function tagHTML(need) {
+    const ks = Object.keys(need);
+    if (level < 3) return `<span class="ruby">${Shih.ruby(ks[0], byZh(ks[0]).py)}</span>`;
+    // 两个贝壳和一个水桶（分两行：两个贝壳和／一个水桶）
+    const part = k => { const N = C.nums[need[k] - 1], w = byZh(k); return { zh: `${N.zh}个${k}`, py: `${N.py} ge ${w.py}` }; };
+    const a = part(ks[0]), b = part(ks[1]);
+    return `<span class="ruby ln">${Shih.ruby(a.zh + '和', a.py + ' hé')}</span><span class="ruby ln">${Shih.ruby(b.zh, b.py)}</span>`;
+  }
+  function dotsHTML(b) {
+    return Object.keys(b.need).map(k => `<span class="r">${level === 3 ? BART.find(k) : ''}${Array.from({ length: b.need[k] }, (_, i) => `<i class="${i < (b.got[k] || 0) ? 'on' : ''}"></i>`).join('')}</span>`).join('');
+  }
+  function paintBag(b) {
+    b.el.querySelector('.tag').innerHTML = tagHTML(b.need);
+    b.el.querySelector('.dots').innerHTML = dotsHTML(b);
+    b.el.dataset.need = JSON.stringify(b.need);
+  }
+
+  let bags = [], filled = 0, goal = 0, drop = null, busy = false;
+  // 掉下来的东西：一定是某一个篮子还需要的
+  function newDrop() {
+    if (!running) return;
+    const want = [];
+    bags.forEach(b => Object.keys(b.need).forEach(k => { if ((b.got[k] || 0) < b.need[k]) want.push(k); }));
+    const k = pick(want);
+    const el = document.createElement('div');
+    el.className = 'drop'; el.innerHTML = BART.find(k); el.style.top = '-90px';
+    el.style.left = (15 + Math.random() * 70) + '%';
+    $('stage').appendChild(el);
+    drop = { el, k, y: -90 };
+    window.__bf = { k, filled, bags: bags.map(b => ({ need: b.need, got: b.got })) };
+  }
+  function loop() {
+    if (!running) return;
+    const now = performance.now(), dt = now - lastT; left -= dt; lastT = now;
+    timerEl.textContent = '⏱ ' + fmt(Math.max(0, left)); timerEl.classList.toggle('low', left < 15000);
+    if (left <= 0) { running = false; if (drop) drop.el.remove(); $('timeUpTxt').textContent = `Time's up! You filled ${filled} of ${goal} baskets. Try again!`; $('timeUp').hidden = false; Shih.speak('时间到了'); return; }
+    if (drop && !busy) {
+      const H = $('stage').clientHeight - (level === 3 ? 230 : 200);   // 掉到篮子上面就算掉到底
+      drop.y += dt * (H + 90) / (C.fall[level - 1] * 1000);
+      drop.el.style.top = drop.y + 'px';
+      if (drop.y >= H) { const d = drop; drop = null; d.el.classList.add('lost'); setTimeout(() => d.el.remove(), 300); setTimeout(newDrop, 350); }
+    }
+    tick = requestAnimationFrame(loop);
+  }
+  function tapBag(b) {
+    if (!running || !drop || busy) return;
+    const k = drop.k;
+    if (!b.need[k] || (b.got[k] || 0) >= b.need[k]) { oops(b.el); return; }   // 不是这个篮子要的，或是已经够了：摇一摇
+    busy = true;
+    const d = drop, r = b.el.querySelector('.basket').getBoundingClientRect(), s = $('stage').getBoundingClientRect();
+    d.el.classList.add('fly');
+    d.el.style.left = (r.left - s.left + r.width / 2) + 'px'; d.el.style.top = (r.top - s.top) + 'px';
+    Shih.speak(k);
+    setTimeout(() => {
+      d.el.remove(); drop = null; busy = false;
+      b.got[k] = (b.got[k] || 0) + 1; paintBag(b);
+      const full = Object.keys(b.need).every(x => (b.got[x] || 0) >= b.need[x]);
+      if (full) {
+        filled++; update();
+        if (filled >= goal) {
+          running = false; cancelAnimationFrame(tick);
+          $('winTime').textContent = 'Time left: ' + fmt(Math.max(0, left));
+          setTimeout(() => { $('winMsg').hidden = false; Shih.speak('太棒了'); }, 300);
+          return;
+        }
+        // 装满了：收走，换一个新的篮子
+        setTimeout(() => { b.need = makeNeed(bags.filter(x => x !== b).map(x => Object.keys(x.need)[0])); b.got = {}; paintBag(b); b.el.classList.remove('swap'); void b.el.offsetWidth; b.el.classList.add('swap'); newDrop(); }, 250);
+      } else newDrop();
+    }, 380);
+  }
+  function setup() {
+    paintLevels(level);
+    goal = C.target[level - 1]; filled = 0; busy = false;
+    $('help').textContent = HELP[level - 1] + ` Fill ${goal} baskets in ${fmt(LIMIT(level))} to get coins!`;
+    $('stage').querySelectorAll('.drop').forEach(e => e.remove()); drop = null;
+    $('bags').innerHTML = '';
+    bags = [];
+    for (let i = 0; i < C.bags[level - 1]; i++) {
+      const el = document.createElement('button');
+      el.type = 'button'; el.className = 'bag';
+      el.innerHTML = `<span class="tag"></span><span class="basket">${BASKET}<span class="dots"></span></span>`;
+      const b = { el, need: makeNeed(bags.map(x => Object.keys(x.need)[0])), got: {} };
+      el.addEventListener('click', () => tapBag(b));
+      $('bags').appendChild(el);
+      bags.push(b); paintBag(b);
+    }
+    running = false; cancelAnimationFrame(tick); left = LIMIT(level); timerEl.textContent = '⏱ ' + fmt(left); timerEl.classList.remove('low');
+    $('winMsg').hidden = true; $('timeUp').hidden = true; update();
+    wait();
+  }
+  function update() { $('score').textContent = `${filled} / ${goal}`; }
+  const wait = Shih.startCover($('playArea'), () => { running = true; lastT = performance.now(); tick = requestAnimationFrame(loop); newDrop(); });
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>我想去</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 我想去（机场的售票柜台）：旅客说「我想去日本。」
+   Level 1 点对的国旗；Level 2 看航班板回答几月几日有票；Level 3 再加多少钱。
+   答对 target 题就马上结束、给金币。选错了摇一摇（不算错）。设定在 units/airport/words.js 的 UNIT.trip */
+body.game { background: #E3EEF6; }
+.wrap { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 820px) { .wrap { grid-template-columns: 1fr; } }
+.side { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.bub { position: relative; width: 100%; box-sizing: border-box; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 20px; padding: 10px 14px; text-align: center; }
+.bub::after { content: ''; position: absolute; left: 50%; bottom: -18px; margin-left: -9px; border: 9px solid transparent; border-top: 10px solid #2B2B2B; }
+.bub .ruby { flex-wrap: wrap; justify-content: center; } .bub .ruby .py { font-size: 12px; } .bub .ruby .zh { font-size: 24px; }
+.bub .again { margin-left: 6px; background: #FFF6D6; border: 2px solid #2B2B2B; border-radius: 10px; font-size: 18px; cursor: pointer; vertical-align: middle; }
+.nb { display: inline-flex; white-space: nowrap; gap: 3px; align-items: flex-end; }
+.ruby > .nb { flex-direction: row; } .nb > span { display: flex; flex-direction: column; align-items: center; }
+.who { width: 140px; height: 200px; }
+.who svg { width: 100%; height: 100%; display: block; }
+.tip { width: 100%; box-sizing: border-box; text-align: center; background: #FFF6D6; border: 2px solid #E9B949; border-radius: 14px; padding: 4px 12px; font: 600 15px var(--f-latin); display: flex; justify-content: center; gap: 4px 14px; flex-wrap: wrap; }
+.tip > span { display: inline-flex; align-items: flex-end; gap: 6px; }
+.tip .ruby .py { font-size: 11px; } .tip .ruby .zh { font-size: 20px; }
+.main { display: flex; flex-direction: column; gap: 12px; }
+/* Level 1：国旗 */
+.flags { background: #FFFFFF; border: 4px solid #2B2B2B; border-radius: 20px; padding: 12px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.flags[hidden], .board[hidden], .panel[hidden] { display: none; }
+.fl { background: #FFF8EC; border: 3px solid #2B2B2B; border-radius: 14px; padding: 6px; cursor: pointer; font: 700 15px var(--f-latin); display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.fl svg { width: 100%; display: block; }
+.fl:hover { background: #FFF6D6; }
+.fl.oops { animation: shake .35s; border-color: var(--bad); }
+.fl.ok { outline: 5px solid var(--me); outline-offset: 1px; }
+/* 航班板 */
+.board { background: #1F2A36; border: 4px solid #2B2B2B; border-radius: 18px; padding: 6px 14px 8px; color: #FFFFFF; }
+.board table { margin: 0 auto; border-collapse: separate; border-spacing: 0 4px; }
+.board th { font: 800 18px var(--f-latin); color: #F5C531; padding: 0 14px; }
+.board th .ruby .py { font-size: 11px; color: #C9D3DC; } .board th .ruby .zh { font-size: 20px; color: #F5C531; }
+.board td { background: #2E3D4D; padding: 1px 14px; vertical-align: middle; font: 800 22px var(--f-latin); color: #F5C531; text-align: center; }
+.board td:first-child { border-radius: 10px 0 0 10px; } .board td:last-child { border-radius: 0 10px 10px 0; }
+.board td .ruby .py { font-size: 10px; color: #C9D3DC; } .board td .ruby .zh { font-size: 19px; color: #FFFFFF; }
+.board td .to { display: inline-flex; align-items: center; gap: 8px; color: #FFFFFF; }
+.board td svg { width: 36px; display: block; }
+.panel { background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 20px; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.sent { display: flex; align-items: flex-end; justify-content: center; gap: 6px; flex-wrap: wrap; min-height: 64px; }
+.sent .ruby .py { font-size: 14px; } .sent .ruby .zh { font-size: 28px; font-weight: 700; }
+.sent .dropSlot { min-height: 58px; padding: 2px 8px; box-sizing: border-box; }
+.sent .dropSlot:not(.filled) { width: 140px; }
+.bank { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.bank .row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; width: 100%; }
+.bank .wcard { min-width: 70px; justify-content: center; cursor: pointer; }
+.bank .wcard .py { font-size: 13px; } .bank .wcard .zh { font-size: 24px; font-weight: 700; }
+.bank .wcard.oops { animation: shake .35s; border-color: var(--bad); }
+.timer.low { background: #FCE3E0; border-color: var(--bad); }
+.timeUp { text-align: center; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 10px; margin: 0 auto 10px; max-width: 640px; font: 700 18px var(--f-latin); display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.timeUp .ruby .py { font-size: 12px; } .timeUp .ruby .zh { font-size: 26px; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill timer" id="timer">0:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="timeUp" id="timeUp" hidden><span class="ruby" id="timeUpRuby"></span><span id="timeUpTxt"></span><button class="ctl" id="again2" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="wrap">
+        <div class="side">
+          <div class="bub" id="bub"></div>
+          <div class="who" id="who"></div>
+          <div class="tip" id="tip"></div>
+        </div>
+        <div class="main">
+          <div class="flags" id="flags"></div>
+          <div class="board" id="board" hidden></div>
+          <div class="panel" id="panel" hidden><div class="sent" id="sent"></div><div class="bank" id="bank"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/numbers.js"></script>
+<script src="../shared/npcs.js"></script>
+<script src="../units/airport/flags.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.trip, F = window.FLAGS, NUM = window.ShihNum;
+  const $ = id => document.getElementById(id);
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  $('timeUpRuby').innerHTML = Shih.ruby('时间到了', 'shí jiān dào le');
+  Shih.soundButton($('soundBtn'));
+
+  // ---- 计时：答对 target 题就马上结束、给金币；时间到了还没达标就没有金币 ----
+  const timerEl = $('timer');
+  const LIMIT = lv => C.time[lv - 1] * 1000, GOAL = () => C.target[level - 1];
+  let left = 0, lastT = 0, tick = 0, running = false;
+  const fmt = ms => { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  function loop() {
+    if (!running) return;
+    const now = performance.now(); left -= now - lastT; lastT = now;
+    timerEl.textContent = '⏱ ' + fmt(Math.max(0, left)); timerEl.classList.toggle('low', left < 15000);
+    if (left <= 0) { finish(); return; }
+    tick = requestAnimationFrame(loop);
+  }
+  function finish() {
+    running = false; cancelAnimationFrame(tick);
+    if (done >= GOAL()) { $('winTime').textContent = 'Time left: ' + fmt(Math.max(0, left)); $('winMsg').hidden = false; Shih.speak('太棒了'); }
+    else { $('timeUpTxt').textContent = `You helped ${done} of ${GOAL()} travelers. Try again!`; $('timeUp').hidden = false; Shih.speak('时间到了'); }
+  }
+
+  const LEVELS = [{ note: 'Which flag?' }, { note: 'Which date? (flight board)' }, { note: '+ how much?' }];
+  let level = Shih.startLevel('tripLevel', 3);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('tripLevel', lv); setup(); });
+  const HELP = ['A traveler tells you where they want to go. Tap the right flag.',
+                'The flight board is in English! Find the country, then tap the right date in Chinese.',
+                'The flight board is in English! Find the country, then tap the right date and price in Chinese.'];
+  const oops = el => { el.classList.remove('oops'); void el.offsetWidth; el.classList.add('oops'); setTimeout(() => el.classList.remove('oops'), 400); };
+  const card = w => `<span class="ruby">${Shih.ruby(w.zh, w.py)}</span>`;
+  const numW = n => { const p = NUM.parts(n); return { zh: p.map(x => x[0]).join(''), py: p.map(x => x[1]).join(' ') }; };
+  const dateW = d => { const m = numW(d.m), dd = numW(d.d); return { zh: `${m.zh}月${dd.zh}日`, py: `${m.py} yuè ${dd.py} rì`, key: d.m + '/' + d.d }; };
+  const priceW = p => { const n = numW(p); return { zh: n.zh + '元', py: n.py + ' yuán', key: 'p' + p }; };   // 一千五百元（不写美元）
+  // 旅客（拿着行李箱）
+  const SUITCASE = '<rect x="78" y="150" width="44" height="40" rx="6" fill="#E5483B" stroke="#2B2B2B" stroke-width="3"/><path d="M92 150 L92 142 L108 142 L108 150" fill="none" stroke="#2B2B2B" stroke-width="3"/><path d="M78 168 L122 168" stroke="#F5C531" stroke-width="4"/>';
+  const TOPS = ['#3B78D8', '#45A852', '#F28C28', '#8E5CC2', '#EC8FB3'];
+  const traveler = () => window.NPC_ART.person({ kind: pick(['man', 'woman', 'boy', 'girl']), top: pick(TOPS), holding: SUITCASE });
+
+  let done = 0, q = null, lastC = '', busy = false;
+  function say(zh, py) {
+    const zs = zh.split(/(?<=[，。？])/).filter(Boolean), ps = py.split(/(?<=[,.?]) /);
+    $('bub').innerHTML = `<span class="ruby">${zs.map((z, i) => `<span class="nb">${Shih.rubyText(z, ps[i] || '')}</span>`).join('')}</span><button type="button" class="again" id="again" aria-label="Listen again">🔊</button>`;
+    $('again').addEventListener('click', () => Shih.speak(zh));
+    q.say = zh;
+    if (running) Shih.speak(zh);
+  }
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const randDate = () => ({ m: rnd(1, 12), d: rnd(1, 28) });
+  function show() {
+    busy = false;
+    let c; do { c = pick(F.list.filter(n => n !== C.from.zh)); } while (c === lastC); lastC = c;
+    const info = F.info(c);
+    q = { c, info };
+    $('who').innerHTML = traveler();
+    $('flags').hidden = level !== 1; $('board').hidden = level === 1; $('panel').hidden = level === 1;
+    if (level === 1) {
+      say(`我想去${c}。`, `wǒ xiǎng qù ${info.py}.`);
+      const opts = shuffle([c].concat(shuffle(F.list.filter(n => n !== c && n !== C.from.zh)).slice(0, 7)));
+      $('flags').innerHTML = '';
+      opts.forEach(n => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'fl'; b.dataset.c = n; b.innerHTML = F.svg(n, { all: true }) + F.info(n).en;   // 国旗下面写英文
+        b.addEventListener('click', () => {
+          if (!running || busy) return;
+          if (n !== c) { oops(b); return; }                           // 选错：摇一摇（不算错）
+          b.classList.add('ok'); Shih.speak(`${c}！`); good();
+        });
+        $('flags').appendChild(b);
+      });
+      window.__trip = { c, done };
+      return;
+    }
+    // 航班板：5 班飞机，国家都不一样，日期、价钱也不一样
+    const NR = 4;     // 几班飞机
+    const cs = [c].concat(shuffle(F.list.filter(n => n !== c && n !== C.from.zh)).slice(0, NR - 1));
+    const ds = [], ps = shuffle(C.prices).slice(0, NR);
+    while (ds.length < NR) { const d = randDate(); if (!ds.some(x => x.m === d.m && x.d === d.d)) ds.push(d); }
+    q.rows = cs.map((n, i) => ({ c: n, d: ds[i], p: ps[i] }));
+    q.row = q.rows[0];
+    q.rows = shuffle(q.rows);
+    // 航班板的标题用英文
+    $('board').innerHTML = `<table><tr>${['Date', 'From', 'To', 'Price'].map(h => `<th>${h}</th>`).join('')}</tr>` +
+      q.rows.map(r => level >= 2
+        // Level 2、3：国家和日期都写英文（学生要自己换成中文）
+        ? `<tr><td>${MON[r.d.m - 1]} ${r.d.d}</td><td>USA</td><td><span class="to">${F.svg(r.c, { all: true })}${F.info(r.c).en}</span></td><td>$${r.p}</td></tr>`
+        : `<tr><td>${r.d.m}月${r.d.d}日</td><td>${card(C.from)}</td><td><span class="to">${F.svg(r.c, { all: true })}${card({ zh: r.c, py: F.info(r.c).py })}</span></td><td>$${r.p}</td></tr>`).join('') + '</table>';
+    if (level === 2) say(`我想去${c}。几月几日有票？`, `wǒ xiǎng qù ${info.py}. jǐ yuè jǐ rì yǒu piào?`);
+    else say(`我想去${c}。几月几日有票？多少钱？`, `wǒ xiǎng qù ${info.py}. jǐ yuè jǐ rì yǒu piào? duō shǎo qián?`);
+    // 混淆的日期：月日对调、差十天、别的航班
+    const D = q.row.d, dOpts = [dateW(D)];
+    const addD = d => { if (d.m >= 1 && d.m <= 12 && d.d >= 1 && d.d <= 31) { const w = dateW(d); if (!dOpts.some(o => o.key === w.key)) dOpts.push(w); } };
+    if (D.d <= 12 && D.d !== D.m) addD({ m: D.d, d: D.m });
+    addD({ m: D.m, d: D.d + (D.d <= 18 ? 10 : -10) });
+    addD(q.rows.find(r => r !== q.row).d);
+    while (dOpts.length < 3) addD(randDate());
+    // 混淆的价钱：多一个零、差五十、别的航班
+    const P = q.row.p, pOpts = [priceW(P)];
+    const addP = p => { const w = priceW(p); if (!pOpts.some(o => o.key === w.key)) pOpts.push(w); };
+    if (P * 10 <= 10000) addP(P * 10);
+    addP(P + 50);
+    addP(q.rows.find(r => r !== q.row && r.p !== P).p);
+    while (pOpts.length < 3) addP(pick(C.prices));
+    q.ansD = dateW(D); q.ansP = priceW(P);
+    const parts = level === 2 ? [{ want: q.ansD.key, kind: 'd' }, { zh: '有票。', py: 'yǒu piào.' }]
+      : [{ want: q.ansD.key, kind: 'd' }, { zh: '有票，', py: 'yǒu piào,' }, { want: q.ansP.key, kind: 'p' }, { zh: '。', py: '' }];
+    $('sent').innerHTML = parts.map(x => x.want ? `<span class="dropSlot" data-kind="${x.kind}" data-want="${x.want}"></span>` : `<span class="ruby">${Shih.rubyText(x.zh, x.py)}</span>`).join('');
+    $('bank').innerHTML = '';
+    const rows = [[shuffle(dOpts.slice(0, 4)), 'd']].concat(level === 3 ? [[shuffle(pOpts.slice(0, 4)), 'p']] : []);
+    rows.forEach(([opts, kind]) => {
+      const r = document.createElement('div'); r.className = 'row';
+      opts.forEach(o => {
+        const el = document.createElement('div');
+        el.className = 'wcard'; el.dataset.key = o.key; el.innerHTML = card(o);
+        el.addEventListener('click', () => {
+          if (!running || busy || el.classList.contains('used')) return;
+          const slot = $('sent').querySelector(`.dropSlot[data-kind="${kind}"]`);
+          if (slot.classList.contains('filled')) return;
+          if (o.key !== slot.dataset.want) { oops(el); return; }      // 选错：摇一摇（不算错）
+          el.classList.add('used'); slot.classList.add('filled'); slot.innerHTML = card(o);
+          if ($('sent').querySelector('.dropSlot:not(.filled)')) return;
+          Shih.speak(level === 2 ? `${q.ansD.zh}有票。` : `${q.ansD.zh}有票，${q.ansP.zh}。`); good();
+        });
+        r.appendChild(el);
+      });
+      $('bank').appendChild(r);
+    });
+    window.__trip = { c, d: q.ansD.key, p: q.ansP.key, done };
+  }
+  function good() {
+    busy = true; done++; update();
+    if (done >= GOAL()) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 1100); return; }   // 达标了：马上结束，给金币
+    setTimeout(() => { if (running) show(); }, 1300);
+  }
+  function setup() {
+    paintLevels(level);
+    $('help').textContent = HELP[level - 1] + ` Help ${GOAL()} travelers in ${fmt(LIMIT(level))} to get coins!`;
+    $('tip').innerHTML = C.tips[level - 1].map(t => `<span><span class="ruby">${Shih.ruby(t.zh, t.py)}</span>${t.en}</span>`).join('');
+    done = 0; lastC = '';
+    running = false; cancelAnimationFrame(tick); left = LIMIT(level); timerEl.textContent = '⏱ ' + fmt(left); timerEl.classList.remove('low');
+    $('winMsg').hidden = true; $('timeUp').hidden = true; update();
+    show(); wait();
+  }
+  function update() { $('score').textContent = `${done} / ${GOAL()}`; }
+  const wait = Shih.startCover($('playArea'), () => { running = true; lastT = performance.now(); tick = requestAnimationFrame(loop); Shih.speak(q.say); });
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

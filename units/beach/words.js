@@ -4,8 +4,10 @@
    游戏：
      1 能去海滩吗？ games/forecast.html?unit=beach
      2 我是谁？ games/whoami.html?unit=beach
-   以后：海滩找一找（二年级 6 月：这是＿＿、我有＿＿）、夏天到了（三年级 6 月：夏天到了，我喜欢＿＿）
-   海滩的游戏都用「听」的，所以金币比普通游戏多一颗：Level 1、2、3 给 2、3、4 颗（shared/coins.js）。
+     3 海滩找一找 games/beachfind.html?unit=beach
+   以后：夏天到了（三年级 6 月：夏天到了，我喜欢＿＿）
+   「能去海滩吗？」「我是谁？」用「听」的，所以金币比普通游戏多一颗：Level 1、2、3 给 2、3、4 颗（shared/coins.js）。
+   「海滩找一找」练认字（有拼音），金币是一般的 1、2、3 颗。
    天气的图用机场的 units/airport/art.js。拼音照台湾的念法。
    ===================================================================== */
 window.UNIT = {};
@@ -62,4 +64,28 @@ UNIT.whoami = {
     { zh: '游泳圈', py: 'yóu yǒng quān', en: 'swim ring', color: true },
     { zh: '冰淇淋', py: 'bīng qí lín', en: 'ice cream', color: false }
   ]
+};
+
+/* ---------------- 海滩找一找（像快手分信） ----------------
+   练认字（三级都有拼音）。海滩的东西一个一个从上面掉下来，学生点牌子写对的篮子，东西就装进去。
+   篮子装满就收走，换一个新的篮子。没接到的东西掉到沙滩上就不见了（不扣分，只是浪费时间）。点错了篮子摇一摇。
+   Level 1：3 个篮子，牌子写一样东西（贝壳），每个篮子装 3 个
+   Level 2：5 个篮子，6 种东西都会掉，每个篮子装 3 个
+   Level 3：3 个篮子，牌子写两样东西和数量（两个贝壳和一个水桶），要装刚好（已经够了再放会摇一下）
+   装满 target 个篮子就过关、给金币
+   words：海滩的字（图在 units/beach/art.js）；count：Level 3 用的东西（都用「个」）
+   bags：画面上几个篮子；fill：Level 1、2 一个篮子装几个；fall：东西掉下来要几秒 */
+UNIT.beachfind = {
+  title: { zh: '海滩找一找', py: 'hǎi tān zhǎo yi zhǎo', en: 'Beach Hunt' },
+  time: [60, 60, 90],
+  target: [4, 5, 4],
+  bags: [3, 5, 3],
+  fill: 3,
+  fall: [5, 5, 5],
+  words: [
+    { zh: '贝壳', py: 'bèi ké', en: 'shell' }, { zh: '海星', py: 'hǎi xīng', en: 'starfish' }, { zh: '螃蟹', py: 'páng xiè', en: 'crab' },
+    { zh: '沙堡', py: 'shā bǎo', en: 'sandcastle' }, { zh: '太阳伞', py: 'tài yáng sǎn', en: 'beach umbrella' }, { zh: '水桶', py: 'shuǐ tǒng', en: 'bucket' }
+  ],
+  count: ['贝壳', '海星', '水桶', '沙堡'],
+  nums: [ { zh: '一', py: 'yí' }, { zh: '两', py: 'liǎng' }, { zh: '三', py: 'sān' } ]
 };
