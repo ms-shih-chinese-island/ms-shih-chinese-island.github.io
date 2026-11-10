@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>排大小</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 排大小（动物园）：只有一级。4～5 只动物（图照真的大小画），拖到「小 → 大」的格子。
+   排对了再填「最大的是＿＿。」「最小的是＿＿。」都对了才算一题。
+   答对 target 题就马上结束、给金币（2 颗）。放错了摇一摇（不算错）。设定在 units/zoo/words.js 的 UNIT.zoosize */
+body.game { background: #EAF3DC; }
+.box { max-width: 1060px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.pen { background: linear-gradient(#BFE3EE 0 22%, #9CCB8A 22%); border: 4px solid #2B2B2B; border-radius: 20px; padding: 12px; display: flex; justify-content: center; align-items: flex-end; gap: 12px; flex-wrap: wrap; min-height: 190px; }
+.ani { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 150px; height: 180px; padding: 4px; box-sizing: border-box; background: rgba(255, 255, 255, .55); }
+.ani svg { display: block; flex: none; }
+.ani .ruby .py { font-size: 13px; } .ani .ruby .zh { font-size: 24px; font-weight: 700; }
+.ani.oops { animation: shake .35s; border-color: var(--bad); }
+.ani.used { visibility: hidden; }
+.ani.dragging { width: 150px; }
+.rowS { background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 20px; padding: 12px; }
+.slots { display: flex; justify-content: center; gap: 10px; }
+.slots .dropSlot { width: 150px; height: 180px; flex-direction: column; justify-content: flex-end; padding: 4px; box-sizing: border-box; cursor: pointer; }
+.slots .dropSlot svg { display: block; flex: none; }
+.slots .dropSlot .ruby .py { font-size: 13px; } .slots .dropSlot .ruby .zh { font-size: 24px; }
+.arrow { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 8px; font: 700 16px var(--f-latin); }
+.arrow .ruby .py { font-size: 12px; } .arrow .ruby .zh { font-size: 26px; font-weight: 700; }
+.arrow .line { flex: 0 1 560px; height: 0; border-top: 5px solid #2B2B2B; position: relative; }
+.arrow .line::after { content: ''; position: absolute; right: -4px; top: -12px; border: 9px solid transparent; border-left: 14px solid #2B2B2B; }
+.panel { background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 20px; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.panel[hidden], .pen[hidden] { display: none; }
+.sents { display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; }
+.sent { display: flex; align-items: flex-end; gap: 6px; }
+.sent .ruby .py { font-size: 14px; } .sent .ruby .zh { font-size: 30px; font-weight: 700; }
+.sent .dropSlot { min-height: 58px; padding: 2px 8px; box-sizing: border-box; cursor: pointer; }
+.sent .dropSlot:not(.filled) { width: 100px; }
+.sent .en { font: 600 14px var(--f-latin); color: #666666; align-self: center; }
+.bank { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.bank .wcard { min-width: 56px; justify-content: center; }
+.bank .wcard .py { font-size: 13px; } .bank .wcard .zh { font-size: 26px; font-weight: 700; }
+.bank .wcard.oops { animation: shake .35s; border-color: var(--bad); }
+.timer.low { background: #FCE3E0; border-color: var(--bad); }
+.timeUp { text-align: center; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 10px; margin: 0 auto 10px; max-width: 640px; font: 700 18px var(--f-latin); display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.timeUp .ruby .py { font-size: 12px; } .timeUp .ruby .zh { font-size: 26px; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill timer" id="timer">0:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="timeUp" id="timeUp" hidden><span class="ruby" id="timeUpRuby"></span><span id="timeUpTxt"></span><button class="ctl" id="again2" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="box">
+        <div class="pen" id="pen"></div>
+        <div class="rowS">
+          <div class="slots" id="slots"></div>
+          <div class="arrow"><span class="ruby" id="small"></span><span class="line"></span><span class="ruby" id="big"></span></div>
+        </div>
+        <div class="panel" id="panel" hidden><div class="sents" id="sents"></div><div class="bank" id="bank"></div></div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/animals.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.zoosize, ANI = UNIT.animals.animals, AA = window.ANIMAL_ART, SIZE = AA.size;
+  const $ = id => document.getElementById(id);
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  $('timeUpRuby').innerHTML = Shih.ruby('时间到了', 'shí jiān dào le');
+  $('small').innerHTML = Shih.ruby('小', 'xiǎo');
+  $('big').innerHTML = Shih.ruby('大', 'dà');
+  Shih.soundButton($('soundBtn'));
+
+  // ---- 计时：答对 target 题就马上结束、给金币；时间到了还没达标就没有金币 ----
+  const timerEl = $('timer');
+  const LIMIT = C.time * 1000, GOAL = C.target;
+  let left = 0, lastT = 0, tick = 0, running = false;
+  const fmt = ms => { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  function loop() {
+    if (!running) return;
+    const now = performance.now(); left -= now - lastT; lastT = now;
+    timerEl.textContent = '⏱ ' + fmt(Math.max(0, left)); timerEl.classList.toggle('low', left < 15000);
+    if (left <= 0) { finish(); return; }
+    tick = requestAnimationFrame(loop);
+  }
+  function finish() {
+    running = false; cancelAnimationFrame(tick);
+    if (done >= GOAL) { $('winTime').textContent = 'Time left: ' + fmt(Math.max(0, left)); $('winMsg').hidden = false; Shih.speak('太棒了'); }
+    else { $('timeUpTxt').textContent = `You got ${done} of ${GOAL}. Try again!`; $('timeUp').hidden = false; Shih.speak('时间到了'); }
+  }
+  $('help').textContent = `Put the animals in order from small to big. Then tell: which one is the biggest? Which one is the smallest? Get ${GOAL} right in ${fmt(LIMIT)} to get coins!`;
+  const oops = el => { el.classList.remove('oops'); void el.offsetWidth; el.classList.add('oops'); setTimeout(() => el.classList.remove('oops'), 400); };
+  // 图的大小：照 size 等级（1 最小 7 最大）
+  const px = a => Math.round(48 + (SIZE[a.zh] - 1) * 12);
+  const aniHTML = a => `<span style="display:flex;align-items:flex-end;justify-content:center;height:120px">${AA.svg(a.zh).replace('<svg', `<svg width="${px(a)}" height="${px(a)}"`)}</span><span class="ruby">${Shih.ruby(a.zh, a.py)}</span>`;
+
+  let done = 0, q = null, busy = false;
+  function show() {
+    busy = false;
+    // 不同大小等级各选一只（同一级的不会一起出现）
+    const n = pick(C.count);
+    const tiers = shuffle([...new Set(Object.values(SIZE))]).slice(0, n).sort((x, y) => x - y);
+    const order = tiers.map(t => pick(ANI.filter(a => SIZE[a.zh] === t)));
+    q = { order };
+    $('slots').innerHTML = order.map((a, i) => `<span class="dropSlot" data-want="${a.zh}"></span>`).join('');
+    $('pen').innerHTML = '';
+    let cards; do { cards = shuffle(order); } while (cards.every((a, i) => a === order[i]));   // 一开始不会就排好
+    const els = cards.map(a => {
+      const el = document.createElement('div');
+      el.className = 'wcard ani'; el.dataset.zh = a.zh; el.innerHTML = aniHTML(a);
+      $('pen').appendChild(el); return el;
+    });
+    $('panel').hidden = true; $('pen').hidden = false;
+    const dnd = Shih.dragCards(els, {
+      slots: () => [...$('slots').querySelectorAll('.dropSlot:not(.filled)')],
+      accept(cd, slot) {
+        if (!running || busy) return true;
+        if (cd.dataset.zh !== slot.dataset.want) { oops(cd); return true; }       // 放错：摇一摇（不算错）
+        const a = order.find(x => x.zh === cd.dataset.zh);
+        cd.classList.add('used'); slot.classList.add('filled'); slot.innerHTML = aniHTML(a);
+        if (!$('slots').querySelector('.dropSlot:not(.filled)')) { busy = true; setTimeout(say, 500); }
+        return true;
+      }
+    });
+    $('slots').querySelectorAll('.dropSlot').forEach(d => d.addEventListener('click', () => { if (!d.classList.contains('filled')) dnd.tapSlot(d); }));
+    window.__zs = { order: order.map(a => a.zh), step: 'sort', done };
+  }
+  // 排好了：「最大的是＿＿。」「最小的是＿＿。」
+  function say() {
+    const o = q.order, big = o[o.length - 1], small = o[0];
+    const S = (zh, py, want, en) => `<div class="sent"><span class="ruby">${Shih.rubyText(zh, py)}</span><span class="dropSlot" data-want="${want}"></span><span class="ruby">${Shih.rubyText('。', '')}</span><span class="en">${en}</span></div>`;
+    $('sents').innerHTML = S('最大的是', 'zuì dà de shì', big.zh, 'the biggest') + S('最小的是', 'zuì xiǎo de shì', small.zh, 'the smallest');
+    $('bank').innerHTML = '';
+    const els = shuffle(o).map(a => {
+      const el = document.createElement('div');
+      el.className = 'wcard'; el.dataset.zh = a.zh; el.innerHTML = `<span class="ruby">${Shih.ruby(a.zh, a.py)}</span>`;
+      $('bank').appendChild(el); return el;
+    });
+    $('panel').hidden = false; $('pen').hidden = true; busy = false;
+    const dnd = Shih.dragCards(els, {
+      slots: () => [...$('sents').querySelectorAll('.dropSlot:not(.filled)')],
+      accept(cd, slot) {
+        if (!running || busy) return true;
+        if (cd.dataset.zh !== slot.dataset.want) { oops(cd); return true; }
+        cd.classList.add('used'); slot.classList.add('filled'); slot.innerHTML = cd.innerHTML;
+        if (!$('sents').querySelector('.dropSlot:not(.filled)')) good();
+        return true;
+      }
+    });
+    $('sents').querySelectorAll('.dropSlot').forEach(d => d.addEventListener('click', () => { if (!d.classList.contains('filled')) dnd.tapSlot(d); }));
+    window.__zs = { order: o.map(a => a.zh), step: 'say', big: big.zh, small: small.zh, done };
+  }
+  function good() {
+    busy = true; done++; update();
+    const o = q.order;
+    Shih.speak(`最大的是${o[o.length - 1].zh}。最小的是${o[0].zh}。`);
+    if (done >= GOAL) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 2200); return; }   // 达标了：马上结束，给金币
+    setTimeout(() => { if (running) show(); }, 2600);
+  }
+  function setup() {
+    done = 0;
+    running = false; cancelAnimationFrame(tick); left = LIMIT; timerEl.textContent = '⏱ ' + fmt(left); timerEl.classList.remove('low');
+    $('winMsg').hidden = true; $('timeUp').hidden = true; update();
+    show(); wait();
+  }
+  function update() { $('score').textContent = `${done} / ${GOAL}`; }
+  const wait = Shih.startCover($('playArea'), () => { running = true; lastT = performance.now(); tick = requestAnimationFrame(loop); });
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

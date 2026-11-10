@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>送爱心</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 送爱心（七夕情人节）。
+   Level 1：爱心上的阿拉伯数字 →「＿个心送给你。」选中文数字。
+   Level 2：「把五个心送给妈妈。」点那个人几下，再按送出。
+   Level 3：「穿红色衣服的哥哥，把十二个心送给穿蓝色衣服的妹妹。」先点送的人，再点收的人，再按送出。
+   答对 target 题就马上结束、给金币。点错了摇一摇（不算错）。设定在 units/qixi/words.js 的 UNIT.hearts */
+body.game { background: #FDEEF3; }
+.box { max-width: 1060px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+.task { background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 20px; padding: 10px 16px; display: flex; align-items: flex-end; justify-content: center; gap: 6px; flex-wrap: wrap; min-height: 64px; }
+.task .ruby .py { font-size: 14px; } .task .ruby .zh { font-size: 30px; font-weight: 700; }
+.task .again { align-self: center; background: #FFF6D6; border: 2px solid #2B2B2B; border-radius: 10px; font-size: 18px; cursor: pointer; margin-left: 8px; }
+.task .dropSlot { min-height: 58px; min-width: 80px; padding: 2px 8px; box-sizing: border-box; cursor: pointer; }
+.task .dropSlot .ruby .zh { font-size: 28px; }
+.scene { position: relative; background: linear-gradient(#FBD3E0 0 70%, #F3B6C9 70%); border: 4px solid #2B2B2B; border-radius: 22px; padding: 10px 10px 6px; display: flex; justify-content: center; align-items: flex-end; gap: 6px; min-height: 330px; }
+.who { position: relative; display: flex; flex-direction: column; align-items: center; background: none; border: 3px solid transparent; border-radius: 18px; padding: 4px 2px; cursor: pointer; width: 170px; }
+.who:hover { background: rgba(255, 255, 255, .45); }
+.who .body { width: 140px; height: 215px; display: flex; align-items: flex-end; justify-content: center; }
+.who .body svg { height: 100%; width: auto; display: block; }
+.who.small .body svg { height: 78%; }
+.who .tag { background: #FFFFFF; border: 2px solid #2B2B2B; border-radius: 10px; padding: 0 8px; margin-top: 4px; }
+.who .tag .ruby .py { font-size: 12px; } .who .tag .ruby .zh { font-size: 22px; font-weight: 700; }
+.heart { position: relative; width: 74px; height: 66px; margin-bottom: 2px; }
+.heart svg { width: 100%; height: 100%; display: block; }
+.heart b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding-bottom: 8px; font: 800 28px var(--f-latin); color: #FFFFFF; text-shadow: 0 2px 0 #2B2B2B; }
+.heart.none { visibility: hidden; }
+.heart.pop { animation: pop .25s; }
+@keyframes pop { 50% { transform: scale(1.18); } }
+.who.from { border-color: #F5C531; background: rgba(255, 246, 214, .85); }
+.who.from::after { content: '🎁 送'; position: absolute; top: -6px; left: 50%; transform: translateX(-50%); font: 700 15px var(--f-latin); background: #F5C531; border: 2px solid #2B2B2B; border-radius: 10px; padding: 0 6px; }
+.who.oops { animation: shake .35s; border-color: var(--bad); }
+.who.ok { border-color: var(--me); background: rgba(227, 244, 220, .85); }
+.bar { display: flex; justify-content: center; gap: 12px; }
+.bar[hidden] { display: none; }
+.bar button { font: 800 20px var(--f-latin); border: 3px solid #2B2B2B; border-radius: 14px; padding: 6px 22px; cursor: pointer; background: #FFFFFF; }
+.bar .go { background: #E2557A; color: #FFFFFF; }
+.bank { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.bank[hidden] { display: none; }
+.bank .wcard { min-width: 64px; justify-content: center; }
+.bank .wcard .py { font-size: 13px; } .bank .wcard .zh { font-size: 28px; font-weight: 700; }
+.bank .wcard.oops { animation: shake .35s; border-color: var(--bad); }
+.timer.low { background: #FCE3E0; border-color: var(--bad); }
+.timeUp { text-align: center; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 10px; margin: 0 auto 10px; max-width: 640px; font: 700 18px var(--f-latin); display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.timeUp .ruby .py { font-size: 12px; } .timeUp .ruby .zh { font-size: 26px; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill timer" id="timer">0:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="timeUp" id="timeUp" hidden><span class="ruby" id="timeUpRuby"></span><span id="timeUpTxt"></span><button class="ctl" id="again2" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="box">
+        <div class="task" id="task"></div>
+        <div class="scene" id="scene"></div>
+        <div class="bank" id="bank" hidden></div>
+        <div class="bar" id="bar" hidden><button type="button" id="clear">↺ Again</button><button type="button" class="go" id="go">💝 Send!</button></div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/numbers.js"></script>
+<script src="../shared/npcs.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.hearts, FAM = C.family, COL = C.colors, NUM = window.ShihNum;
+  const $ = id => document.getElementById(id);
+  const shuffle = NUM.shuffle, pick = NUM.pick, rnd = NUM.rnd;
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.ruby('情人节快乐', 'qíng rén jié kuài lè');
+  $('timeUpRuby').innerHTML = Shih.ruby('时间到了', 'shí jiān dào le');
+  Shih.soundButton($('soundBtn'));
+
+  // ---- 计时：答对 target 题就马上结束、给金币；时间到了还没达标就没有金币 ----
+  const timerEl = $('timer');
+  const LIMIT = lv => C.time[lv - 1] * 1000, GOAL = () => C.target[level - 1];
+  let left = 0, lastT = 0, tick = 0, running = false;
+  const fmt = ms => { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  function loop() {
+    if (!running) return;
+    const now = performance.now(); left -= now - lastT; lastT = now;
+    timerEl.textContent = '⏱ ' + fmt(Math.max(0, left)); timerEl.classList.toggle('low', left < 15000);
+    if (left <= 0) { finish(); return; }
+    tick = requestAnimationFrame(loop);
+  }
+  function finish() {
+    running = false; cancelAnimationFrame(tick);
+    if (done >= GOAL()) { $('winTime').textContent = 'Time left: ' + fmt(Math.max(0, left)); $('winMsg').hidden = false; Shih.speak('情人节快乐！'); }
+    else { $('timeUpTxt').textContent = `You got ${done} of ${GOAL()}. Try again!`; $('timeUp').hidden = false; Shih.speak('时间到了'); }
+  }
+
+  const LEVELS = [{ note: 'Number → 中文 + pinyin' }, { note: 'Send hearts to family' }, { note: '+ shirt colors' }];
+  let level = Shih.startLevel('heartsLevel', 3);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('heartsLevel', lv); setup(); });
+  const HELP = ['Look at the number on the heart. Choose the Chinese number.',
+                'Read the sentence. Tap the person to give hearts — one tap, one heart. Then press Send!',
+                'Read the sentence. First tap who gives the hearts. Then tap who gets them. Then press Send!'];
+  const oops = el => { el.classList.remove('oops'); void el.offsetWidth; el.classList.add('oops'); setTimeout(() => el.classList.remove('oops'), 400); };
+
+  // 数量：2 念「两」；「一」在「个」前面念 yí
+  const cnt = n => n === 2 ? { zh: '两', py: 'liǎng' } : n === 1 ? { zh: '一', py: 'yí' } : { zh: NUM.zh(n), py: NUM.py(n) };
+  const HEART = `<svg viewBox="0 0 74 66" aria-hidden="true"><path d="M37 62 Q4 40 4 20 Q4 4 20 4 Q31 4 37 16 Q43 4 54 4 Q70 4 70 20 Q70 40 37 62 Z" fill="#E2557A" stroke="#2B2B2B" stroke-width="4" stroke-linejoin="round"/><ellipse cx="20" cy="18" rx="7" ry="4" fill="#FFFFFF" opacity=".6"/></svg>`;
+  const SHIRT = ['#5B9BD5', '#EC8FB3', '#8CC7A0', '#F2A03D', '#B58BE0', '#7FC4D8', '#D9A86C', '#F29BC4'];
+  const personHTML = (f, top) => NPC_ART.person({ kind: f.kind, top, glasses: f.kind === 'oldman' || f.kind === 'oldwoman' });
+
+  let done = 0, q = null, busy = false, last = '';
+  function makeWho(p, i) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'who' + (p.f.small ? ' small' : ''); b.dataset.i = i;
+    b.innerHTML = `<span class="heart${p.show == null ? ' none' : ''}">${HEART}<b>${p.show == null ? '' : p.show}</b></span><span class="body">${personHTML(p.f, p.top)}</span>` +
+      `<span class="tag"><span class="ruby">${Shih.ruby(p.f.zh, p.f.py)}</span></span>`;
+    b.addEventListener('click', () => tapWho(p, b));
+    return b;
+  }
+  function setTask(zh, py, extra) {
+    $('task').innerHTML = `<span class="ruby">${Shih.rubyText(zh, py)}</span>${extra || ''}<button type="button" class="again" id="again" aria-label="Listen again">🔊</button>`;
+    $('again').addEventListener('click', () => Shih.speak(q.say));
+  }
+  function show() {
+    busy = false;
+    $('scene').innerHTML = ''; $('bank').innerHTML = '';
+    let n; do { n = rnd(level === 1 ? 1 : 1, C.max[level - 1]); } while ((level === 1 && n === 2) || String(n) === last);
+    last = String(n);
+    if (level === 1) {
+      // 一个人，爱心上写数字；「＿个心送给你。」
+      const f = pick(FAM), p = { f, top: pick(SHIRT), show: n };
+      q = { n, people: [p], say: `${NUM.zh(n)}个心送给你。` };
+      $('scene').appendChild(makeWho(p, 0));
+      $('task').innerHTML = `<span class="dropSlot" data-want="${n}"></span><span class="ruby">${Shih.rubyText('个心送给你。', 'ge xīn sòng gěi nǐ.')}</span><button type="button" class="again" id="again" aria-label="Listen again">🔊</button>`;
+      $('again').addEventListener('click', () => Shih.speak(q.say));
+      // 选项：答案＋相近的数字（不要 2）
+      const opts = NUM.options(n, shuffle([n - 1, n + 1, n - 2, n + 2, n + 3].filter(x => x !== 2)), 1, 10, 3).filter(x => x !== 2);
+      while (opts.length < 4) { const x = rnd(1, 10); if (x !== 2 && !opts.includes(x)) opts.push(x); }
+      const cards = shuffle(opts).map(x => {
+        const el = document.createElement('div'); el.className = 'wcard'; el.dataset.n = x;
+        el.innerHTML = `<span class="ruby">${Shih.ruby(cnt(x).zh, cnt(x).py)}</span>`; $('bank').appendChild(el); return el;
+      });
+      $('bank').hidden = false; $('bar').hidden = true;
+      const dnd = Shih.dragCards(cards, {
+        slots: () => [...$('task').querySelectorAll('.dropSlot:not(.filled)')],
+        accept(cd, slot) {
+          if (!running || busy) return true;
+          if (+cd.dataset.n !== n) { oops(cd); return true; }
+          slot.classList.add('filled'); slot.innerHTML = cd.innerHTML; cd.classList.add('used');
+          good(); return true;
+        }
+      });
+      $('task').querySelector('.dropSlot').addEventListener('click', e => { if (!e.currentTarget.classList.contains('filled')) dnd.tapSlot(e.currentTarget); });
+    } else if (level === 2) {
+      // 五个家人；「我爱我的家人。把五个心送给妈妈。」
+      const fs = shuffle(FAM).slice(0, 5), to = pick(fs), N = cnt(n);
+      const people = fs.map((f, i) => ({ f, top: SHIRT[i], got: 0 }));
+      q = { n, people, to: people[fs.indexOf(to)], say: `我爱我的家人。把${N.zh}个心送给${to.zh}。` };
+      setTask(`我爱我的家人。把${N.zh}个心送给${to.zh}。`, `wǒ ài wǒ de jiā rén. bǎ ${N.py} ge xīn sòng gěi ${to.py}.`);
+      people.forEach((p, i) => $('scene').appendChild(makeWho(p, i)));
+      $('bank').hidden = true; $('bar').hidden = false;
+    } else {
+      // 穿红色衣服的哥哥，把十二个心送给穿蓝色衣服的妹妹。
+      // 送的人、收的人；同一个称呼、别的颜色的人；同一个颜色、别的称呼的人
+      const [fa, fb] = shuffle(FAM), [ca, cb, cc, cd] = shuffle(COL);
+      const A = { f: fa, c: ca }, B = { f: fb, c: cb };
+      const others = [{ f: fa, c: cc }, { f: fb, c: ca }, { f: shuffle(FAM.filter(f => f !== fa && f !== fb))[0], c: cb }, { f: fb, c: cd }];
+      const people = shuffle([A, B].concat(shuffle(others).slice(0, 3))).map(p => ({ f: p.f, c: p.c, top: p.c.hex, got: 0 }));
+      const N = cnt(n);
+      q = { n, people, from: people.find(p => p.f === fa && p.c === ca), to: people.find(p => p.f === fb && p.c === cb), giver: null };
+      const zh = `穿${ca.zh}衣服的${fa.zh}，把${N.zh}个心送给穿${cb.zh}衣服的${fb.zh}。`;
+      const py = `chuān ${ca.py} yī fú de ${fa.py}, bǎ ${N.py} ge xīn sòng gěi chuān ${cb.py} yī fú de ${fb.py}.`;
+      q.say = zh; setTask(zh, py);
+      people.forEach((p, i) => $('scene').appendChild(makeWho(p, i)));
+      $('bank').hidden = true; $('bar').hidden = false;
+    }
+    if (running) Shih.speak(q.say);
+    window.__h = { level, n, done, people: q.people.map(p => p.f.zh + (p.c ? '|' + p.c.zh : '')), to: q.to ? q.people.indexOf(q.to) : 0, from: q.from ? q.people.indexOf(q.from) : -1 };
+  }
+  function paintHeart(i) {
+    const p = q.people[i], el = $('scene').children[i].querySelector('.heart');
+    el.classList.toggle('none', !p.got); el.querySelector('b').textContent = p.got || '';
+    el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+  }
+  function tapWho(p, el) {
+    if (!running || busy || level === 1) return;
+    const i = q.people.indexOf(p);
+    if (level === 3 && !q.giver) {                                      // 先点送的人
+      if (p !== q.from) { oops(el); return; }
+      q.giver = p; el.classList.add('from'); Shih.speak(p.f.zh); return;
+    }
+    if (p === q.giver) return;
+    if (p.got >= C.max[level - 1]) return;
+    p.got++; paintHeart(i);
+  }
+  $('clear').addEventListener('click', () => {
+    if (!running || busy || level === 1) return;
+    q.people.forEach((p, i) => { if (p.got) { p.got = 0; paintHeart(i); } });
+  });
+  $('go').addEventListener('click', () => {
+    if (!running || busy || level === 1) return;
+    if (level === 3 && !q.giver) { oops($('task')); return; }
+    const ok = q.people.every(p => p === q.to ? p.got === q.n : !p.got);
+    if (!ok) {                                                          // 不对：摇一摇，心都收回来（不算错）
+      q.people.forEach((p, i) => { if (p.got) { oops($('scene').children[i]); p.got = 0; paintHeart(i); } });
+      if (!q.to.got) oops($('go'));
+      return;
+    }
+    $('scene').children[q.people.indexOf(q.to)].classList.add('ok');
+    good();
+  });
+  function good() {
+    busy = true; done++; update();
+    Shih.speak(level === 1 ? q.say : '我爱你！');
+    if (done >= GOAL()) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 1500); return; }   // 达标了：马上结束，给金币
+    setTimeout(() => { if (running) show(); }, 1500);
+  }
+  function setup() {
+    paintLevels(level);
+    $('help').textContent = HELP[level - 1] + ` Get ${GOAL()} right in ${fmt(LIMIT(level))} to get coins!`;
+    done = 0; last = '';
+    running = false; cancelAnimationFrame(tick); left = LIMIT(level); timerEl.textContent = '⏱ ' + fmt(left); timerEl.classList.remove('low');
+    $('winMsg').hidden = true; $('timeUp').hidden = true; update();
+    show(); wait();
+  }
+  function update() { $('score').textContent = `${done} / ${GOAL()}`; }
+  const wait = Shih.startCover($('playArea'), () => { running = true; lastT = performance.now(); tick = requestAnimationFrame(loop); Shih.speak(q.say); });
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

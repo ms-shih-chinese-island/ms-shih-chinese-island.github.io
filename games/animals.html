@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>找动物</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 找动物（宠物店、花园、动物园共用）：读句子（有拼音），点对的动物。
+   Level 1「这是黑色的猫。」；Level 2「我喜欢白色的狗和黄色的小鸟。」；Level 3「我看到两只白色的兔子和一只黑色的猫。」点刚好的数量。
+   答对 target 题就马上结束、给金币。点错了摇一摇（不算错）。设定在 units/（单元）/words.js 的 UNIT.animals */
+body.game { background: #FBF3E4; }
+.top { max-width: 1100px; margin: 0 auto 12px; display: flex; gap: 14px; align-items: center; justify-content: center; }
+.kid { width: 84px; height: 84px; }
+.kid svg { width: 100%; height: 100%; display: block; }
+.bub { position: relative; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 20px; padding: 8px 18px; display: flex; align-items: center; gap: 10px; }
+.bub::before { content: ''; position: absolute; left: -18px; top: 50%; margin-top: -9px; border: 9px solid transparent; border-right: 10px solid #2B2B2B; }
+.bub .ruby .py { font-size: 13px; } .bub .ruby .zh { font-size: 30px; font-weight: 700; }
+.bub .again { background: #FFF6D6; border: 2px solid #2B2B2B; border-radius: 10px; font-size: 18px; cursor: pointer; }
+.nb { display: inline-flex; white-space: nowrap; gap: 3px; align-items: flex-end; }
+.ruby > .nb { flex-direction: row; } .nb > span { display: flex; flex-direction: column; align-items: center; }
+.got { display: flex; gap: 2px; min-width: 60px; flex-wrap: wrap; max-width: 200px; }
+.got svg { width: 36px; height: 36px; }
+/* 场景 */
+.scene { position: relative; width: min(100%, 880px, calc(48vh * 1000 / 470)); margin: 0 auto; aspect-ratio: 1000 / 470; border: 4px solid #2B2B2B; border-radius: 20px; overflow: hidden; }
+.scene.shop { background: linear-gradient(#F6E3C6 0 30%, #D9A86C 30% 33%, #F6E3C6 33% 60%, #D9A86C 60% 63%, #EAD2A8 63%); }
+.scene.garden { background: linear-gradient(#BFE3EE 0 18%, #8CC97A 18%); }
+.scene.sea { background: linear-gradient(#7FC8E8, #3E8FC4 70%, #E8D29A 70%); }
+.scene.zoo { background: linear-gradient(#BFE3EE 0 18%, #9CCB8A 18% 60%, #E8D29A 60%); }
+.thing { position: absolute; transform: translate(-50%, -50%); width: 10.5%; aspect-ratio: 1; background: none; border: 3px solid transparent; border-radius: 50%; padding: 0; cursor: pointer; }
+.thing svg { width: 100%; height: 100%; display: block; }
+.thing:hover { background: rgba(255, 255, 255, .45); }
+.thing.oops { animation: shakeT .35s; border-color: var(--bad); }
+@keyframes shakeT { 0%, 100% { transform: translate(-50%, -50%); } 25% { transform: translate(calc(-50% - 6px), -50%); } 75% { transform: translate(calc(-50% + 6px), -50%); } }
+.thing.ok { border-color: var(--me); background: rgba(227, 244, 220, .85); }
+.timer.low { background: #FCE3E0; border-color: var(--bad); }
+.timeUp { text-align: center; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 10px; margin: 0 auto 10px; max-width: 640px; font: 700 18px var(--f-latin); display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.timeUp .ruby .py { font-size: 12px; } .timeUp .ruby .zh { font-size: 26px; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill timer" id="timer">0:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="timeUp" id="timeUp" hidden><span class="ruby" id="timeUpRuby"></span><span id="timeUpTxt"></span><button class="ctl" id="again2" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="top">
+        <div class="kid" id="kid"></div>
+        <div class="bub" id="bub"></div>
+        <div class="got" id="got"></div>
+      </div>
+      <div class="scene" id="scene"></div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/kids.js"></script>
+<script src="../shared/animals.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.animals, AA = window.ANIMAL_ART, KIDS = window.ART;
+  const $ = id => document.getElementById(id);
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  $('timeUpRuby').innerHTML = Shih.ruby('时间到了', 'shí jiān dào le');
+  $('scene').classList.add(C.scene);
+  Shih.soundButton($('soundBtn'));
+
+  // ---- 计时：答对 target 题就马上结束、给金币；时间到了还没达标就没有金币 ----
+  const timerEl = $('timer');
+  const LIMIT = lv => C.time[lv - 1] * 1000, GOAL = () => C.target[level - 1];
+  let left = 0, lastT = 0, tick = 0, running = false;
+  const fmt = ms => { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  function loop() {
+    if (!running) return;
+    const now = performance.now(); left -= now - lastT; lastT = now;
+    timerEl.textContent = '⏱ ' + fmt(Math.max(0, left)); timerEl.classList.toggle('low', left < 15000);
+    if (left <= 0) { finish(); return; }
+    tick = requestAnimationFrame(loop);
+  }
+  function finish() {
+    running = false; cancelAnimationFrame(tick);
+    if (done >= GOAL()) { $('winTime').textContent = 'Time left: ' + fmt(Math.max(0, left)); $('winMsg').hidden = false; Shih.speak('太棒了'); }
+    else { $('timeUpTxt').textContent = `You got ${done} of ${GOAL()}. Try again!`; $('timeUp').hidden = false; Shih.speak('时间到了'); }
+  }
+
+  const COL = !!C.colors;
+  const LEVELS = [{ note: (COL ? 'Color + animal' : 'Which animal?') + ' + pinyin' }, { note: 'Two animals (我喜欢)' }, { note: 'How many? (我看到)' }];
+  let level = Shih.startLevel('animalsLevel:' + Shih.unitId(), 3);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('animalsLevel:' + Shih.unitId(), lv); setup(); });
+  const HELP = ['Read the sentence. Find it and tap it.',
+                'Read the sentence. Find both and tap them.',
+                'Read the sentence. How many of each? Tap exactly that many — not more!'];
+  const oops = el => { el.classList.remove('oops'); void el.offsetWidth; el.classList.add('oops'); setTimeout(() => el.classList.remove('oops'), 400); };
+
+  // 所有的组合：动物 × 颜色（动物园没有颜色）
+  const colorOf = zh => C.colors.find(c => c.zh === zh);
+  const COMBOS = [];
+  C.animals.forEach(a => (COL ? a.colors.map(colorOf) : [null]).forEach(c => COMBOS.push({ a, c, key: a.zh + '|' + (c ? c.zh : '') })));
+  const name = x => x.c ? { zh: `${x.c.zh}的${x.a.zh}`, py: `${x.c.py} de ${x.a.py}` } : { zh: x.a.zh, py: x.a.py };
+  // 跟答案「很像」的：同一种动物别的颜色，或同一个颜色别的动物
+  const near = (x, pool) => pool.filter(y => y !== x && (y.a === x.a || (x.c && y.c === x.c)));
+
+  const CELLS = []; for (let r = 0; r < 3; r++) for (let c = 0; c < 6; c++) CELLS.push([10 + c * 16, 22 + r * 28]);
+  let done = 0, q = null, kid = null, lastKey = '', busy = false;
+  function show() {
+    busy = false;
+    let t; do { t = pick(COMBOS); } while (t.key === lastKey); lastKey = t.key;
+    const items = [];
+    let zh, py;
+    if (level === 1) {
+      q = { want: { [t.key]: 1 } };
+      // 每一种只画一个：答案＋很像的＋别的，最多 9 个
+      const rest = shuffle(near(t, COMBOS)).concat(shuffle(COMBOS.filter(y => y !== t && !near(t, COMBOS).includes(y))));
+      [t].concat(rest).slice(0, 9).forEach(x => items.push(x));
+      const n = name(t); zh = `这是${n.zh}。`; py = `zhè shì ${n.py}.`;
+    } else if (level === 2) {
+      const t2 = pick(COMBOS.filter(y => y.a !== t.a));
+      q = { want: { [t.key]: 1, [t2.key]: 1 } };
+      const nearAll = [...new Set(near(t, COMBOS).concat(near(t2, COMBOS)))].filter(y => y !== t && y !== t2);
+      const rest = shuffle(nearAll).concat(shuffle(COMBOS.filter(y => y !== t && y !== t2 && !nearAll.includes(y))));
+      [t, t2].concat(rest).slice(0, 10).forEach(x => items.push(x));
+      const a = name(t), b = name(t2); zh = `我喜欢${a.zh}和${b.zh}。`; py = `wǒ xǐ huān ${a.py} hé ${b.py}.`;
+    } else {
+      // 两样东西各有数量；画面上的比要的多 1～2 个（最多 4 个）；很像的也画 2～3 个
+      const t2 = pick(COMBOS.filter(y => y.a !== t.a));
+      const n1 = rnd(1, 3), n2 = rnd(1, 3);
+      q = { want: { [t.key]: n1, [t2.key]: n2 } };
+      [[t, n1], [t2, n2]].forEach(([x, n]) => { for (let i = 0, k = Math.min(4, n + rnd(1, 2)); i < k; i++) items.push(x); });
+      const others = shuffle([...new Set(near(t, COMBOS).concat(near(t2, COMBOS)))].filter(y => y !== t && y !== t2)).concat(shuffle(COMBOS.filter(y => y !== t && y !== t2)));
+      for (const x of [...new Set(others)]) { if (items.length >= 17) break; for (let i = 0, k = rnd(2, 3); i < k && items.length < 18; i++) items.push(x); }
+      const N1 = C.nums[n1 - 1], N2 = C.nums[n2 - 1], a = name(t), b = name(t2);
+      zh = `${C.lead ? C.lead.zh : ''}我看到${N1.zh}${C.mw.zh}${a.zh}和${N2.zh}${C.mw.zh}${b.zh}。`;
+      py = `${C.lead ? C.lead.py + ' ' : ''}wǒ kàn dào ${N1.py} ${C.mw.py} ${a.py} hé ${N2.py} ${C.mw.py} ${b.py}.`;
+    }
+    q.got = {}; q.say = zh;
+    $('bub').innerHTML = `<span class="ruby"><span class="nb">${Shih.rubyText(zh, py)}</span></span><button type="button" class="again" id="again" aria-label="Listen again">🔊</button>`;
+    $('again').addEventListener('click', () => Shih.speak(zh));
+    $('kid').innerHTML = KIDS.kid(kid, 'good');
+    $('got').innerHTML = '';
+    $('scene').innerHTML = '';
+    const cells = shuffle(CELLS);
+    shuffle(items).forEach((x, i) => {
+      const [cx, cy] = cells[i], b = document.createElement('button');
+      b.type = 'button'; b.className = 'thing'; b.dataset.k = x.key;
+      b.style.left = (cx + rnd(-3, 3)) + '%'; b.style.top = (cy + rnd(-4, 4)) + '%';
+      b.innerHTML = AA.svg(x.a.zh, x.c ? x.c.hex : ''); b.setAttribute('aria-label', (x.c ? x.c.zh : '') + x.a.en);
+      b.addEventListener('click', () => tap(x, b));
+      $('scene').appendChild(b);
+    });
+    if (running) Shih.speak(zh);
+    window.__an = { want: q.want, done };
+  }
+  function tap(x, el) {
+    if (!running || busy || el.classList.contains('ok')) return;
+    const need = q.want[x.key] || 0, have = q.got[x.key] || 0;
+    if (have >= need) { oops(el); return; }                            // 不是要找的，或是已经够了：摇一摇（不算错）
+    q.got[x.key] = have + 1; el.classList.add('ok');
+    $('got').insertAdjacentHTML('beforeend', AA.svg(x.a.zh, x.c ? x.c.hex : ''));
+    if (Object.keys(q.want).every(k => (q.got[k] || 0) >= q.want[k])) good();
+  }
+  function good() {
+    busy = true; done++; update();
+    $('kid').innerHTML = KIDS.kid(kid, 'great'); Shih.speak('对！');
+    if (done >= GOAL()) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 900); return; }   // 达标了：马上结束，给金币
+    setTimeout(() => { if (running) show(); }, 1100);
+  }
+  function setup() {
+    paintLevels(level);
+    $('help').textContent = HELP[level - 1] + ` Get ${GOAL()} right in ${fmt(LIMIT(level))} to get coins!`;
+    kid = KIDS.people[Math.floor(Math.random() * KIDS.people.length)];
+    done = 0; lastKey = '';
+    running = false; cancelAnimationFrame(tick); left = LIMIT(level); timerEl.textContent = '⏱ ' + fmt(left); timerEl.classList.remove('low');
+    $('winMsg').hidden = true; $('timeUp').hidden = true; update();
+    show(); wait();
+  }
+  function update() { $('score').textContent = `${done} / ${GOAL()}`; }
+  const wait = Shih.startCover($('playArea'), () => { running = true; lastT = performance.now(); tick = requestAnimationFrame(loop); Shih.speak(q.say); });
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

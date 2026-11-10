@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>我怕／我不怕</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 我怕／我不怕（花园、水族馆共用）：看小朋友的脸（害怕／不怕）和图，把字卡放进句子。
+   Level 1「我＿＿蜜蜂。」选怕／不怕；Level 2「我＿＿＿＿。」怕／不怕＋东西；
+   Level 3：同一种画一大一小，每一只旁边一张脸（一张害怕、一张不怕）。「我＿＿＿＿蜜蜂，我＿＿＿＿蜜蜂。」（左边先说）
+   答对 target 题就马上结束、给金币。放错了摇一摇（不算错）。设定在 units/（单元）/words.js 的 UNIT.pa */
+body.game { background: #EEF4E2; }
+.card { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.scene { display: flex; align-items: center; justify-content: center; gap: 24px; border: 4px solid #2B2B2B; border-radius: 22px; padding: 14px; }
+.scene.garden { background: linear-gradient(#BFE3EE 0 30%, #8CC97A 30%); }
+.scene.sea { background: linear-gradient(#7FC8E8, #3E8FC4); }
+.face, .thing { width: 190px; height: 190px; flex: none; }
+.pair { display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, .35); border-radius: 20px; padding: 6px; }
+.pair .face { width: 130px; height: 130px; } .pair .thing { width: 170px; height: 170px; }
+.face svg { width: 100%; height: 100%; display: block; }
+.thing { background: rgba(255, 255, 255, .6); border: 3px solid #2B2B2B; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.thing svg { display: block; }
+.panel { background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 20px; padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+.sent { display: flex; align-items: flex-end; justify-content: center; gap: 6px; flex-wrap: wrap; min-height: 70px; }
+.sent .ruby .py { font-size: 14px; } .sent .ruby .zh { font-size: 32px; font-weight: 700; }
+.sent .dropSlot { min-height: 60px; padding: 2px 8px; box-sizing: border-box; cursor: pointer; }
+.sent .dropSlot:not(.filled) { width: 96px; }
+.sent .dropSlot .ruby .zh { font-size: 28px; }
+.sent.right .dropSlot { border-color: var(--me); }
+.bank { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.bank .wcard { min-width: 56px; justify-content: center; }
+.bank .wcard .py { font-size: 13px; } .bank .wcard .zh { font-size: 26px; font-weight: 700; }
+.bank .wcard.oops { animation: shake .35s; border-color: var(--bad); }
+.timer.low { background: #FCE3E0; border-color: var(--bad); }
+.timeUp { text-align: center; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 10px; margin: 0 auto 10px; max-width: 640px; font: 700 18px var(--f-latin); display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.timeUp .ruby .py { font-size: 12px; } .timeUp .ruby .zh { font-size: 26px; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill timer" id="timer">0:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="timeUp" id="timeUp" hidden><span class="ruby" id="timeUpRuby"></span><span id="timeUpTxt"></span><button class="ctl" id="again2" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="card">
+        <div class="scene" id="scene"></div>
+        <div class="panel"><div class="sent" id="sent"></div><div class="bank" id="bank"></div></div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/animals.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.pa, T = C.things, AA = window.ANIMAL_ART;
+  const $ = id => document.getElementById(id);
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.rubyText(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  $('timeUpRuby').innerHTML = Shih.ruby('时间到了', 'shí jiān dào le');
+  $('scene').classList.add(C.scene);
+  Shih.soundButton($('soundBtn'));
+
+  // ---- 计时：答对 target 题就马上结束、给金币；时间到了还没达标就没有金币 ----
+  const timerEl = $('timer');
+  const LIMIT = lv => C.time[lv - 1] * 1000, GOAL = () => C.target[level - 1];
+  let left = 0, lastT = 0, tick = 0, running = false;
+  const fmt = ms => { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  function loop() {
+    if (!running) return;
+    const now = performance.now(); left -= now - lastT; lastT = now;
+    timerEl.textContent = '⏱ ' + fmt(Math.max(0, left)); timerEl.classList.toggle('low', left < 15000);
+    if (left <= 0) { finish(); return; }
+    tick = requestAnimationFrame(loop);
+  }
+  function finish() {
+    running = false; cancelAnimationFrame(tick);
+    if (done >= GOAL()) { $('winTime').textContent = 'Time left: ' + fmt(Math.max(0, left)); $('winMsg').hidden = false; Shih.speak('太棒了'); }
+    else { $('timeUpTxt').textContent = `You got ${done} of ${GOAL()}. Try again!`; $('timeUp').hidden = false; Shih.speak('时间到了'); }
+  }
+
+  const LEVELS = [{ note: '怕 or 不怕? + pinyin' }, { note: '怕／不怕 + what?' }, { note: '+ 大 or 小?' }];
+  let level = Shih.startLevel('paLevel:' + Shih.unitId(), 3);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('paLevel:' + Shih.unitId(), lv); setup(); });
+  const HELP = ['Look at the face. Is the kid afraid? Choose 怕 or 不怕.',
+                'Look at the face and the picture. Finish the sentence.',
+                'One big, one small. Look at each face. Finish the sentence — start from the left!'];
+  const oops = el => { el.classList.remove('oops'); void el.offsetWidth; el.classList.add('oops'); setTimeout(() => el.classList.remove('oops'), 400); };
+  const card = w => `<span class="ruby">${Shih.ruby(w.zh, w.py)}</span>`;
+  const W = { 我: { zh: '我', py: 'wǒ' }, 怕: { zh: '怕', py: 'pà' }, 不怕: { zh: '不怕', py: 'bú pà' }, 大: { zh: '大', py: 'dà' }, 小: { zh: '小', py: 'xiǎo' }, '。': { zh: '。', py: '' } };
+
+  // 小朋友的脸：害怕（眼睛睁大、嘴巴抖、流汗、发抖的线）／不怕（笑）
+  const INK = '#2B2B2B';
+  const FACE = scared => `<svg viewBox="0 0 200 200" aria-hidden="true">` +
+    (scared ? `<path d="M20 80 L8 74 M20 100 L6 100 M20 120 L8 126 M180 80 L192 74 M180 100 L194 100 M180 120 L192 126" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>` : '') +
+    `<circle cx="100" cy="104" r="74" fill="${scared ? '#F3E3C9' : '#F7D9B5'}" stroke="${INK}" stroke-width="5"/>` +
+    `<path d="M30 92 Q34 30 100 28 Q166 30 170 92 Q150 60 100 58 Q50 60 30 92 Z" fill="#4A3424" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>` +
+    (scared
+      ? `<circle cx="72" cy="100" r="16" fill="#FFFFFF" stroke="${INK}" stroke-width="4"/><circle cx="128" cy="100" r="16" fill="#FFFFFF" stroke="${INK}" stroke-width="4"/><circle cx="72" cy="102" r="6" fill="${INK}"/><circle cx="128" cy="102" r="6" fill="${INK}"/>` +
+        `<path d="M56 76 L84 82 M144 76 L116 82" stroke="${INK}" stroke-width="5" stroke-linecap="round"/>` +
+        `<path d="M74 146 Q82 136 90 146 Q100 136 110 146 Q118 136 126 146 L126 150 Q100 168 74 150 Z" fill="#FFFFFF" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/>` +
+        `<path d="M160 60 Q168 74 160 82 Q152 74 160 60 Z" fill="#7FC8E8" stroke="${INK}" stroke-width="3"/>`
+      : `<path d="M58 102 Q72 88 86 102 M114 102 Q128 88 142 102" fill="none" stroke="${INK}" stroke-width="5" stroke-linecap="round"/>` +
+        `<circle cx="56" cy="124" r="10" fill="#F49AC1" opacity=".7"/><circle cx="144" cy="124" r="10" fill="#F49AC1" opacity=".7"/>` +
+        `<path d="M70 132 Q100 168 130 132 Z" fill="#E5483B" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/>`) +
+    `</svg>`;
+
+  let done = 0, q = null, busy = false, last = '';
+  function show() {
+    busy = false;
+    let t; do { t = pick(T); } while (t.zh === last); last = t.zh;
+    const scared = Math.random() < 0.5, big = Math.random() < 0.5;
+    q = { t, scared, big };
+    const thingSvg = sz => AA.svg(t.zh, t.c || '').replace('<svg', `<svg width="${sz}" height="${sz}"`);
+    const PA = scared ? W.怕 : W.不怕, others = shuffle(T.filter(x => x !== t));
+    let parts, bank;
+    if (level < 3) {
+      $('scene').innerHTML = `<div class="face">${FACE(scared)}</div><div class="thing">${thingSvg(140)}</div>`;
+    }
+    if (level === 1) {
+      parts = [W.我, { want: PA.zh }, t, W['。']];
+      bank = [W.怕, W.不怕];
+    } else if (level === 2) {
+      parts = [W.我, { want: PA.zh }, { want: t.zh }, W['。']];
+      bank = [W.怕, W.不怕, t].concat(others.slice(0, 3));
+    } else {
+      // 同一种画两只，一大一小；每一只旁边一张脸（一张害怕、一张不怕）。句子照左到右：「我＿＿＿＿蜜蜂，我＿＿＿＿蜜蜂。」
+      const L = [{ big, scared }, { big: !big, scared: !scared }];
+      $('scene').innerHTML = L.map(x => `<div class="pair"><div class="face">${FACE(x.scared)}</div><div class="thing">${thingSvg(x.big ? 160 : 58)}</div></div>`).join('');
+      const cl = x => [{ want: x.scared ? '怕' : '不怕' }, { want: x.big ? '大' : '小' }, t];
+      parts = [W.我].concat(cl(L[0]), [{ zh: '，', py: '' }, W.我], cl(L[1]), [W['。']]);
+      bank = [W.怕, W.不怕, W.大, W.小];
+    }
+    q.say = parts.map(x => x.want || x.zh).join('');
+    $('sent').classList.remove('right');
+    $('sent').innerHTML = parts.map(x => x.want ? `<span class="dropSlot" data-want="${x.want}"></span>` : `<span class="ruby">${Shih.rubyText(x.zh, x.py)}</span>`).join('');
+    $('bank').innerHTML = '';
+    const cards = shuffle(bank).map(w => {
+      const el = document.createElement('div');
+      el.className = 'wcard'; el.dataset.zh = w.zh; el.innerHTML = card(w);
+      $('bank').appendChild(el); return el;
+    });
+    const empty = () => [...$('sent').querySelectorAll('.dropSlot:not(.filled)')];
+    const dnd = Shih.dragCards(cards, {
+      slots: empty,
+      accept(cd, slot) {
+        if (!running || busy) return true;
+        if (cd.dataset.zh !== slot.dataset.want) { oops(cd); return true; }    // 放错：摇一摇（不算错）
+        slot.classList.add('filled'); slot.innerHTML = cd.innerHTML;
+        if (!['怕', '不怕', '大', '小'].includes(cd.dataset.zh)) cd.classList.add('used');
+        if (!empty().length) good();
+        return true;
+      }
+    });
+    $('sent').querySelectorAll('.dropSlot').forEach(d => d.addEventListener('click', () => { if (!d.classList.contains('filled')) dnd.tapSlot(d); }));
+    window.__pa = { want: [...$('sent').querySelectorAll('.dropSlot')].map(s => s.dataset.want), done };
+  }
+  function good() {
+    busy = true; done++; update();
+    $('sent').classList.add('right');
+    Shih.speak(q.say);
+    if (done >= GOAL()) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 1500); return; }   // 达标了：马上结束，给金币
+    setTimeout(() => { if (running) show(); }, level === 1 ? 1200 : 1700);
+  }
+  function setup() {
+    paintLevels(level);
+    $('help').textContent = HELP[level - 1] + ` Get ${GOAL()} right in ${fmt(LIMIT(level))} to get coins!`;
+    done = 0; last = '';
+    running = false; cancelAnimationFrame(tick); left = LIMIT(level); timerEl.textContent = '⏱ ' + fmt(left); timerEl.classList.remove('low');
+    $('winMsg').hidden = true; $('timeUp').hidden = true; update();
+    show(); wait();
+  }
+  function update() { $('score').textContent = `${done} / ${GOAL()}`; }
+  const wait = Shih.startCover($('playArea'), () => { running = true; lastT = performance.now(); tick = requestAnimationFrame(loop); });
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

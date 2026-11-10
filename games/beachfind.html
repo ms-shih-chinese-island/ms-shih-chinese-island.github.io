@@ -10,7 +10,7 @@
 <style>
 /* 海滩找一找（像快手分信）：海滩的东西从上面掉下来，点牌子写对的篮子，东西就装进去。
    篮子装满就收走，换一个新的。没接到的东西掉到沙滩上就不见了（不扣分）。点错了篮子摇一摇。
-   Level 1 三个篮子；Level 2 五个篮子；Level 3 篮子写两样东西和数量（两个贝壳和一个水桶）。
+   Level 1 三个篮子；Level 2 五个篮子；Level 3 篮子写两样东西和数量（两条毛巾和一个水桶）。
    设定在 units/beach/words.js 的 UNIT.beachfind */
 body.game { background: #FBEFD5; }
 .stage { position: relative; max-width: 960px; margin: 0 auto; height: min(560px, calc(100vh - 230px)); min-height: 430px; background: linear-gradient(#9ED3F0 0 16%, #6FB7E0 16% 26%, #F2DDB0 26%); border: 4px solid #2B2B2B; border-radius: 22px; overflow: hidden; }
@@ -89,7 +89,7 @@ Shih.loadUnit().then(UNIT => {
   let left = 0, lastT = 0, tick = 0, running = false;
   const fmt = ms => { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
 
-  const LEVELS = [{ note: '3 baskets + pinyin' }, { note: '5 baskets + pinyin' }, { note: 'How many? (两个贝壳和一个水桶)' }];
+  const LEVELS = [{ note: '3 baskets + pinyin' }, { note: '5 baskets + pinyin' }, { note: 'How many? (两条毛巾和一个水桶)' }];
   let level = Shih.startLevel('beachfindLevel', 3);
   const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('beachfindLevel', lv); setup(); });
   const HELP = ['Things are falling! Tap the basket with the right word before it hits the sand.',
@@ -101,7 +101,7 @@ Shih.loadUnit().then(UNIT => {
     `<path d="M10 34 L110 34 L98 96 L22 96 Z" fill="#E2B25A" stroke="#2B2B2B" stroke-width="4" stroke-linejoin="round"/>` +
     `<path d="M14 52 L106 52 M17 70 L103 70" stroke="#C9963F" stroke-width="3"/><path d="M40 34 L44 96 M60 34 L60 96 M80 34 L76 96" stroke="#C9963F" stroke-width="3"/></svg>`;
 
-  // 一个篮子要装什么：need = { 贝壳: 3 }（Level 3：{ 贝壳: 2, 水桶: 1 }）
+  // 一个篮子要装什么：need = { 毛巾: 3 }（Level 3：{ 毛巾: 2, 水桶: 1 }）
   function makeNeed(used) {
     if (level < 3) {
       const free = W.filter(w => !used.includes(w.zh));
@@ -114,8 +114,11 @@ Shih.loadUnit().then(UNIT => {
   function tagHTML(need) {
     const ks = Object.keys(need);
     if (level < 3) return `<span class="ruby">${Shih.ruby(ks[0], byZh(ks[0]).py)}</span>`;
-    // 两个贝壳和一个水桶（分两行：两个贝壳和／一个水桶）
-    const part = k => { const N = C.nums[need[k] - 1], w = byZh(k); return { zh: `${N.zh}个${k}`, py: `${N.py} ge ${w.py}` }; };
+    // 两条毛巾和一个水桶（分两行：两条毛巾和／一个水桶）
+    const part = k => { const N = C.nums[need[k] - 1], w = byZh(k);
+      // 一 变调：后面是第四声（个＝gè）念 yí，不然念 yì
+      const n = N.zh === '一' ? (/[àèìòùǜ]|^ge$/.test(w.mw.py) ? 'yí' : 'yì') : N.py;
+      return { zh: `${N.zh}${w.mw.zh}${k}`, py: `${n} ${w.mw.py} ${w.py}` }; };
     const a = part(ks[0]), b = part(ks[1]);
     return `<span class="ruby ln">${Shih.ruby(a.zh + '和', a.py + ' hé')}</span><span class="ruby ln">${Shih.ruby(b.zh, b.py)}</span>`;
   }

@@ -58,15 +58,24 @@ window.ISLANDS = {
           { zh: '服务台', py: 'fú wù tái', en: 'Lost Kid Announcement', note: 'Tap 🔊 to hear the top and bottom of the lost kid. Then find the lost kid in the crowd.', href: 'games/lost.html?unit=clothes' },
           { zh: '找朋友', py: 'zhǎo péng yǒu', en: 'Find My Friends', note: "Read your friend's message to see their top and bottom. Then find your friend in the crowd.", href: 'games/find.html?unit=clothes' }
         ] },
-      { zh: '宠物店', py: 'chǒng wù diàn', en: 'Pet Shop', x: 1268, y: 132, color: 'mom', games: [] },
+      { id: 'petshop', zh: '宠物店', py: 'chǒng wù diàn', en: 'Pet Shop', x: 1268, y: 132, color: 'mom', games: [
+          { zh: '找宠物', py: 'zhǎo chǒng wù', en: 'Find the Pets', note: 'Read the sentence. Find the cat, dog, rabbit or bird in the right color!', href: 'games/animals.html?unit=petshop' }
+        ] },
       { id: 'fire', zh: '消防局', py: 'xiāo fáng jú', en: 'Fire Station', x: 1918, y: 88, color: 'dad',
         games: [
           { zh: '找装备', py: 'zhǎo zhuāng bèi', en: 'Find the Gear', note: 'Fire! Help the firefighter put on the gear. (Extra practice: more coins!)', href: 'games/gear.html?unit=fire' },
           { zh: '去灭火', py: 'qù miè huǒ', en: 'Put Out the Fire', note: 'Which floor is on fire? How many buckets? Left or right? (Extra practice: more coins!)', href: 'games/douse.html?unit=fire' }
         ] },
-      { zh: '动物园', py: 'dòng wù yuán', en: 'Zoo & Farm', x: 1454, y: 46, color: 'me', games: [] },
+      { id: 'zoo', zh: '动物园', py: 'dòng wù yuán', en: 'Zoo & Farm', x: 1454, y: 46, color: 'me', games: [
+          { zh: '动物园点名', py: 'dòng wù yuán diǎn míng', en: 'Zoo Roll Call', note: 'Read the sentence. Find the right zoo animals — how many?', href: 'games/animals.html?unit=zoo' },
+          { zh: '我喜欢动物', py: 'wǒ xǐ huān dòng wù', en: 'My Favorite Animal', note: 'Which animal do you like? Why? 我喜欢＿＿，因为＿＿很＿＿。', href: 'games/zoolike.html?unit=zoo' },
+          { zh: '排大小', py: 'pái dà xiǎo', en: 'Small to Big', note: 'Put the animals in order from small to big. Which is the biggest?', href: 'games/zoosize.html?unit=zoo' }
+        ] },
       { zh: '运动场', py: 'yùn dòng chǎng', en: 'Sports Field', x: 1758, y: 166, color: 'sun', games: [] },
-      { zh: '水族馆', py: 'shuǐ zú guǎn', en: 'Aquarium', x: 2194, y: 148, color: 'sea', games: [] },
+      { id: 'aquarium', zh: '水族馆', py: 'shuǐ zú guǎn', en: 'Aquarium', x: 2194, y: 148, color: 'sea', games: [
+          { zh: '在水族馆', py: 'zài shuǐ zú guǎn', en: 'At the Aquarium', note: 'Read the sentence. Find the sea animals — how many?', href: 'games/animals.html?unit=aquarium' },
+          { zh: '我怕／我不怕', py: 'wǒ pà / wǒ bú pà', en: 'Afraid or Not?', note: 'Look at the face. Are you afraid of the sea animal? 我怕／我不怕，大／小', href: 'games/pa.html?unit=aquarium' }
+        ] },
       { id: 'airport', zh: '机场', py: 'jī chǎng', en: 'Airport', x: 1566, y: 412, color: 'night',
         games: [
           { zh: '涂国旗', py: 'tú guó qí', en: 'Color the Flag', note: 'Read the color words and color the flags of the world!', href: 'games/flags.html?unit=airport' },
@@ -80,7 +89,10 @@ window.ISLANDS = {
           { zh: '我是谁？', py: 'wǒ shì shéi', en: 'Who Am I?', note: 'Listen: what does the kid have? Find the right kid on the beach! (Listening: more coins!)', href: 'games/whoami.html?unit=beach' },
           { zh: '海滩找一找', py: 'hǎi tān zhǎo yi zhǎo', en: 'Beach Hunt', note: 'Read the sentence and find the things on the beach!', href: 'games/beachfind.html?unit=beach' }
         ] },
-      { zh: '花园', py: 'huā yuán', en: 'Garden', x: 1250, y: 520, color: 'me', games: [] },
+      { id: 'garden', zh: '花园', py: 'huā yuán', en: 'Garden', x: 1250, y: 520, color: 'me', games: [
+          { zh: '花园里的虫', py: 'huā yuán lǐ de chóng', en: 'Garden Bugs', note: 'Read the sentence. Find the bugs in the right color!', href: 'games/animals.html?unit=garden' },
+          { zh: '我怕／我不怕', py: 'wǒ pà / wǒ bú pà', en: 'Afraid or Not?', note: 'Look at the face. Are you afraid of the bug? 我怕／我不怕，大／小', href: 'games/pa.html?unit=garden' }
+        ] },
       { id: 'restaurant', zh: '餐厅', py: 'cān tīng', en: 'Restaurant', x: 1076, y: 546, color: 'dad',
         games: [
           { zh: '请给我', py: 'qǐng gěi wǒ', en: 'Please Give Me', note: 'A customer asks for tableware. Read or listen, then give the right things.', href: 'games/give.html?unit=restaurant' },
@@ -141,7 +153,9 @@ window.ISLANDS = {
           { zh: '猜灯谜', py: 'cāi dēng mí', en: 'Lantern Riddles', note: 'Read the riddle on the lantern. Tap the right animal to throw a ring!', href: 'games/riddle.html?unit=cny' },
           { zh: '年夜饭找一找', py: 'nián yè fàn zhǎo yì zhǎo', en: 'New Year Feast Hunt', note: 'Tap a circle to see what is there. Drag the word into the sentence.', href: 'games/feast.html?unit=cny' }
         ] },
-      { zh: '七夕', py: 'qī xī', en: "Chinese Valentine's Day", x: 510, y: 578, color: 'mom', games: [] },
+      { id: 'qixi', zh: '七夕情人节', py: 'qī xī qíng rén jié', en: "Chinese Valentine's Day", x: 510, y: 578, color: 'mom', games: [
+          { zh: '送爱心', py: 'sòng ài xīn', en: 'Send Hearts', note: 'Read the numbers and send hearts to your family. 我爱你！情人节快乐！', href: 'games/hearts.html?unit=qixi' }
+        ] },
       { zh: '端午节', py: 'duān wǔ jié', en: 'Dragon Boat Festival', x: 1060, y: 52, color: 'sea', games: [] },
       { id: 'market', zh: '感恩节', py: 'gǎn ēn jié', en: 'Thanksgiving', x: 950, y: 170, color: 'dad',
         games: [
