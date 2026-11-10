@@ -35,6 +35,7 @@
     g += `<path d="M90 98 Q100 107 110 98" fill="none" stroke="${INK}" stroke-width="3.5" stroke-linecap="round"/>`;
     if (o.glasses) g += `<circle cx="85" cy="84" r="10" fill="none" ${sw(2.5)}/><circle cx="115" cy="84" r="10" fill="none" ${sw(2.5)}/><path d="M95 84 L105 84" ${sw(2.5)}/>`;
     g += o.hairFront || '';
+    g += o.face || '';
     g += o.hat || '';
     return `<svg viewBox="0 -30 200 290" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${g}</svg>`;
   }
@@ -82,7 +83,7 @@
       hairFront: `<path d="M58 80 Q58 44 100 42 Q142 44 142 80 Q130 60 100 60 Q70 60 58 80 Z" fill="#2E2838" ${sw()}/>` }
   };
   const BOTTOM = { oldman: '#4A4A55', oldwoman: '#2F3E66', man: '#2F3E66', woman: '#7E6DAA', boy: '#3B5FA0', girl: '#E2557A' };
-  const personOf = o => person(Object.assign({ top: o.top, top2: o.top, bottom: BOTTOM[o.kind], glasses: !!o.glasses, skirt: o.kind === 'woman' || o.kind === 'girl' }, HAIR[o.kind]));
+  const personOf = o => person(Object.assign({ top: o.top, top2: o.top, bottom: o.bottom || BOTTOM[o.kind], glasses: !!o.glasses, skirt: o.kind === 'woman' || o.kind === 'girl' }, HAIR[o.kind], o.hat ? { hat: o.hat } : {}, o.holding ? { holding: o.holding } : {}, o.face ? { face: o.face } : {}));   // o.hat、o.bottom、o.holding、o.face 可以不给
 
   window.NPC_ART = {
     person: personOf,
