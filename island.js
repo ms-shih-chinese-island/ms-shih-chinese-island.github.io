@@ -59,14 +59,18 @@ window.ISLANDS = {
           { zh: '找朋友', py: 'zhǎo péng yǒu', en: 'Find My Friends', note: "Read your friend's message to see their top and bottom. Then find your friend in the crowd.", href: 'games/find.html?unit=clothes' }
         ] },
       { zh: '宠物店', py: 'chǒng wù diàn', en: 'Pet Shop', x: 1268, y: 132, color: 'mom', games: [] },
-      { zh: '消防局', py: 'xiāo fáng jú', en: 'Fire Station', x: 1918, y: 88, color: 'dad', games: [] },
+      { id: 'fire', zh: '消防局', py: 'xiāo fáng jú', en: 'Fire Station', x: 1918, y: 88, color: 'dad',
+        games: [
+          { zh: '找装备', py: 'zhǎo zhuāng bèi', en: 'Find the Gear', note: 'Fire! Help the firefighter put on the gear. (Extra practice: more coins!)', href: 'games/gear.html?unit=fire' },
+          { zh: '去灭火', py: 'qù miè huǒ', en: 'Put Out the Fire', note: 'Which floor is on fire? How many buckets? Left or right? (Extra practice: more coins!)', href: 'games/douse.html?unit=fire' }
+        ] },
       { zh: '动物园', py: 'dòng wù yuán', en: 'Zoo & Farm', x: 1454, y: 46, color: 'me', games: [] },
       { zh: '运动场', py: 'yùn dòng chǎng', en: 'Sports Field', x: 1758, y: 166, color: 'sun', games: [] },
       { zh: '水族馆', py: 'shuǐ zú guǎn', en: 'Aquarium', x: 2194, y: 148, color: 'sea', games: [] },
       { zh: '机场', py: 'jī chǎng', en: 'Airport', x: 1566, y: 412, color: 'night', games: [] },
       { zh: '海滩', py: 'hǎi tān', en: 'Beach', x: 2110, y: 594, color: 'sun', games: [] },
       { zh: '花园', py: 'huā yuán', en: 'Garden', x: 1250, y: 520, color: 'me', games: [] },
-      { id: 'restaurant', zh: '餐厅', py: 'cān tīng', en: 'Restaurant', x: 1076, y: 526, color: 'dad',
+      { id: 'restaurant', zh: '餐厅', py: 'cān tīng', en: 'Restaurant', x: 1076, y: 546, color: 'dad',
         games: [
           { zh: '请给我', py: 'qǐng gěi wǒ', en: 'Please Give Me', note: 'A customer asks for tableware. Read or listen, then give the right things.', href: 'games/give.html?unit=restaurant' },
           { zh: '爱吃不爱吃', py: 'ài chī bú ài chī', en: 'Yummy or Yucky?', note: 'Look at 👍 👎 and build the sentence: 我爱吃饺子。', href: 'games/likes.html?unit=restaurant' },
@@ -75,8 +79,18 @@ window.ISLANDS = {
           { zh: '点菜算一算', py: 'diǎn cài suàn yi suàn', en: 'Order & Add Up', note: 'See (or hear) what friends want, type it into the order machine, and add up the bill.', href: 'games/pay.html?unit=restaurant' },
           { zh: '餐厅对话框', py: 'cān tīng duì huà kuàng', en: 'Restaurant Chat', note: 'Fill in the chat between the server and the customer.', href: 'games/dine.html?unit=restaurant' }
         ] },
-      { zh: '公安局', py: 'gōng ān jú', en: 'Police Station', x: 1752, y: 540, color: 'sea', games: [] },
-      { zh: '邮政局', py: 'yóu zhèng jú', en: 'Post Office', x: 1920, y: 510, color: 'me', games: [] },
+      { id: 'police', zh: '公安局', py: 'gōng ān jú', en: 'Police Station', x: 1752, y: 540, color: 'sea',
+        games: [
+          { zh: '找家人', py: 'zhǎo jiā rén', en: 'Find My Family', note: 'A lost kid is looking for a family member. Find the right person!', href: 'games/seek.html?unit=police' },
+          { zh: '失物招领', py: 'shī wù zhāo lǐng', en: 'Lost and Found', note: 'A kid lost something. Find it in the lost-and-found box!', href: 'games/lostfound.html?unit=police' },
+          { zh: '在哪里？', py: 'zài nǎ lǐ', en: 'Where Is It?', note: 'A lost kid asks the way. Tap the place and answer!', href: 'games/where.html?unit=police' }
+        ] },
+      { id: 'post-office', zh: '邮政局', py: 'yóu zhèng jú', en: 'Post Office', x: 1920, y: 510, color: 'me',
+        games: [
+          { zh: '送信', py: 'sòng xìn', en: 'Mail Delivery', note: 'Read where the letter goes. Tap the right place on the map!', href: 'games/post.html?unit=community' },
+          { zh: '邮局柜台', py: 'yóu jú guì tái', en: 'Post Office Counter', note: 'Count the letters and stamps. Drag the number and the color into the sentence.', href: 'games/counter.html?unit=community' },
+          { zh: '快手分信', py: 'kuài shǒu fēn xìn', en: 'Quick Mail Sort', note: 'Letters are falling! Tap the mailbox with the right color word.', href: 'games/sort.html?unit=community' }
+        ] },
       // 旅客中心：在码头旁边，坐船来的人先到这里
       { id: 'hello', zh: '你好', py: 'nǐ hǎo', en: 'Hello', x: 2060, y: 88, color: 'sea',
         games: [

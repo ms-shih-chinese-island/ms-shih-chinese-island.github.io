@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>失物招领</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 失物招领（公安局）：小朋友说「我的＿＿不见了」，学生在失物箱里点对的东西，东西飞回给他。
+   Level 1：只说东西；Level 2：我的黄色铅笔不见了。Level 3：我的红色帽子和蓝色雨伞都不见了。（两样都要找）
+   点错了东西摇一摇（不算错）。时间内做完就有金币。设定在 units/police/words.js 的 UNIT.lostfound */
+body.game { background: #EFE6DA; }
+.wrap { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 820px) { .wrap { grid-template-columns: 1fr; } }
+.side { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.bub { position: relative; width: 100%; box-sizing: border-box; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 20px; padding: 10px 14px; text-align: center; }
+.bub::after { content: ''; position: absolute; left: 50%; bottom: -18px; margin-left: -9px; border: 9px solid transparent; border-top: 10px solid #2B2B2B; }
+.bub .ruby { flex-wrap: wrap; justify-content: center; } .bub .ruby .py { font-size: 12px; } .bub .ruby .zh { font-size: 24px; }
+.bub .again { margin-left: 6px; background: #FFF6D6; border: 2px solid #2B2B2B; border-radius: 10px; font-size: 18px; cursor: pointer; vertical-align: middle; }
+.nb { display: inline-flex; white-space: nowrap; gap: 3px; align-items: flex-end; }
+.ruby > .nb { flex-direction: row; } .nb > span { display: flex; flex-direction: column; align-items: center; }
+.kid { width: 150px; }
+.kid svg { width: 150px; height: 150px; display: block; }
+.got { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; min-height: 60px; background: #FFFFFF; border: 3px dashed #C9A27A; border-radius: 16px; padding: 6px; width: 100%; box-sizing: border-box; }
+.got svg { width: 52px; height: 52px; }
+.box { background: #C9A27A; border: 4px solid #2B2B2B; border-radius: 18px; padding: 60px 14px 16px; position: relative; box-shadow: inset 0 -12px 0 #B08A60; }
+.box .lbl { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); background: #FFF6D6; border: 3px solid #2B2B2B; border-radius: 10px; padding: 0 14px; white-space: nowrap; }
+.box .lbl .ruby .py { font-size: 11px; } .box .lbl .ruby .zh { font-size: 20px; }
+.items { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
+.items.many { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+.it { background: #FFF8EC; border: 3px solid #2B2B2B; border-radius: 14px; cursor: pointer; padding: 4px; aspect-ratio: 1; }
+.it svg { width: 100%; height: 100%; display: block; }
+.it:hover { background: #FFF6D6; }
+.it.oops { animation: shake .35s; border-color: var(--bad); }
+.it.gone { visibility: hidden; }
+.fly { position: fixed; width: 70px; height: 70px; z-index: 60; pointer-events: none; transition: left .45s ease-in-out, top .45s ease-in-out, transform .45s; }
+.fly svg { width: 100%; height: 100%; }
+.timer.low { background: #FCE3E0; border-color: var(--bad); }
+.timeUp { text-align: center; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 10px; margin: 0 auto 10px; max-width: 640px; font: 700 18px var(--f-latin); display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.timeUp .ruby .py { font-size: 12px; } .timeUp .ruby .zh { font-size: 26px; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill timer" id="timer">0:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="timeUp" id="timeUp" hidden><span class="ruby" id="timeUpRuby"></span><span id="timeUpTxt"></span><button class="ctl" id="again2" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="wrap">
+        <div class="side">
+          <div class="bub" id="bub"></div>
+          <div class="kid" id="kid"></div>
+          <div class="got" id="got"></div>
+        </div>
+        <div class="box"><span class="lbl" id="lbl"></span><div class="items" id="items"></div></div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/kids.js"></script>
+<script src="../units/police/art.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.lostfound, COLORS = UNIT.colors, LART = window.LART, KIDS = window.ART;
+  const $ = id => document.getElementById(id);
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  $('timeUpRuby').innerHTML = Shih.ruby('时间到了', 'shí jiān dào le');
+  $('lbl').innerHTML = `<span class="ruby">${Shih.ruby('失物箱', 'shī wù xiāng')}</span>`;
+  Shih.soundButton($('soundBtn'));
+
+  const timerEl = $('timer');
+  const LIMIT = lv => C.time[lv - 1] * 1000;
+  let left = 0, lastT = 0, tick = 0, running = false;
+  const fmt = ms => { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  function loop() {
+    if (!running) return;
+    const now = performance.now(); left -= now - lastT; lastT = now;
+    timerEl.textContent = '⏱ ' + fmt(Math.max(0, left)); timerEl.classList.toggle('low', left < 15000);
+    if (left <= 0) { running = false; $('timeUpTxt').textContent = `Time's up! You helped ${qi} of ${qs.length} kids. Try again!`; $('timeUp').hidden = false; Shih.speak('时间到了'); return; }
+    tick = requestAnimationFrame(loop);
+  }
+
+  const LEVELS = [{ note: 'What is it? + pinyin' }, { note: '+ color + pinyin' }, { note: 'How many + color + pinyin' }];
+  let level = Shih.startLevel('lostfoundLevel', 3);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('lostfoundLevel', lv); setup(); });
+  const HELP = ['Listen and read: what did the kid lose? Tap it in the lost-and-found box.',
+                'What did the kid lose, and what color? Some kids lost two things! Tap them in the box.',
+                'The kid lost two kinds of things. How many of each, and what color? Tap all of them in the box.'];
+  const oops = el => { el.classList.remove('oops'); void el.offsetWidth; el.classList.add('oops'); setTimeout(() => el.classList.remove('oops'), 400); };
+  const ruby = (zh, p) => {
+    const zs = zh.split(/(?<=[，。？])/).filter(Boolean), ps = (p || '').split(/(?<=[,.?])/).filter(Boolean);
+    return `<span class="ruby">${zs.map((z, i) => `<span class="nb">${Shih.rubyText(z, (ps[i] || '').trim())}</span>`).join('')}</span>`;
+  };
+
+  let qs = [], qi = 0, things = [], want = [], busy = false;
+  const ONE = { zh: '一', py: 'yì' };
+  const oneFor = mw => mw.zh === '个' ? { zh: '一', py: 'yí' } : ONE;          // 一个 yí gè；一支、一顶、一把 yì
+  const COUNTS = [null, ONE].concat(C.counts);                                  // COUNTS[n]
+  function makeQuestions() {
+    let its = [];
+    while (its.length < C.rounds * 2) its = its.concat(shuffle(C.items));
+    return Array.from({ length: C.rounds }, (_, i) => {
+      const it = its[i * 2], it2 = its[i * 2 + 1] === it ? C.items.find(x => x !== it) : its[i * 2 + 1];
+      const [c, c2] = shuffle(COLORS);
+      const kid = KIDS.people[(i * 7 + 2) % KIDS.people.length];
+      // Level 1：一样东西；Level 2：前三题一样东西（颜色 + 东西），后三题用「和」说两样东西；Level 3：两句话，各有数量
+      if (level === 1) return { kid, want: [{ it, c, n: 1 }] };
+      if (level === 2) return { kid, want: i < 3 ? [{ it, c, n: 1 }] : [{ it, c, n: 1 }, { it: it2, c: c2, n: 1 }] };
+      return { kid, want: [{ it, c, n: 1 + Math.floor(Math.random() * 3) }, { it: it2, c: c2, n: 1 + Math.floor(Math.random() * 3) }] };
+    });
+  }
+  // 失物箱里的东西：要的东西 + 同一样东西别的颜色 + 别的东西同颜色
+  function boxOf(q) {
+    const out = [], key = w => w.it.zh + '|' + w.c.zh;
+    if (level === 1) {
+      const w = q.want[0];
+      out.push({ it: w.it, c: w.c, key: key(w) });
+      shuffle(C.items.filter(x => x !== w.it)).slice(0, 5).forEach(x => out.push({ it: x, c: pick(COLORS) }));
+      return shuffle(out);
+    }
+    // Level 3：每一堆的数量都差不多（1～3 个），不能「哪一堆最多就选哪一堆」，一定要看颜色和东西
+    const many = () => level === 3 ? 1 + Math.floor(Math.random() * 3) : 1;
+    q.want.forEach(w => {
+      const mine = level === 3 ? w.n + (Math.random() < .5 ? 1 : 0) : 1;       // 有时候刚好、有时候多一个
+      for (let i = 0; i < mine; i++) out.push({ it: w.it, c: w.c, key: key(w) });
+      shuffle(COLORS.filter(c => !q.want.some(x => x.it === w.it && x.c === c))).slice(0, level === 3 ? 1 : 2).forEach(c => { for (let i = 0, k = many(); i < k; i++) out.push({ it: w.it, c }); });
+      const other = pick(C.items.filter(x => !q.want.some(y => y.it === x)));
+      for (let i = 0, k = many(); i < k; i++) out.push({ it: other, c: w.c });
+    });
+    while (out.length < 8) out.push({ it: pick(C.items.filter(x => !q.want.some(y => y.it === x))), c: pick(COLORS) });
+    return shuffle(out);
+  }
+  function show() {
+    const q = qs[qi], W = q.want;
+    let zh, py;
+    if (level === 1) { zh = `我的${W[0].it.zh}不见了。`; py = `wǒ de ${W[0].it.py} bú jiàn le.`; }
+    else if (level === 2 && W.length === 1) { zh = `我的${W[0].c.zh}${W[0].it.zh}不见了。`; py = `wǒ de ${W[0].c.py} ${W[0].it.py} bú jiàn le.`; }
+    else if (level === 2) { zh = `我的${W[0].c.zh}${W[0].it.zh}和${W[1].c.zh}${W[1].it.zh}不见了。`; py = `wǒ de ${W[0].c.py} ${W[0].it.py} hé ${W[1].c.py} ${W[1].it.py} bú jiàn le.`; }
+    else {
+      const k = w => w.n === 1 ? oneFor(w.it.mw) : COUNTS[w.n];
+      zh = `我的${k(W[0]).zh}${W[0].it.mw.zh}${W[0].c.zh}${W[0].it.zh}不见了。我的${k(W[1]).zh}${W[1].it.mw.zh}${W[1].c.zh}${W[1].it.zh}也不见了。`;
+      py = `wǒ de ${k(W[0]).py} ${W[0].it.mw.py} ${W[0].c.py} ${W[0].it.py} bú jiàn le. wǒ de ${k(W[1]).py} ${W[1].it.mw.py} ${W[1].c.py} ${W[1].it.py} yě bú jiàn le.`;
+    }
+    q.say = zh;
+    // 两样东西的句子在「和」后面可以换行；Level 3 两句一句一行
+    let bubHTML;
+    if (level === 2 && W.length === 2) { const [a, b] = zh.split('和'), [pa, pb] = py.split(' hé '); bubHTML = `<span class="ruby"><span class="nb">${Shih.rubyText(a + '和', pa + ' hé')}</span><span class="nb">${Shih.rubyText(b, pb)}</span></span>`; }
+    else if (level === 3) { const [a, b] = zh.split(/(?<=。)/), [pa, pb] = py.split(/(?<=\.) /); bubHTML = `<div class="ruby"><span class="nb">${Shih.rubyText(a, pa)}</span></div><div class="ruby"><span class="nb">${Shih.rubyText(b, pb)}</span></div>`; }
+    else bubHTML = ruby(zh, py);
+    $('bub').innerHTML = bubHTML + `<button type="button" class="again" id="again" aria-label="Listen again">🔊</button>`;
+    $('again').addEventListener('click', () => Shih.speak(zh));
+    if (running) Shih.speak(zh);
+    $('kid').innerHTML = KIDS.kid(q.kid, 'notgood');
+    $('got').innerHTML = '';
+    want = W.map(w => ({ key: w.it.zh + '|' + w.c.zh, n: w.n, got: 0 }));
+    busy = false;
+    things = boxOf(q);
+    $('items').innerHTML = ''; $('items').classList.toggle('many', things.length > 10);
+    things.forEach(t => {
+      const el = document.createElement('button');
+      el.type = 'button'; el.className = 'it'; el.innerHTML = LART.svg(t.it.zh, t.c.hex);
+      el.dataset.it = t.it.zh; el.dataset.c = t.c.zh; if (t.key) el.dataset.key = t.key;
+      el.addEventListener('click', () => tap(t, el));
+      $('items').appendChild(el);
+    });
+    window.__lf = { want: want.map(w => ({ key: w.key, n: w.n })), qi };
+  }
+  function tap(t, el) {
+    if (!running || busy) return;
+    const w = want.find(x => x.key === t.key);
+    if (!w || w.got >= w.n) { oops(el); return; }     // 拿错，或是已经拿够了：摇一摇（不算错）
+    w.got++; t.key = null;
+    const from = el.getBoundingClientRect(), to = $('got').getBoundingClientRect();
+    const f = document.createElement('div'); f.className = 'fly'; f.innerHTML = LART.svg(t.it.zh, t.c.hex);
+    f.style.left = from.left + 'px'; f.style.top = from.top + 'px';
+    document.body.appendChild(f); el.classList.add('gone');
+    requestAnimationFrame(() => requestAnimationFrame(() => { f.style.left = (to.left + to.width / 2 - 35) + 'px'; f.style.top = (to.top) + 'px'; f.style.transform = 'scale(.75)'; }));
+    const done = want.every(x => x.got >= x.n);
+    if (done) busy = true;
+    setTimeout(() => {
+      f.remove(); $('got').insertAdjacentHTML('beforeend', LART.svg(t.it.zh, t.c.hex));
+      if (!done) return;
+      Shih.speak('谢谢！');
+      $('kid').innerHTML = KIDS.kid(qs[qi].kid, 'great');
+      qi++; update();
+      if (qi >= qs.length) {
+        running = false; cancelAnimationFrame(tick);
+        $('winTime').textContent = 'Time left: ' + fmt(Math.max(0, left));
+        setTimeout(() => { $('winMsg').hidden = false; Shih.speak('太棒了'); }, 900);
+      } else setTimeout(() => { if (running) show(); }, 1300);
+    }, 480);
+  }
+  function setup() {
+    paintLevels(level);
+    $('help').textContent = HELP[level - 1] + ` Help ${C.rounds} kids in ${fmt(LIMIT(level))} to get coins!`;
+    qs = makeQuestions(); qi = 0;
+    running = false; cancelAnimationFrame(tick); left = LIMIT(level); timerEl.textContent = '⏱ ' + fmt(left); timerEl.classList.remove('low');
+    $('winMsg').hidden = true; $('timeUp').hidden = true; update();
+    show(); wait();
+  }
+  function update() { $('score').textContent = `${qi} / ${qs.length}`; }
+  const wait = Shih.startCover($('playArea'), () => { running = true; lastT = performance.now(); tick = requestAnimationFrame(loop); Shih.speak(qs[qi].say); });
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

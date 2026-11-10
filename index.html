@@ -487,28 +487,28 @@ table.rec tr:nth-child(even) td { background: #F6FAFB; }
       </g>
 
       <!-- restaurant：橘色的店、一碗面和筷子的招牌（跟池塘换了位置） -->
-      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" transform="translate(-284 -24)">
+      <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" transform="translate(-284 -4)">
         <rect x="1306" y="430" width="108" height="64" fill="#FFF6E5"/>
         <path d="M1296 432 L1424 432 L1412 408 L1308 408 Z" fill="#F28C28"/>
         <path d="M1346 400 Q1360 414 1374 400 Z" fill="#FFFFFF"/><path d="M1352 384 L1364 398 M1360 382 L1370 398" stroke-width="2.5"/>
         <rect x="1316" y="444" width="32" height="26" fill="#BFE3EE"/><rect x="1364" y="452" width="28" height="42" fill="#B4471C"/>
         <path d="M1296 494 L1424 494" stroke-width="4"/>
       </g>
-      <!-- police station：蓝色的楼、黄色的星星徽章 -->
+      <!-- police station：棕色的楼（美国的警察局）、黄色的星星徽章 -->
       <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" transform="translate(112 -8)">
-        <rect x="1586" y="430" width="108" height="64" fill="#D6E4F5"/>
-        <rect x="1578" y="418" width="124" height="14" fill="#3B78D8"/>
+        <rect x="1586" y="430" width="108" height="64" fill="#EBD9BF"/>
+        <rect x="1578" y="418" width="124" height="14" fill="#8A5A2B"/>
         <path d="M1640 384 L1645 396 L1658 397 L1648 405 L1651 418 L1640 411 L1629 418 L1632 405 L1622 397 L1635 396 Z" fill="#F5C531"/>
-        <rect x="1596" y="444" width="28" height="24" fill="#BFE3EE"/><rect x="1656" y="444" width="28" height="24" fill="#BFE3EE"/><rect x="1628" y="454" width="24" height="40" fill="#3B78D8"/>
+        <rect x="1596" y="444" width="28" height="24" fill="#BFE3EE"/><rect x="1656" y="444" width="28" height="24" fill="#BFE3EE"/><rect x="1628" y="454" width="24" height="40" fill="#6E4520"/>
         <path d="M1578 494 L1702 494" stroke-width="4"/>
       </g>
-      <!-- post office：绿色的屋顶、信封招牌、门口一个绿色邮筒 -->
+      <!-- post office：蓝色的屋顶（美国的邮局）、信封招牌、门口一个蓝色邮筒 -->
       <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" transform="translate(-16 -39)">
         <rect x="1866" y="430" width="108" height="64" fill="#FFFFFF"/>
-        <path d="M1856 432 L1920 404 L1984 432 Z" fill="#45A852"/>
+        <path d="M1856 432 L1920 404 L1984 432 Z" fill="#3B78D8"/>
         <rect x="1906" y="440" width="28" height="20" fill="#FFF6D6"/><path d="M1906 440 L1920 452 L1934 440" fill="none" stroke-width="2"/>
-        <rect x="1876" y="464" width="24" height="30" fill="#2F7A4D"/><rect x="1942" y="458" width="24" height="20" fill="#BFE3EE"/>
-        <rect x="1988" y="462" width="16" height="32" rx="6" fill="#45A852"/><path d="M1991 472 L2001 472" stroke-width="2"/>
+        <rect x="1876" y="464" width="24" height="30" fill="#1F4580"/><rect x="1942" y="458" width="24" height="20" fill="#BFE3EE"/>
+        <rect x="1988" y="462" width="16" height="32" rx="6" fill="#3B78D8"/><path d="M1991 472 L2001 472" stroke-width="2"/>
         <path d="M1856 494 L1984 494" stroke-width="4"/>
       </g>
       <!-- town trees, bushes and street lamps（零零落落的，房子中间留空地） -->
@@ -976,17 +976,19 @@ const WALK = {
       school: [216, 350], schoolDoor: [265, 258], library: [525, 268], market: [356, 450], P1: [670, 400], plaza: [700, 467], home: [735, 300],
       hospital: [227, 505], PK: [622, 520], BL: [930, 432], RL: [1014, 440], bank: [800, 418], playground: [540, 548],
       T1: [1078, 356], T2: [1168, 352], T3: [1296, 350], T4: [1524, 358], T5: [1730, 360], T6: [1880, 350], T7: [1950, 345], T8: [2112, 356], T9: [2170, 378],
-      pet: [1318, 290], restaurant: [1140, 478], B1: [1172, 470], B2: [1832, 418], U1: [1488, 316], mall: [1016, 258], police: [1806, 470], fire: [1922, 268], post: [1860, 478], hello: [2060, 264], zoo: [1500, 198], J1: [1484, 358], J2: [1830, 354], sports: [1690, 298], SR: [1842, 296], Y1: [2112, 318], airport: [1398, 530], A1: [1450, 570], PL: [1700, 498], garden: [1204, 486], aquarium: [2182, 300], beach: [2052, 530],
+      pet: [1318, 290], restaurant: [1094, 498], BR: [946, 508], B1: [1172, 478], B2: [1832, 418], U1: [1488, 316], mall: [1016, 258], police: [1806, 470], fire: [1922, 268], post: [1860, 478], hello: [2060, 264], zoo: [1500, 198], J1: [1484, 358], J2: [1830, 354], sports: [1690, 298], SR: [1842, 296], Y1: [2112, 318], airport: [1398, 530], A1: [1450, 570], PL: [1700, 498], garden: [1204, 486], aquarium: [2182, 300], beach: [2052, 530],
       dock: [2252, 372]
     },
     edges: [['school', 'A'], ['A', 'schoolDoor'], ['A', 'B'], ['B', 'library'], ['B', 'C'], ['C', 'P1'], ['P1', 'plaza'], ['C', 'D'], ['D', 'home'],
-            ['D', 'E'], ['E', 'bank'], ['E', 'G'], ['A', 'F'], ['F', 'hospital'], ['F', 'market'], ['market', 'playground'], ['playground', 'PK'], ['PK', 'plaza'], ['bank', 'BL'], ['BL', 'RL'], ['RL', 'restaurant'],
-            ['G', 'T1'], ['T1', 'T2'], ['T2', 'T3'], ['T3', 'J1'], ['J1', 'T4'], ['T4', 'T5'], ['J1', 'U1'], ['U1', 'zoo'], ['U1', 'pet'], ['T4', 'sports'], ['T5', 'J2'], ['J2', 'T6'], ['J2', 'B2'], ['B2', 'police'], ['B2', 'post'], ['post', 'beach'], ['T6', 'T7'], ['T7', 'T8'], ['T8', 'T9'], ['T9', 'dock'],
-            ['T2', 'B1'], ['B1', 'restaurant'], ['B1', 'garden'], ['garden', 'A1'], ['A1', 'airport'], ['A1', 'PL'], ['PL', 'police'], ['T1', 'mall'], ['T6', 'fire'], ['T8', 'Y1'], ['Y1', 'hello'],
+            ['D', 'E'], ['E', 'G'], ['A', 'F'], ['F', 'hospital'], ['F', 'market'], ['market', 'playground'], ['playground', 'PK'], ['PK', 'plaza'], 
+            ['G', 'T1'], ['T1', 'T2'], ['T2', 'T3'], ['T3', 'J1'], ['J1', 'T4'], ['T4', 'T5'], ['J1', 'U1'], ['U1', 'zoo'], ['T4', 'sports'], ['T5', 'J2'], ['J2', 'T6'], ['J2', 'B2'], ['B2', 'police'], ['B2', 'post'], ['post', 'beach'], ['T6', 'T7'], ['T7', 'T8'], ['T8', 'T9'], ['T9', 'dock'],
+            ['T2', 'B1'], ['B1', 'garden'], ['garden', 'A1'], ['A1', 'airport'], ['A1', 'PL'], ['PL', 'police'], ['T6', 'fire'], ['T8', 'Y1'], ['Y1', 'hello'],
             ['Y1', 'aquarium']],
     curvy: true,   // 小路都弯一点点
+    // 圆滑的弧线（像椭圆的一段，不会有直角）：照顺序经过这几个点，画成一条顺顺的曲线
+    smooth: [['G', 'mall', 'pet', 'J1'], ['E', 'bank', 'BR', 'restaurant', 'B1']],
     // 下排的小路：花园 → 机场下面 → 公安局，弯成一个弧形
-    bends: { 'PK|plaza': 6, 'BL|RL': 4, 'garden|A1': 12, 'A1|PL': 12 },
+    bends: { 'PK|plaza': 6, 'garden|A1': 12, 'A1|PL': 12 },
     places: { '家': 'home', '学校': 'school', '图书馆': 'library', '超市': 'market', '医院': 'hospital', '数字': 'bank', '公园': 'playground',
               '购物中心': 'mall', '餐厅': 'restaurant', '宠物店': 'pet', '公安局': 'police', '消防局': 'fire', '邮政局': 'post', '你好': 'hello',
               '动物园': 'zoo', '运动场': 'sports', '机场': 'airport', '花园': 'garden', '水族馆': 'aquarium', '海滩': 'beach' },
@@ -1003,6 +1005,27 @@ const WALK = {
     boatOut: [[410, 440], [330, 470], [246, 462]], boatIn: [[246, 462], [330, 470], [410, 440]]
   }
 };
+// smooth：把一串点画成顺顺的曲线（Catmull-Rom），切成很多小段当成小路，走路也照着走
+Object.values(WALK).forEach(W => {
+  (W.smooth || []).forEach((chain, ci) => {
+    const P = chain.map(n => W.nodes[n]);
+    const at = (i) => P[Math.max(0, Math.min(P.length - 1, i))];
+    let prev = chain[0];
+    for (let i = 0; i < P.length - 1; i++) {
+      const p0 = i === 0 ? [2 * P[0][0] - P[1][0], 2 * P[0][1] - P[1][1] - 60] : at(i - 1), p1 = at(i), p2 = at(i + 1);
+      const p3 = i + 2 < P.length ? at(i + 2) : [2 * p2[0] - p1[0], 2 * p2[1] - p1[1] - 60];
+      for (let k = 1; k <= 8; k++) {
+        const t = k / 8, t2 = t * t, t3 = t2 * t;
+        const f = (a, b, c, d) => .5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+        const name = k === 8 ? chain[i + 1] : `sm${ci}_${i}_${k}`;
+        if (k < 8) W.nodes[name] = [f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])];
+        W.edges.push([prev, name]);
+        (W.bends = W.bends || {})[prev + '|' + name] = 0;
+        prev = name;
+      }
+    }
+  });
+});
 const REDUCE = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const store = { get: (k, d) => { try { const v = localStorage.getItem('shih:' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
                 set: (k, v) => { try { localStorage.setItem('shih:' + k, JSON.stringify(v)); } catch (e) {} } };
@@ -1017,7 +1040,7 @@ function bendCtl(W, a, b) {
     let h = 0; for (const c of a + b) h = (h * 31 + c.charCodeAt(0)) | 0;
     k = (h & 1 ? 1 : -1) * Math.min(14, Math.max(4, L * .07));
   }
-  if (k == null) return null;
+  if (k == null || k === 0) return null;
   return [(A[0] + B[0]) / 2 - dy / L * k * 2, (A[1] + B[1]) / 2 + dx / L * k * 2];
 }
 // 从 a 走到 b 经过的点（弯的路分成几小段）

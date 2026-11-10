@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>在哪里？</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 在哪里？（公安局）：迷路的小朋友问「请问，医院在哪里？」，学生点对的地方，再回答他。
+   Level 1：点对的地方；Level 2：有黄色圈，点对了再选「医院在这里／那里。」Level 3：两个地方，按顺序点，再排「银行在这里，学校在那里。」（这里、那里已经放好；黄色圈里面 = 这里，外面 = 那里）
+   达到目标就马上结束，给金币；时间到了还没达标就没有金币。点错了摇一摇（不算错）。
+   设定在 units/police/words.js 的 UNIT.where */
+body.game { background: #EFE6DA; }
+.wrap { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 820px) { .wrap { grid-template-columns: 1fr; } }
+.side { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.bub { position: relative; width: 100%; box-sizing: border-box; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 20px; padding: 10px 14px; text-align: center; }
+.bub::after { content: ''; position: absolute; left: 50%; bottom: -18px; margin-left: -9px; border: 9px solid transparent; border-top: 10px solid #2B2B2B; }
+.bub .ruby { flex-wrap: wrap; justify-content: center; } .bub .ruby .py { font-size: 12px; } .bub .ruby .zh { font-size: 24px; }
+.bub .again { margin-left: 6px; background: #FFF6D6; border: 2px solid #2B2B2B; border-radius: 10px; font-size: 18px; cursor: pointer; vertical-align: middle; }
+.nb { display: inline-flex; white-space: nowrap; gap: 3px; align-items: flex-end; }
+.ruby > .nb { flex-direction: row; } .nb > span { display: flex; flex-direction: column; align-items: center; }
+.kid { width: 130px; }
+.kid svg { width: 130px; height: 130px; display: block; }
+.main { display: flex; flex-direction: column; gap: 12px; }
+/* 地图：1000 × 460，两排地方，中间一条大马路；小朋友站在大马路上。Level 3 小朋友身边有黄色虚线圈 = 「这里」 */
+.map { position: relative; width: 100%; aspect-ratio: 1000 / 460; background: #CFE6C4; border: 4px solid #2B2B2B; border-radius: 18px; overflow: hidden; }
+.map > svg.roads { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pl { position: absolute; transform: translate(-50%, -50%); width: 15%; aspect-ratio: 1; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 14px; cursor: pointer; padding: 3px; font: inherit; z-index: 2; }
+.pl { display: flex; flex-direction: column; align-items: center; }
+.pl svg { width: 100%; flex: 1; min-height: 0; display: block; }
+.pl .en { font: 700 14px var(--f-latin); line-height: 1.1; color: #2B2B2B; padding-bottom: 2px; }
+.pl:hover { background: #FFF6D6; }
+.pl.oops { animation: shakeC .35s; border-color: var(--bad); }
+@keyframes shakeC { 0%, 100% { transform: translate(-50%, -50%); } 25% { transform: translate(calc(-50% - 6px), -50%); } 75% { transform: translate(calc(-50% + 6px), -50%); } }
+.pl.ok { background: #E3F4DC; border-color: var(--me); outline: 4px solid var(--me); outline-offset: 1px; }
+.me { position: absolute; transform: translate(-50%, -50%); width: 8.5%; aspect-ratio: 1; z-index: 3; pointer-events: none; }
+.me svg { width: 100%; height: 100%; display: block; }
+.near { position: absolute; transform: translate(-50%, -50%); width: 23%; height: 88%; border: 4px dashed #E0A800; background: rgba(255, 230, 120, .35); border-radius: 50%; z-index: 1; pointer-events: none; }
+.near[hidden] { display: none; }
+.panel { background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 20px; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.panel[hidden] { display: none; }
+.sent { display: flex; align-items: flex-end; justify-content: center; gap: 6px; flex-wrap: wrap; min-height: 70px; }
+.sent .ruby .py { font-size: 14px; } .sent .ruby .zh { font-size: 30px; font-weight: 700; }
+.sent .dropSlot { min-height: 58px; padding: 2px 8px; min-width: 0; box-sizing: border-box; width: auto; }
+.sent .dropSlot:not(.filled) { width: 96px; }
+.sent .dropSlot .ruby .zh { font-size: 28px; }
+.bank { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.bank .wcard { min-width: 56px; justify-content: center; }
+.bank .wcard .py { font-size: 13px; } .bank .wcard .zh { font-size: 26px; font-weight: 700; }
+.bank .wcard.oops { animation: shake .35s; border-color: var(--bad); }
+.timer.low { background: #FCE3E0; border-color: var(--bad); }
+.timeUp { text-align: center; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 10px; margin: 0 auto 10px; max-width: 640px; font: 700 18px var(--f-latin); display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.timeUp .ruby .py { font-size: 12px; } .timeUp .ruby .zh { font-size: 26px; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill timer" id="timer">0:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="timeUp" id="timeUp" hidden><span class="ruby" id="timeUpRuby"></span><span id="timeUpTxt"></span><button class="ctl" id="again2" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="wrap">
+        <div class="side">
+          <div class="bub" id="bub"></div>
+          <div class="kid" id="kid"></div>
+        </div>
+        <div class="main">
+          <div class="map" id="map"></div>
+          <div class="panel" id="panel" hidden><div class="sent" id="sent"></div><div class="bank" id="bank"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/kids.js"></script>
+<script src="../shared/places.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.where, W = C.words, PA = window.PLACE_ART, KIDS = window.ART;
+  const PLACES = PA.list.filter(p => p !== '公安局').map(p => PA.info(p));     // 我们就在公安局，不问公安局
+  const $ = id => document.getElementById(id);
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh.replace('？', ''), C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  $('timeUpRuby').innerHTML = Shih.ruby('时间到了', 'shí jiān dào le');
+  Shih.soundButton($('soundBtn'));
+
+  // ---- 计时：时间到了才结束，答对的题数达到目标就有金币 ----
+  const timerEl = $('timer');
+  const LIMIT = lv => C.time[lv - 1] * 1000, GOAL = () => C.target[level - 1];
+  let left = 0, lastT = 0, tick = 0, running = false;
+  const fmt = ms => { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  function loop() {
+    if (!running) return;
+    const now = performance.now(); left -= now - lastT; lastT = now;
+    timerEl.textContent = '⏱ ' + fmt(Math.max(0, left)); timerEl.classList.toggle('low', left < 15000);
+    if (left <= 0) { finish(); return; }
+    tick = requestAnimationFrame(loop);
+  }
+  function finish() {
+    running = false; cancelAnimationFrame(tick);
+    if (done >= GOAL()) { $('winTime').textContent = 'Time left: ' + fmt(Math.max(0, left)); $('winMsg').hidden = false; Shih.speak('太棒了'); }
+    else { $('timeUpTxt').textContent = `You helped ${done} kids. The goal is ${GOAL()}. Try again!`; $('timeUp').hidden = false; Shih.speak('时间到了'); }
+  }
+
+  const LEVELS = [{ note: 'Tap the place + pinyin' }, { note: '+ here / there' }, { note: 'Two places + near / far' }];
+  let level = Shih.startLevel('whereLevel', 3);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('whereLevel', lv); setup(); });
+  const HELP = ['A lost kid asks where a place is. Tap the right place!',
+                'Tap the right place, then answer: inside the yellow circle = 这里 (here), outside = 那里 (there).',
+                'The kid asks about two places. Tap them in order, then answer: inside the yellow circle = 这里 (here), outside = 那里 (there).'];
+  const oops = el => { el.classList.remove('oops'); void el.offsetWidth; el.classList.add('oops'); setTimeout(() => el.classList.remove('oops'), 400); };
+  const card = w => `<span class="ruby">${Shih.ruby(w.zh, w.py)}</span>`;
+
+  let done = 0, q = null, last = [], step = 0, busy = false;
+  // 8 个位置：上排 0-3、下排 4-7；小朋友站在第 col 行（上下两个地方就是「这里」）
+  const SLOT_X = [140, 380, 620, 860];
+  const ROADS = `<svg class="roads" viewBox="0 0 1000 460" preserveAspectRatio="none" aria-hidden="true">
+    <rect x="235" y="0" width="50" height="460" fill="#A7AEB6"/><rect x="475" y="0" width="50" height="460" fill="#A7AEB6"/><rect x="715" y="0" width="50" height="460" fill="#A7AEB6"/>
+    <rect x="0" y="195" width="1000" height="70" fill="#A7AEB6"/><path d="M0 230 L1000 230" stroke="#FFFFFF" stroke-width="5" stroke-dasharray="26 18"/></svg>`;
+  let spot = {};
+  const isNear = (p, cols) => cols.includes(spot[p.zh] % 4);
+  // 小朋友站的地方：两个房子中间（圈里 2 个地方），或是十字路口（圈里 4 个地方）
+  const STANDS = SLOT_X.map((x, c) => ({ x, cols: [c] })).concat([260, 500, 740].map((x, c) => ({ x, cols: [c, c + 1] })));
+  function nextQ() {
+    const st = STANDS[Math.floor(Math.random() * STANDS.length)];
+    // Level 3：问两个地方，一个在圈里（这里）、一个在圈外（那里），先问哪一个不一定
+    let ask;
+    if (level === 3) {
+      const pool = PLACES.filter(p => !last.includes(p.zh));
+      ask = shuffle([shuffle(pool.filter(p => isNear(p, st.cols)))[0] || shuffle(PLACES.filter(p => isNear(p, st.cols)))[0], shuffle(pool.filter(p => !isNear(p, st.cols)))[0]]);
+    } else if (level === 2) {      // Level 2：一半在圈里（这里）、一半在圈外（那里）
+      const pool = PLACES.filter(p => !last.includes(p.zh) && isNear(p, st.cols) === (Math.random() < .5));
+      ask = shuffle(pool.length ? pool : PLACES.filter(p => !last.includes(p.zh))).slice(0, 1);
+    } else ask = shuffle(PLACES.filter(p => !last.includes(p.zh))).slice(0, 1);
+    last = ask.map(p => p.zh);
+    return { ask, x: st.x, cols: st.cols, kid: KIDS.people[Math.floor(Math.random() * KIDS.people.length)] };
+  }
+  function show() {
+    q = nextQ(); step = 0; busy = false;
+    const A = q.ask;
+    q.say = A.map((p, i) => (i ? '' : '请问，') + p.zh + '在哪里？').join('');
+    // 一个问题一行
+    const lines = A.map((p, i) => `<div class="ruby">${i ? '' : `<span class="nb">${Shih.rubyText('请问，', 'qǐng wèn,')}</span>`}<span class="nb">${Shih.rubyText(p.zh + '在哪里？', p.py + ' zài nǎ lǐ?')}</span></div>`);
+    $('bub').innerHTML = `${lines.join('')}<button type="button" class="again" id="again" aria-label="Listen again">🔊</button>`;
+    $('again').addEventListener('click', () => Shih.speak(q.say));
+    $('kid').innerHTML = KIDS.kid(q.kid, 'notgood');
+    $('panel').hidden = true;
+    // 地图：地方的位置一回合排一次（setup），小朋友每题站的地方不一样
+    $('map').innerHTML = ROADS + `<div class="near" id="near" style="left:${q.x / 10}%;top:50%;width:${q.cols.length === 2 ? 47 : 23}%"${level >= 2 ? '' : ' hidden'}></div>` +
+      `<div class="me" style="left:${q.x / 10}%;top:50%">${KIDS.kid(q.kid, 'notgood')}</div>`;
+    PLACES.forEach(p => {
+      const k = spot[p.zh], el = document.createElement('button');
+      el.type = 'button'; el.className = 'pl'; el.dataset.zh = p.zh;
+      el.style.left = SLOT_X[k % 4] / 10 + '%'; el.style.top = (k < 4 ? 117 : 343) / 4.6 + '%';
+      el.innerHTML = PA.svg(p.zh) + `<span class="en">${p.en}</span>`;      // 图上写英文，不写中文（不然看字就会选）
+      el.addEventListener('click', () => tapPlace(p, el));
+      $('map').appendChild(el);
+    });
+    if (running) Shih.speak(q.say);
+    window.__wh = { ask: A.map(p => p.zh), step: 'tap', done };
+  }
+  function tapPlace(p, el) {
+    if (!running || busy || step >= q.ask.length || el.classList.contains('ok')) return;
+    if (p.zh !== q.ask[step].zh) { oops(el); return; }      // 点错：摇一摇（不算错）
+    el.classList.add('ok');
+    Shih.speak(p.zh);
+    step++;
+    if (step < q.ask.length) return;
+    if (level === 1) { good(); return; }
+    setTimeout(() => { if (running) say(); }, 500);
+  }
+  // Level 2、3：排句子
+  function say() {
+    const A = q.ask;
+    // Level 2：「医院在＿。」（选这里／那里）；Level 3：这里、那里已经放好了，学生看远近把地方放进去：「＿在这里，＿在那里。」
+    const near = A.find(p => isNear(p, q.cols)), far = A.find(p => !isNear(p, q.cols));
+    const parts = level === 3
+      ? [{ want: near.zh }, W.zai, W.here, { zh: '，', py: '' }, { want: far.zh }, W.zai, W.there, { zh: '。', py: '' }]
+      : [A[0], W.zai, { want: (isNear(A[0], q.cols) ? W.here : W.there).zh }, { zh: '。', py: '' }];     // Level 2：地方已经放好，学生选这里／那里
+    $('sent').innerHTML = parts.map(x => x.want ? `<span class="dropSlot" data-want="${x.want}"></span>` : `<span class="ruby">${Shih.rubyText(x.zh, x.py)}</span>`).join('');
+    const other = shuffle(PLACES.filter(p => !A.includes(p)))[0];
+    // 字卡：Level 2 = 地方 + 一个别的地方 + 这里 + 哪里；Level 3 = 两个地方 + 两个别的地方
+    const others = shuffle(PLACES.filter(p => !A.includes(p))).slice(0, level === 3 ? 2 : 1);
+    const opts = level === 3 ? shuffle(A.concat(others)) : [W.here, W.there, W.where];
+    $('bank').innerHTML = '';
+    const cards = opts.map(t => {
+      const el = document.createElement('div');
+      el.className = 'wcard'; el.dataset.zh = t.zh; el.innerHTML = card(t);
+      $('bank').appendChild(el); return el;
+    });
+    $('panel').hidden = false;
+    const dnd = Shih.dragCards(cards, {
+      slots: () => [...$('sent').querySelectorAll('.dropSlot:not(.filled)')],
+      accept(c, slot) {
+        if (!running || busy) return true;
+        if (c.dataset.zh !== slot.dataset.want) { oops(c); return true; }     // 拉错：摇一摇（不算错）
+        const t = opts.find(x => x.zh === c.dataset.zh);
+        c.classList.add('used'); slot.classList.add('filled'); slot.innerHTML = card(t);
+        if (!$('sent').querySelector('.dropSlot:not(.filled)')) { Shih.speak(level === 3 ? `${near.zh}在这里，${far.zh}在那里。` : `${A[0].zh}在${isNear(A[0], q.cols) ? '这里' : '那里'}。`); good(); }
+        return true;
+      }
+    });
+    $('sent').querySelectorAll('.dropSlot').forEach(d => d.addEventListener('click', () => { if (!d.classList.contains('filled')) dnd.tapSlot(d); }));
+    window.__wh = { ask: A.map(p => p.zh), step: 'say', slots: [...$('sent').querySelectorAll('.dropSlot')].map(s => s.dataset.want), done };
+  }
+  function good() {
+    busy = true; done++; update();
+    if (done >= GOAL()) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 1200); return; }   // 达标了：马上结束，给金币
+    $('kid').innerHTML = KIDS.kid(q.kid, 'great');
+    const me = $('map').querySelector('.me'); if (me) me.innerHTML = KIDS.kid(q.kid, 'great');
+    setTimeout(() => Shih.speak('谢谢！'), level === 1 ? 500 : 1300);
+    setTimeout(() => { if (running) show(); }, level === 1 ? 1200 : 2200);
+  }
+  function setup() {
+    paintLevels(level);
+    $('help').textContent = HELP[level - 1] + ` Help ${GOAL()} kids in ${fmt(LIMIT(level))} to get coins!`;
+    done = 0; last = [];
+    spot = {}; shuffle(PLACES).forEach((p, i) => { spot[p.zh] = i; });
+    running = false; cancelAnimationFrame(tick); left = LIMIT(level); timerEl.textContent = '⏱ ' + fmt(left); timerEl.classList.remove('low');
+    $('winMsg').hidden = true; $('timeUp').hidden = true; update();
+    show(); wait();
+  }
+  function update() { $('score').textContent = `${done} / ${GOAL()}`; }
+  const wait = Shih.startCover($('playArea'), () => { running = true; lastT = performance.now(); tick = requestAnimationFrame(loop); Shih.speak(q.say); });
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

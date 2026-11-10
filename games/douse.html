@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>去灭火</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 去灭火（消防局）：一栋 5 层楼，队长说「三楼着火了！」，学生点对的楼层灭火。
+   Level 2 再加几桶水；Level 3：水管从楼下开始，学生按上／下／左／右对准火，选几桶水，再按 Spray。
+   答对 target 题就马上结束、给金币。点错了摇一摇（不算错）。设定在 units/fire/words.js 的 UNIT.douse */
+body.game { background: #F6E3D6; }
+.wrap { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 820px) { .wrap { grid-template-columns: 1fr; } }
+.side { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.bub { position: relative; width: 100%; box-sizing: border-box; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 20px; padding: 10px 14px; text-align: center; }
+.bub::after { content: ''; position: absolute; left: 50%; bottom: -18px; margin-left: -9px; border: 9px solid transparent; border-top: 10px solid #2B2B2B; }
+.bub .ruby { flex-wrap: wrap; justify-content: center; } .bub .ruby .py { font-size: 12px; } .bub .ruby .zh { font-size: 26px; }
+.bub .again { margin-left: 6px; background: #FFF6D6; border: 2px solid #2B2B2B; border-radius: 10px; font-size: 18px; cursor: pointer; vertical-align: middle; }
+.nb { display: inline-flex; white-space: nowrap; gap: 3px; align-items: flex-end; }
+.ruby > .nb { flex-direction: row; } .nb > span { display: flex; flex-direction: column; align-items: center; }
+.cap { width: 110px; height: 198px; }
+.cap svg { width: 100%; height: 100%; display: block; }
+.main { display: flex; flex-direction: column; gap: 10px; }
+/* 场景：1000 × 560 */
+.scene { position: relative; width: min(100%, calc(48vh * 1000 / 560)); margin: 0 auto; aspect-ratio: 1000 / 560; background: #BFE3EE; border: 4px solid #2B2B2B; border-radius: 18px; overflow: hidden; }
+.scene .ground { position: absolute; left: 0; right: 0; bottom: 0; height: 9%; background: #9CCB8A; border-top: 4px solid #2B2B2B; }
+.scene .bld { position: absolute; left: 26%; width: 48%; top: 8.9%; height: 82.2%; background: #E8D3B0; border: 4px solid #2B2B2B; border-bottom: none; box-sizing: border-box; }
+.scene .roof { position: absolute; left: 24.5%; width: 51%; top: 6.4%; height: 3%; background: #8A5A2B; border: 4px solid #2B2B2B; border-radius: 4px; box-sizing: border-box; }
+.wd { position: absolute; transform: translate(-50%, -50%); width: 8%; height: 10.7%; background: #FFF6D6; border: 3px solid #2B2B2B; border-radius: 6px; cursor: pointer; padding: 0; z-index: 2; }
+.wd:hover { background: #FFFFFF; }
+.wd .fire { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 120%; height: 150%; pointer-events: none; transition: transform .4s, opacity .4s; }
+.wd .fire svg { width: 100%; height: 100%; display: block; }
+.wd.out .fire { transform: translateX(-50%) scale(.1); opacity: 0; }
+.wd.out { background: #D8D8D8; }
+.wd.oops { animation: shakeC .35s; border-color: var(--bad); }
+@keyframes shakeC { 0%, 100% { transform: translate(-50%, -50%); } 25% { transform: translate(calc(-50% - 6px), -50%); } 75% { transform: translate(calc(-50% + 6px), -50%); } }
+.truck { position: absolute; left: 1%; bottom: 3%; width: 22%; z-index: 3; }
+.truck svg { width: 100%; display: block; }
+.scene svg.lad { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 4; pointer-events: none; }
+.scene svg.lad line, .scene svg.lad circle { transition: all .5s ease-in-out; }
+.scene svg.lad .spray { transition: opacity .2s; }
+/* 下面的操作：箭头、水桶 */
+.tip { width: 100%; box-sizing: border-box; align-items: flex-end; row-gap: 6px; column-gap: 14px !important; text-align: center; background: #FFF6D6; border: 2px solid #E9B949; border-radius: 14px; padding: 4px 12px; font: 600 15px var(--f-latin); display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; }
+.tip .ruby .py { font-size: 11px; } .tip .ruby .zh { font-size: 20px; } .tip > span { display: inline-flex; align-items: flex-end; gap: 6px; }
+.ctrl { background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 14px; min-height: 76px; flex-wrap: wrap; }
+.ctrl[hidden] { display: none; }
+.big { font: 700 22px var(--f-latin); background: #FFF6D6; border: 3px solid #2B2B2B; border-radius: 14px; padding: 8px 18px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.big:hover { background: #FFE9A8; }
+.big svg { width: 40px; height: 40px; }
+.big .ruby .py { font-size: 12px; } .big .ruby .zh { font-size: 24px; }
+.pad, .buck { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.big.dir { padding: 4px 16px; min-width: 64px; justify-content: center; }
+.big.oops { animation: shake .35s; border-color: var(--bad); }
+.pail { display: flex; gap: 4px; min-width: 150px; min-height: 48px; align-items: center; justify-content: center; border: 3px dashed #C9A27A; border-radius: 12px; padding: 2px 8px; }
+.pail svg { width: 40px; height: 40px; }
+.timer.low { background: #FCE3E0; border-color: var(--bad); }
+.timeUp { text-align: center; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 10px; margin: 0 auto 10px; max-width: 640px; font: 700 18px var(--f-latin); display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.timeUp .ruby .py { font-size: 12px; } .timeUp .ruby .zh { font-size: 26px; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill timer" id="timer">0:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="timeUp" id="timeUp" hidden><span class="ruby" id="timeUpRuby"></span><span id="timeUpTxt"></span><button class="ctl" id="again2" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="wrap">
+        <div class="side">
+          <div class="bub" id="bub"></div>
+          <div class="cap" id="cap"></div>
+          <div class="tip" id="tip"></div>
+        </div>
+        <div class="main">
+          <div class="scene" id="scene"></div>
+          <div class="ctrl" id="ctrl" hidden></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../units/fire/art.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.douse, FART = window.FART;
+  const $ = id => document.getElementById(id);
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  $('timeUpRuby').innerHTML = Shih.ruby('时间到了', 'shí jiān dào le');
+  $('cap').innerHTML = FART.man(FART.order.filter(x => x !== '面罩'), 'great');      // 队长（不戴面罩，看得到脸）
+  Shih.soundButton($('soundBtn'));
+
+  // ---- 计时：答对 target 题就马上结束、给金币；时间到了还没达标就没有金币 ----
+  const timerEl = $('timer');
+  const LIMIT = lv => C.time[lv - 1] * 1000, GOAL = () => C.target[level - 1];
+  let left = 0, lastT = 0, tick = 0, running = false;
+  const fmt = ms => { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  function loop() {
+    if (!running) return;
+    const now = performance.now(); left -= now - lastT; lastT = now;
+    timerEl.textContent = '⏱ ' + fmt(Math.max(0, left)); timerEl.classList.toggle('low', left < 15000);
+    if (left <= 0) { finish(); return; }
+    tick = requestAnimationFrame(loop);
+  }
+  function finish() {
+    running = false; cancelAnimationFrame(tick);
+    if (done >= GOAL()) { $('winTime').textContent = 'Time left: ' + fmt(Math.max(0, left)); $('winMsg').hidden = false; Shih.speak('太棒了'); }
+    else { $('timeUpTxt').textContent = `You put out ${done} of ${GOAL()} fires. Try again!`; $('timeUp').hidden = false; Shih.speak('时间到了'); }
+  }
+
+  const LEVELS = [{ note: 'Which floor? + pinyin' }, { note: '+ how many buckets' }, { note: 'Move the hose: up / down / left / right' }];
+  let level = Shih.startLevel('douseLevel', 3);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('douseLevel', lv); setup(); });
+  const HELP = ['Which floor is on fire? Tap the fire on that floor. (Count the floors from the bottom!)',
+                'Tap the fire on the right floor. Then tap the bucket the right number of times and press Spray!',
+                'Move the hose to the fire with 上 / 下 / 左 / 右. Choose the number of buckets, then press Spray!'];
+  const oops = el => { el.classList.remove('oops'); void el.offsetWidth; el.classList.add('oops'); setTimeout(() => el.classList.remove('oops'), 400); };
+
+  // ---- 场景 ----
+  const WX = [320, 440, 560, 680];                 // 4 个窗户的 x
+  const FY = f => 510 - (f - 0.5) * 92;            // 第 f 楼的中间 y
+  const REST = { x: 200, y: 440 };                 // 云梯放下来的时候，水管在这里
+  let nozzle = { ...REST };
+  function drawScene() {
+    let h = `<div class="ground"></div><div class="roof"></div><div class="bld"></div>`;
+    for (let f = 1; f <= 5; f++) WX.forEach((x, w) => {
+      h += `<button type="button" class="wd" data-f="${f}" data-w="${w}" style="left:${x / 10}%;top:${FY(f) / 5.6}%" aria-label="floor ${f}"></button>`;
+    });
+    h += `<div class="truck">${FART.truck()}</div>`;
+    h += `<svg class="lad" viewBox="0 0 1000 560" preserveAspectRatio="none" aria-hidden="true">
+      <line id="lad1" x1="190" y1="470" x2="${REST.x}" y2="${REST.y}" stroke="#2B2B2B" stroke-width="18" stroke-linecap="round"/>
+      <line id="lad2" x1="190" y1="470" x2="${REST.x}" y2="${REST.y}" stroke="#D9DEE3" stroke-width="10" stroke-linecap="round" stroke-dasharray="4 10"/>
+      <line id="spray" class="spray" x1="0" y1="0" x2="0" y2="0" stroke="#4A9BE0" stroke-width="16" stroke-linecap="round" opacity="0"/>
+      <circle id="noz" cx="${REST.x}" cy="${REST.y}" r="13" fill="#E5483B" stroke="#2B2B2B" stroke-width="4"/></svg>`;
+    $('scene').innerHTML = h;
+    $('scene').querySelectorAll('.wd').forEach(el => el.addEventListener('click', () => tapWin(el)));
+  }
+  function moveNozzle(p) {
+    nozzle = p;
+    ['lad1', 'lad2'].forEach(id => { $(id).setAttribute('x2', p.x); $(id).setAttribute('y2', p.y); });
+    $('noz').setAttribute('cx', p.x); $('noz').setAttribute('cy', p.y);
+  }
+  const at = (f, w) => ({ x: WX[w], y: f ? FY(f) + 40 : 532 });     // 水管停在窗户下面；f = 0：在楼下
+  const winEl = (f, w) => $('scene').querySelector(`.wd[data-f="${f}"][data-w="${w}"]`);
+  function spray(f, w, then) {
+    const s = $('spray'), x = WX[w], y = FY(f);
+    s.setAttribute('x1', nozzle.x); s.setAttribute('y1', nozzle.y); s.setAttribute('x2', x); s.setAttribute('y2', y);
+    s.style.opacity = '.85';
+    setTimeout(() => { winEl(f, w).classList.add('out'); }, 300);
+    setTimeout(() => { s.style.opacity = '0'; then && then(); }, 700);
+  }
+
+  // ---- 题目 ----
+  const F = C.floors, B = C.buckets;
+  let done = 0, q = null, step = '', lastF = 0, pail = 0, busy = false;
+  const fireAt = (f, w) => { const el = winEl(f, w); el.dataset.fire = '1'; el.insertAdjacentHTML('beforeend', `<span class="fire">${FART.flame()}</span>`); };
+  function say(zh, py) {
+    // 一句一块，可以换行（「四楼着火了！」「要三桶水。」）
+    const zs = zh.split(/(?<=[！。])/).filter(Boolean), ps = py.split(/(?<=[!.]) /);
+    $('bub').innerHTML = `<span class="ruby">${zs.map((z, i) => `<span class="nb">${Shih.rubyText(z, ps[i] || '')}</span>`).join('')}</span><button type="button" class="again" id="again" aria-label="Listen again">🔊</button>`;
+    $('again').addEventListener('click', () => Shih.speak(zh));
+    q.say = zh;
+    if (running) Shih.speak(zh);
+  }
+  function show() {
+    let f; do { f = rnd(1, 5); } while (f === lastF); lastF = f;
+    q = { f, w: rnd(0, 3), n: rnd(1, 3) };
+    drawScene(); moveNozzle({ ...REST }); busy = false; pail = 0;
+    fireAt(q.f, q.w);
+    shuffle([1, 2, 3, 4, 5].filter(x => x !== f)).slice(0, 2).forEach(x => fireAt(x, rnd(0, 3)));     // 别的楼层也有火
+    const fl = F[f - 1], bk = B[q.n - 1];
+    step = 'floor';
+    if (level >= 2) say(`${fl.zh}楼着火了！要${bk.zh}桶水。`, `${fl.py} lóu zháo huǒ le! yào ${bk.py} tǒng shuǐ.`);
+    else say(`${fl.zh}楼着火了！`, `${fl.py} lóu zháo huǒ le!`);
+    $('ctrl').hidden = true;
+    window.__douse = { f: q.f, w: q.w, n: q.n, step, done };
+    // Level 3：不点窗户。水管从楼下开始，学生按上／下／左／右对准火，选几桶水，再按 Spray
+    if (level === 3) { q.r = 0; q.p = rnd(0, 3); moveNozzle(at(0, q.p)); step = 'aim'; pailCtrl(); }
+  }
+  function tapWin(el) {
+    if (!running || busy || step !== 'floor') return;
+    const f = +el.dataset.f, w = +el.dataset.w;
+    if (f !== q.f) { oops(el); return; }                                  // 楼层不对
+    if (w !== q.w) { oops(el); return; }                                  // 要点着火的窗户
+    moveNozzle(at(q.f, q.w));
+    if (level === 1) { busy = true; setTimeout(() => spray(q.f, q.w, good), 550); return; }
+    step = 'pail'; setTimeout(pailCtrl, 500);
+  }
+  // Level 2、3：按几次水桶，再喷水
+  function pailCtrl() {
+    pail = 0;
+    const btn = (id, zh, py) => `<button type="button" class="big dir" id="${id}"><span class="ruby">${Shih.ruby(zh, py)}</span></button>`;
+    const pad = level === 3 ? `<span class="pad">${btn('goU', '上', 'shàng')}${btn('goD', '下', 'xià')}${btn('goL', '左', 'zuǒ')}${btn('goR', '右', 'yòu')}</span>` : '';
+    $('ctrl').innerHTML = pad + `<span class="buck"><button type="button" class="big" id="add">${FART.bucket()} +1</button><span class="pail" id="pail"></span>` +
+      `<button type="button" class="big" id="undo" aria-label="Start again">↺</button>` +
+      `<button type="button" class="big" id="go">💦 Spray!</button></span>`;
+    $('ctrl').hidden = false;
+    const paint = () => { $('pail').innerHTML = FART.bucket().repeat(pail); };
+    const ok = () => running && (step === 'pail' || step === 'aim');
+    if (level === 3) {
+      // 方向键：按钮只有中文（上、下、左、右）
+      const move = (dr, dc, el) => {
+        if (!ok()) return;
+        const r = q.r + dr, c = q.p + dc;
+        if (r < 0 || r > 5 || c < 0 || c > 3) { oops(el); return; }      // 到边了：摇一摇
+        q.r = r; q.p = c; moveNozzle(at(r, c));
+        window.__douse.r = r; window.__douse.p = c;
+      };
+      $('goU').addEventListener('click', e => move(1, 0, e.currentTarget));
+      $('goD').addEventListener('click', e => move(-1, 0, e.currentTarget));
+      $('goL').addEventListener('click', e => move(0, -1, e.currentTarget));
+      $('goR').addEventListener('click', e => move(0, 1, e.currentTarget));
+    }
+    $('add').addEventListener('click', () => { if (!ok()) return; if (pail < 5) { pail++; paint(); } });
+    $('undo').addEventListener('click', () => { pail = 0; paint(); });
+    $('go').addEventListener('click', e => {
+      if (!ok()) return;
+      if (level === 3 && (q.r !== q.f || q.p !== q.w)) { oops(e.currentTarget); return; }   // 水管没对准火
+      if (pail !== q.n) { oops(e.currentTarget); pail = 0; paint(); return; }                // 桶数不对：摇一摇，重来
+      step = 'done'; busy = true; spray(q.f, q.w, good);
+    });
+    window.__douse = { f: q.f, w: q.w, n: q.n, r: q.r, p: q.p, step: level === 3 ? 'aim' : 'pail', done };
+  }
+  function good() {
+    busy = true; done++; update();
+    $('ctrl').hidden = true;
+    if (done >= GOAL()) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 900); return; }   // 达标了：马上结束，给金币
+    setTimeout(() => { if (running) show(); }, 900);
+  }
+  function setup() {
+    paintLevels(level);
+    $('help').textContent = HELP[level - 1] + ` Put out ${GOAL()} fires in ${fmt(LIMIT(level))} to get coins!`;
+    $('tip').innerHTML = C.tips[level - 1].map(t => `<span><span class="ruby">${Shih.ruby(t.zh, t.py)}</span>${t.en}</span>`).join('');
+    done = 0; lastF = 0;
+    running = false; cancelAnimationFrame(tick); left = LIMIT(level); timerEl.textContent = '⏱ ' + fmt(left); timerEl.classList.remove('low');
+    $('winMsg').hidden = true; $('timeUp').hidden = true; update();
+    show(); wait();
+  }
+  function update() { $('score').textContent = `${done} / ${GOAL()}`; }
+  const wait = Shih.startCover($('playArea'), () => { running = true; lastT = performance.now(); tick = requestAnimationFrame(loop); Shih.speak(q.say); });
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>
