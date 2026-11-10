@@ -109,7 +109,7 @@
   S.speak = function (text) {
     if (!S.soundOn || !('speechSynthesis' in window)) return;
     speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
+    const u = new SpeechSynthesisUtterance(String(text).replace(/（[^）]*）/g, ''));   // 括号里的不念（例如「痛（疼）」只念「痛」）
     u.lang = 'zh-CN'; u.rate = S.SPEED;
     if (zhVoice) u.voice = zhVoice;
     speechSynthesis.speak(u);

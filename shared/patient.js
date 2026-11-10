@@ -1,6 +1,6 @@
 /* =====================================================================
    小病人：看医生、候诊室共用（240 × 350）
-   穿短袖、短裤，手和脚先用圆圈；手指疼、脚趾头疼时旁边画一个放大镜圆圈。
+   穿短袖、短裤，手和脚先用圆圈；手指头疼、脚趾头疼时旁边画一个放大镜圆圈。
    ShihPatient.svg({ zh, look, face, mark, side })  → 画好的 <svg> 里面的东西
      zh    哪个部位（背：会画成转过身）   look  ShihPatient.look() 随机的小朋友和衣服颜色
      face  'good' 笑、'hurt' 疼（＞＜）、'notgood' 不好
@@ -14,7 +14,7 @@
   const SKIN = { light: '#FBDCC8', asian: '#F6D9B5', tan: '#C98E62' };
   const sw = (w = 3) => `stroke="${INK}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"`;
   const limb = (d, c, w = 16) => `<path d="${d}" fill="none" stroke="${INK}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="${c}" stroke-width="${w - 6}" stroke-linecap="round" stroke-linejoin="round"/>`;
-  function hand(x, y, s, dir, fingers) {  // dir = -1 左手、1 右手（大拇指朝外）；fingers：画出手指（只有「手指」的题目才画）
+  function hand(x, y, s, dir, fingers) {  // dir = -1 左手、1 右手（大拇指朝外）；fingers：画出手指（只有「手指头」的题目才画）
     if (!fingers) return `<circle cx="${x}" cy="${y + 2}" r="11" fill="${s}" ${sw(2.5)}/>`;
     let f = '';
     [-6.9, -2.3, 2.3, 6.9].forEach(dx => { f += `<ellipse cx="${x + dx}" cy="${y + 11}" rx="3.3" ry="5.4" fill="${s}" ${sw(2.2)}/>`; });
@@ -116,8 +116,9 @@
   // 每个部位：箭头／疼的记号指的点，和点得到的范围（圆：x, y, r）
   //   大的部位包含小的：头包含脸、眼睛…；手包含手指；脚包含脚趾头；腿包含膝盖
   const PARTS = {
-    '头':     { at: [[120, 34]], hit: [[120, 58, 32]], arrow: 'up' },
-    '脸':     { at: [[102, 76], [138, 76]], hit: [[120, 70, 24]] },
+    '头':     { at: [[120, 34]], hit: [[120, 58, 32]], ring: [120, 60, 42] },     // 头：整个头画一个红圈（箭头留给头发）
+    '头发':   { at: [[100, 40]], hit: [[120, 40, 22]] },
+    '脸':     { at: [[102, 76], [138, 76]], hit: [[120, 70, 24]], faceMark: true },   // 脸：整张脸涂上淡红色＋虚线框
     '眼睛':   { at: [[110, 64], [130, 64]], hit: [[110, 64, 8], [130, 64, 8]], face: true },
     '耳朵':   { at: [[92, 64], [148, 64]], hit: [[92, 64, 8], [148, 64, 8]], face: true, ear: true },
     '鼻子':   { at: [[120, 70]], hit: [[120, 70, 6]], face: true },
@@ -126,7 +127,7 @@
     '肩膀':   { at: [[90, 110], [150, 110]], hit: [[90, 110, 12], [150, 110, 12]] },
     '手臂':   { at: [[76, 158], [164, 158]], hit: [[78, 150, 13], [72, 178, 11], [162, 150, 13], [168, 178, 11]] },
     '手':     { at: [[67, 205], [173, 205]], hit: [[67, 209, 17], [173, 209, 17]] },
-    '手指':   { at: [[170, 120]], hit: [], pose: 'fingers' },
+    '手指头': { at: [[170, 120]], hit: [], pose: 'fingers' },
     '肚子':   { at: [[120, 168]], hit: [[120, 168, 24]] },
     '腿':     { at: [[106, 296], [134, 296]], hit: [[106, 252, 12], [106, 272, 12], [106, 296, 12], [134, 252, 12], [134, 272, 12], [134, 296, 12]] },
     '膝盖':   { at: [[106, 270], [134, 270]], hit: [[106, 270, 10], [134, 270, 10]] },
@@ -184,7 +185,7 @@
 
 
   // 很像的一对：不会同时出现在选项里
-  const PAIR = { '脚': '脚趾头', '脚趾头': '脚', '手': '手指', '手指': '手' };
+  const PAIR = { '脚': '脚趾头', '脚趾头': '脚', '手': '手指头', '手指头': '手' };
   function look() {
     return { p: pick(ART.people), shirt: pick(['#5B9BD5', '#8CC7A0', '#F2A65A', '#9B8BC4', '#F5C531', '#EC8FB3']), shorts: pick(['#3B5B8C', '#7A4B2A', '#4A6B3A', '#5E4B8B']) };
   }
@@ -195,7 +196,8 @@
     if (q.mark && !P.pose) {
       if (q.side == null) q.side = Math.floor(Math.random() * P.at.length);
       const pt = P.at[q.side];
-      mark = q.mark === 'arrow' ? arrowMark(pt, P.arrow === 'up') : painMark(pt, P);
+      mark = q.mark === 'arrow' && P.faceMark ? `<ellipse cx="120" cy="71" rx="25" ry="20" fill="#E5483B" fill-opacity=".28" stroke="#E5483B" stroke-width="4" stroke-dasharray="8 5"/>` + arrowMark([97, 78], false) :
+        q.mark === 'arrow' ? (P.ring ? `<circle cx="${P.ring[0]}" cy="${P.ring[1]}" r="${P.ring[2]}" fill="none" stroke="#E5483B" stroke-width="6" stroke-dasharray="14 8"/>` : arrowMark(pt, P.arrow === 'up')) : painMark(pt, P);
     }
     // 箭头题的手指、脚趾头：放大镜里不画红色（只是指出来）
     if (q.mark === 'arrow' && P.pose) o.hurt = false, o.point = true;

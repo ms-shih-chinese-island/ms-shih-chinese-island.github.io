@@ -77,3 +77,21 @@ UNIT.crowd = {
   },
   done: { zh: '都找到了！', py: 'dōu zhǎo dào le!' }
 };
+
+/* ---------------- 衣服走一走（board game） ----------------
+   一个学生自己玩：按「掷骰子」，棋子往前走，停在哪一格就说那一格的衣服（选字卡放进句子）。答对了才能再掷骰子。
+   Level 1「这是＿＿。」（只说衣服）
+   Level 2「这是＿＿的＿＿。」（颜色＋衣服）
+   Level 3 字卡自己排成整句「我想买红色的T恤。」再按 Submit
+   特别格（special）：前进两格、后退一格、再掷一次。时间内走到终点（第 21 格）就有金币（1/2/3）
+   每一格的衣服和颜色每次都会重新随机 */
+UNIT.board = {
+  title: { zh: '衣服走一走', py: 'yī fú zǒu yi zǒu', en: 'Clothes Board Game' },
+  squares: 21,
+  time: [150, 180, 240],
+  special: {
+    5:  { zh: '前进两格', py: 'qián jìn liǎng gé', en: 'Go forward 2', move: 2 },
+    11: { zh: '后退一格', py: 'hòu tuì yì gé', en: 'Go back 1', move: -1 },
+    16: { zh: '再掷一次', py: 'zài zhì yí cì', en: 'Roll again', again: true }
+  }
+};

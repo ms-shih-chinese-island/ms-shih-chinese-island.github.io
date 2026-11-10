@@ -2,7 +2,7 @@
    单元：身体 Body（主岛 → 医院 → 看医生）
    ---------------------------------------------------------------------
    看医生 games/doctor.html?unit=body、候诊室 games/waiting.html?unit=body 读这一份。拼音照台湾的念法。
-   只有两级：Level 1 = 二年级（这是我的＿＿）、Level 2 = 三、四年级（我的＿＿疼）。
+   只有两级：Level 1 = 二年级（这是我的＿＿）、Level 2 = 三、四年级（我的＿＿痛（疼））。
 
    身体部位（words）每个一行：
      zh / py / en   中文、拼音、英文（英文给老师看的）
@@ -14,7 +14,7 @@ window.UNIT = {};
 /* 每一级的说明（Level 按钮上的小字）：两级就好，四年级没有新的身体部位，玩 Level 2 */
 UNIT.levels = [
   { note: '这是我的＿＿。' },
-  { note: '我的＿＿疼。' }
+  { note: '我的＿＿痛（疼）。' }
 ];
 
 /* 身体部位 */
@@ -36,7 +36,8 @@ UNIT.words = [
   { zh: '肚子',   py: 'dù zi',       en: 'belly',     level: 2 },
   { zh: '腿',     py: 'tuǐ',         en: 'leg',       level: 2 },
   { zh: '背',     py: 'bèi',         en: 'back',      level: 2 },
-  { zh: '手指',   py: 'shǒu zhǐ',    en: 'finger',    level: 2 },
+  { zh: '手指头', py: 'shǒu zhǐ tóu', en: 'finger',    level: 2, trad: '手指頭' },
+  { zh: '头发',   py: 'tóu fǎ',      en: 'hair',      level: 2, trad: '頭髮', noPain: true },   // noPain：不会「头发痛」，Level 2 只当干扰卡
   { zh: '脚趾头', py: 'jiǎo zhǐ tóu', en: 'toe',      level: 2, trad: '腳趾頭' }
 ];
 
@@ -45,7 +46,7 @@ UNIT.words = [
      pick    看图选字：箭头（Level 1）或疼的地方（Level 2），从 4 个字里选对的放进句子
      read    读句子：Level 1 点出那个地方；Level 2 把 OK 绷贴到疼的地方
      listen  听句子（🔊，不写出来）：一样点出来／贴 OK 绷
-   手指、脚趾头、背只出 pick（其他题型的图会直接告诉答案）。
+   手指头、脚趾头、背只出 pick（其他题型的图会直接告诉答案）。
 */
 UNIT.doctor = {
   title: { zh: '看医生', py: 'kàn yī shēng', en: 'See the Doctor' },
@@ -59,15 +60,15 @@ UNIT.doctor = {
     { pick: 3, read: 3, listen: 2 }
   ],
   say1: { zh: '这是我的{x}。', py: 'zhè shì wǒ de {x}.' },
-  say2: { zh: '我的{x}疼。', py: 'wǒ de {x} téng.' },
+  say2: { zh: '我的{x}痛（疼）。', py: 'wǒ de {x} tòng téng.' },   // 跟投影片一样用「痛」，括号里写「疼」（括号里的不念）
   done: { zh: '太棒了！', py: 'tài bàng le!' }
 };
 
 /* ---------------- 候诊室 ----------------
    一轮 2 个病人，每个人头上一个对话泡泡，泡泡里有空格。学生用拆开的字卡，帮每个人排好句子。
      Level 1：这是／我的／鼻子 → 这是我的鼻子。（健康检查，每个小朋友指着一个地方）
-     Level 2：我的／肚子／疼   → 我的肚子疼。  （每个病人有一个地方疼）
-   两个人的「这是」「我的」「疼」是一样的卡，差别在身体部位；另外多 1 张陷阱卡（图上没有的部位）。
+     Level 2：我的／肚子／痛（疼）   → 我的肚子痛（疼）。  （每个病人有一个地方疼）
+   两个人的「这是」「我的」「痛（疼）」是一样的卡，差别在身体部位；另外多 1 张陷阱卡（图上没有的部位）。
    people  每一轮几个人      rounds  一关几轮      traps  几张陷阱卡
 */
 UNIT.waiting = {
