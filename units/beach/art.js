@@ -47,6 +47,24 @@
     太阳伞: `<path d="M50 30 L50 92" ${sw(4)}/><path d="M10 46 Q50 0 90 46 Z" fill="#FFFFFF" ${sw()}/><path d="M30 46 Q38 16 50 13 Q42 22 42 46 Z M58 46 Q58 22 50 13 Q62 16 70 46 Z" fill="#E5483B" ${sw(2.5)}/>`,
     水桶: `<path d="M30 40 Q50 10 70 40" fill="none" ${sw(3.5)}/><path d="M24 40 L76 40 L68 90 L32 90 Z" fill="#3B78D8" ${sw()}/><path d="M27 54 L73 54" stroke="#FFFFFF" stroke-width="5"/>`
   };
+  // ---- 课纲二年级 6 月的海滩词 ----
+  Object.assign(FIND, {
+    海滩伞: FIND.太阳伞,
+    太阳眼镜: `<path d="M8 46 L22 44 M92 46 L78 44" ${sw(4)}/><path d="M44 48 Q50 42 56 48" fill="none" ${sw(4)}/>` +
+          `<path d="M14 44 L46 44 Q46 66 30 66 Q14 66 14 44 Z M54 44 L86 44 Q86 66 70 66 Q54 66 54 44 Z" fill="#2E3A59" ${sw()}/>` +
+          `<path d="M20 49 L28 49 M60 49 L68 49" stroke="#8FA8D8" stroke-width="4" stroke-linecap="round"/>`,
+    拖鞋: `<path d="M22 20 Q8 20 8 44 Q8 72 16 86 Q22 94 32 88 Q40 72 38 44 Q38 20 22 20 Z" fill="#F5C531" ${sw()}/><path d="M12 46 Q22 30 23 24 Q24 30 35 46" fill="none" stroke="#3B78D8" stroke-width="5" stroke-linecap="round"/>` +
+          `<path d="M70 14 Q56 14 56 38 Q56 66 64 80 Q70 88 80 82 Q88 66 86 38 Q86 14 70 14 Z" fill="#F5C531" ${sw()}/><path d="M60 40 Q70 24 71 18 Q72 24 83 40" fill="none" stroke="#3B78D8" stroke-width="5" stroke-linecap="round"/>`,
+    毛巾: `<path d="M18 22 L82 22 L82 86 L18 86 Z" fill="#EC8FB3" ${sw()}/><path d="M18 34 L82 34 M18 74 L82 74" stroke="#FFFFFF" stroke-width="5"/>` +
+          `<path d="M24 86 L24 94 M34 86 L34 94 M44 86 L44 94 M56 86 L56 94 M66 86 L66 94 M76 86 L76 94" ${sw(2.5)}/><path d="M18 22 L82 22 L82 30 L18 30 Z" fill="#D46E96" ${sw(2.5)}/>`,
+    游泳衣: `<path d="M30 12 L36 12 L42 36 Q50 42 58 36 L64 12 L70 12 L72 46 Q76 62 80 78 Q64 70 50 88 Q36 70 20 78 Q24 62 28 46 Z" fill="#3BB3A8" ${sw()}/>` +
+          `<circle cx="40" cy="56" r="4" fill="#FFFFFF"/><circle cx="60" cy="58" r="4" fill="#FFFFFF"/><circle cx="50" cy="70" r="4" fill="#FFFFFF"/>`,
+    铲子: `<path d="M52 8 L48 8 L48 52" fill="none" ${sw(0)}/><rect x="44" y="8" width="12" height="46" rx="5" fill="#F28C28" ${sw()}/><rect x="36" y="6" width="28" height="10" rx="5" fill="#F28C28" ${sw()}/>` +
+          `<path d="M28 54 L72 54 L70 78 Q50 98 30 78 Z" fill="#E5483B" ${sw()}/>`,
+    防晒油: `<rect x="40" y="8" width="20" height="14" rx="3" fill="#FFFFFF" ${sw()}/><path d="M28 22 L72 22 Q78 22 78 30 L76 86 Q76 92 70 92 L30 92 Q24 92 24 86 L22 30 Q22 22 28 22 Z" fill="#F5C531" ${sw()}/>` +
+          `<circle cx="50" cy="52" r="12" fill="#F28C28" ${sw(2.5)}/><path d="M50 34 L50 38 M50 66 L50 70 M32 52 L36 52 M64 52 L68 52" ${sw(2.5)}/><path d="M32 78 L68 78" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/>`,
+    冲浪板: `<path d="M50 4 Q74 30 66 70 Q60 96 50 96 Q40 96 34 70 Q26 30 50 4 Z" fill="#3B78D8" ${sw()}/><path d="M50 8 L50 94" stroke="#FFFFFF" stroke-width="5"/><path d="M38 40 Q50 50 62 40" fill="none" stroke="#F5C531" stroke-width="5" stroke-linecap="round"/>`
+  });
   const findIcon = k => `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${FIND[k]}</svg>`;
 
   window.BART = { find: findIcon, findList: Object.keys(FIND), kid, icon, items: Object.keys(ITEM), hat: c => `<svg viewBox="36 20 128 56" aria-hidden="true">${HAT(c)}</svg>`, glasses: `<svg viewBox="64 70 72 28" aria-hidden="true">${GLASSES}</svg>` };

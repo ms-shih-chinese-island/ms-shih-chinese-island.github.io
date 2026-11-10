@@ -69,9 +69,9 @@ UNIT.whoami = {
 /* ---------------- 海滩找一找（像快手分信） ----------------
    练认字（三级都有拼音）。海滩的东西一个一个从上面掉下来，学生点牌子写对的篮子，东西就装进去。
    篮子装满就收走，换一个新的篮子。没接到的东西掉到沙滩上就不见了（不扣分，只是浪费时间）。点错了篮子摇一摇。
-   Level 1：3 个篮子，牌子写一样东西（贝壳），每个篮子装 3 个
+   Level 1：3 个篮子，牌子写一样东西（毛巾），每个篮子装 3 个
    Level 2：5 个篮子，6 种东西都会掉，每个篮子装 3 个
-   Level 3：3 个篮子，牌子写两样东西和数量（两个贝壳和一个水桶），要装刚好（已经够了再放会摇一下）
+   Level 3：3 个篮子，牌子写两样东西和数量（两条毛巾和一个水桶），要装刚好（已经够了再放会摇一下）
    装满 target 个篮子就过关、给金币
    words：海滩的字（图在 units/beach/art.js）；count：Level 3 用的东西（都用「个」）
    bags：画面上几个篮子；fill：Level 1、2 一个篮子装几个；fall：东西掉下来要几秒 */
@@ -82,10 +82,19 @@ UNIT.beachfind = {
   bags: [3, 5, 3],
   fill: 3,
   fall: [5, 5, 5],
+  // 课纲二年级 6 月的海滩词（这是＿＿。我有＿＿。）mw：量词（Level 3 用）
   words: [
-    { zh: '贝壳', py: 'bèi ké', en: 'shell' }, { zh: '海星', py: 'hǎi xīng', en: 'starfish' }, { zh: '螃蟹', py: 'páng xiè', en: 'crab' },
-    { zh: '沙堡', py: 'shā bǎo', en: 'sandcastle' }, { zh: '太阳伞', py: 'tài yáng sǎn', en: 'beach umbrella' }, { zh: '水桶', py: 'shuǐ tǒng', en: 'bucket' }
+    { zh: '太阳眼镜', py: 'tài yáng yǎn jìng', en: 'sunglasses', mw: { zh: '副', py: 'fù' } },
+    { zh: '海滩伞', py: 'hǎi tān sǎn', en: 'beach umbrella', mw: { zh: '把', py: 'bǎ' } },
+    { zh: '拖鞋', py: 'tuō xié', en: 'flip-flops', mw: { zh: '双', py: 'shuāng' } },
+    { zh: '毛巾', py: 'máo jīn', en: 'towel', mw: { zh: '条', py: 'tiáo' } },
+    { zh: '游泳衣', py: 'yóu yǒng yī', en: 'swimsuit', mw: { zh: '件', py: 'jiàn' } },
+    { zh: '水桶', py: 'shuǐ tǒng', en: 'bucket', mw: { zh: '个', py: 'ge' } },
+    { zh: '铲子', py: 'chǎn zi', en: 'shovel', mw: { zh: '把', py: 'bǎ' } },
+    { zh: '防晒油', py: 'fáng shài yóu', en: 'sunscreen', mw: { zh: '瓶', py: 'píng' } },
+    { zh: '冲浪板', py: 'chōng làng bǎn', en: 'surfboard', mw: { zh: '块', py: 'kuài' } }
   ],
-  count: ['贝壳', '海星', '水桶', '沙堡'],
+  // Level 3 数数量的（量词：个、条、双、瓶）
+  count: ['水桶', '毛巾', '拖鞋', '防晒油'],
   nums: [ { zh: '一', py: 'yí' }, { zh: '两', py: 'liǎng' }, { zh: '三', py: 'sān' } ]
 };
