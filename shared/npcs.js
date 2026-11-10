@@ -68,7 +68,24 @@
       hairFront: `<path d="M58 82 Q58 46 100 44 Q142 46 142 82 Q138 64 120 60 L80 60 Q62 64 58 82 Z" fill="#2E2838" ${sw()}/>`, holding: redEnvelope })
   };
 
+  // 可以换衣服颜色、加眼镜的大人和小孩（公安局「找家人」用）
+  // NPC_ART.person({ kind, top, glasses })  kind：'oldman' 'oldwoman' 'man' 'woman' 'boy' 'girl'
+  const HAIR = {
+    oldman: { hairFront: `<path d="M60 76 Q58 58 70 52 Q66 66 72 72 Z M140 76 Q142 58 130 52 Q134 66 128 72 Z" fill="#E6E6E6" ${sw()}/>` },
+    oldwoman: { hairBack: `<circle cx="100" cy="34" r="17" fill="#E6E6E6" ${sw()}/>`,
+      hairFront: `<path d="M58 84 Q52 40 100 38 Q148 40 142 84 Q136 62 116 56 Q100 64 84 56 Q64 62 58 84 Z" fill="#E6E6E6" ${sw()}/>` },
+    man: { hairFront: `<path d="M58 80 Q56 40 100 38 Q144 40 142 80 Q132 58 110 58 Q90 52 72 62 Q62 68 58 80 Z" fill="#2E2838" ${sw()}/>` },
+    woman: { hairBack: `<path d="M56 82 Q52 40 100 36 Q148 40 144 82 L146 128 Q134 134 126 124 L74 124 Q66 134 54 128 Z" fill="#4A3424" ${sw()}/>`,
+      hairFront: `<path d="M58 80 Q60 48 100 46 Q140 48 142 80 Q124 60 100 62 Q76 60 58 80 Z" fill="#4A3424" ${sw()}/>` },
+    boy: { hairFront: `<path d="M58 78 Q58 42 100 40 Q142 42 142 78 L132 66 L122 74 L112 62 L100 72 L88 62 L78 74 L68 66 Z" fill="#6B4A2E" ${sw()}/>` },
+    girl: { hairBack: `<circle cx="52" cy="70" r="14" fill="#2E2838" ${sw()}/><circle cx="148" cy="70" r="14" fill="#2E2838" ${sw()}/>`,
+      hairFront: `<path d="M58 80 Q58 44 100 42 Q142 44 142 80 Q130 60 100 60 Q70 60 58 80 Z" fill="#2E2838" ${sw()}/>` }
+  };
+  const BOTTOM = { oldman: '#4A4A55', oldwoman: '#2F3E66', man: '#2F3E66', woman: '#7E6DAA', boy: '#3B5FA0', girl: '#E2557A' };
+  const personOf = o => person(Object.assign({ top: o.top, top2: o.top, bottom: BOTTOM[o.kind], glasses: !!o.glasses, skirt: o.kind === 'woman' || o.kind === 'girl' }, HAIR[o.kind]));
+
   window.NPC_ART = {
+    person: personOf,
     relatives: Object.keys(RELATIVES), relative: name => RELATIVES[name](),
     // 邻居：戴巫婆帽，捧着一碗糖
     neighbor: () => person({
