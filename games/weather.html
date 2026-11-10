@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>天气怎么样？</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 天气怎么样？（机场）：机长问「今天天气怎么样？」学生看飞机窗外回答。
+   Level 1 点天气；Level 2 加温度（华氏），温度从三个选项选；Level 3 看机场的天气板回答某个城市的天气和温度（温度一样自己填）。
+   答对 target 题就马上结束、给金币。点错了摇一摇（不算错）。设定在 units/airport/words.js 的 UNIT.weather */
+body.game { background: #E3EEF6; }
+.wrap { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 820px) { .wrap { grid-template-columns: 1fr; } }
+.side { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.bub { position: relative; width: 100%; box-sizing: border-box; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 20px; padding: 10px 14px; text-align: center; }
+.bub::after { content: ''; position: absolute; left: 50%; bottom: -18px; margin-left: -9px; border: 9px solid transparent; border-top: 10px solid #2B2B2B; }
+.bub .ruby { flex-wrap: wrap; justify-content: center; } .bub .ruby .py { font-size: 12px; } .bub .ruby .zh { font-size: 24px; }
+.bub .again { margin-left: 6px; background: #FFF6D6; border: 2px solid #2B2B2B; border-radius: 10px; font-size: 18px; cursor: pointer; vertical-align: middle; }
+.nb { display: inline-flex; white-space: nowrap; gap: 3px; align-items: flex-end; }
+.ruby > .nb { flex-direction: row; } .nb > span { display: flex; flex-direction: column; align-items: center; }
+.pilot { width: 140px; height: 200px; }
+.pilot svg { width: 100%; height: 100%; display: block; }
+.tip { width: 100%; box-sizing: border-box; text-align: center; background: #FFF6D6; border: 2px solid #E9B949; border-radius: 14px; padding: 4px 12px; font: 600 15px var(--f-latin); display: flex; justify-content: center; gap: 6px; align-items: flex-end; }
+.tip .ruby .py { font-size: 11px; } .tip .ruby .zh { font-size: 20px; }
+.tip[hidden] { display: none; }
+.main { display: flex; flex-direction: column; gap: 12px; }
+/* 飞机的窗户 */
+.view { display: flex; align-items: center; justify-content: center; gap: 22px; background: #FFFFFF; border: 4px solid #2B2B2B; border-radius: 22px; padding: 10px; }
+.view[hidden] { display: none; }
+.plane { width: min(24%, 170px); aspect-ratio: 3 / 4; background: #D9DEE3; border: 4px solid #2B2B2B; border-radius: 46% / 36%; padding: 16px; box-sizing: border-box; box-shadow: inset 0 0 0 8px #EEF1F4; }
+.plane .glass { width: 100%; height: 100%; border: 3px solid #2B2B2B; border-radius: 44% / 34%; overflow: hidden; }
+.plane .glass svg { width: 100%; height: 100%; display: block; }
+.therm { display: flex; flex-direction: column; align-items: center; gap: 6px; font: 800 36px var(--f-latin); color: #2B2B2B; }
+.therm svg { width: 40px; height: 100px; }
+.therm[hidden] { display: none; }
+/* 天气板（Level 3） */
+.board { background: #1F2A36; border: 4px solid #2B2B2B; border-radius: 18px; padding: 10px 14px 14px; color: #FFFFFF; }
+.board[hidden] { display: none; }
+.board .head { text-align: center; margin-bottom: 8px; }
+.board .head .ruby .py { font-size: 11px; color: #C9D3DC; } .board .head .ruby .zh { font-size: 22px; color: #F5C531; }
+.board table { width: auto; margin: 0 auto; border-collapse: separate; border-spacing: 0 6px; }
+.board td { background: #2E3D4D; padding: 2px 14px; vertical-align: middle; }
+.board td:first-child { min-width: 90px; }
+.board td:first-child { border-radius: 10px 0 0 10px; } .board td:last-child { border-radius: 0 10px 10px 0; text-align: left; font: 800 30px var(--f-latin); color: #F5C531; }
+.board td .ruby .py { font-size: 12px; color: #C9D3DC; } .board td .ruby .zh { font-size: 26px; color: #FFFFFF; }
+.board td svg { width: 64px; height: 46px; display: block; margin: 0 auto; }
+.panel { background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 20px; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.sent { display: flex; align-items: flex-end; justify-content: center; gap: 6px; flex-wrap: wrap; min-height: 64px; }
+.sent .ruby .py { font-size: 14px; } .sent .ruby .zh { font-size: 28px; font-weight: 700; }
+.sent .dropSlot { min-height: 58px; padding: 2px 8px; box-sizing: border-box; }
+.sent .dropSlot:not(.filled) { width: 110px; }
+.sent .dropSlot .ruby .zh { font-size: 26px; }
+.bank { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.bank .wcard { min-width: 56px; justify-content: center; cursor: pointer; }
+.bank .wcard .py { font-size: 13px; } .bank .wcard .zh { font-size: 26px; font-weight: 700; }
+.bank .wcard.oops, .numpad .wcard.oops { animation: shake .35s; border-color: var(--bad); }
+.numpad { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; border-top: 2px dashed #C9D3DC; padding-top: 10px; }
+.numpad .wcard { min-width: 46px; justify-content: center; cursor: pointer; font: inherit; padding: 2px 6px; }
+.numpad .wcard .py { font-size: 12px; } .numpad .wcard .zh { font-size: 24px; font-weight: 700; }
+.sent .numbox { min-width: 120px; width: auto !important; }
+.sent .numbox .ruby { display: inline-flex; gap: 2px; }
+.numbox.oops { animation: shake .35s; border-color: var(--bad); }
+.numpad .tool { font: 800 22px var(--f-latin); min-width: 54px; padding: 2px 12px; }
+.numpad .tool.ok { background: #E3F4DC; border-color: var(--me); }
+.timer.low { background: #FCE3E0; border-color: var(--bad); }
+.timeUp { text-align: center; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 10px; margin: 0 auto 10px; max-width: 640px; font: 700 18px var(--f-latin); display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.timeUp .ruby .py { font-size: 12px; } .timeUp .ruby .zh { font-size: 26px; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill timer" id="timer">0:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="timeUp" id="timeUp" hidden><span class="ruby" id="timeUpRuby"></span><span id="timeUpTxt"></span><button class="ctl" id="again2" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="wrap">
+        <div class="side">
+          <div class="bub" id="bub"></div>
+          <div class="pilot" id="pilot"></div>
+          <div class="tip" id="tip" hidden></div>
+        </div>
+        <div class="main">
+          <div class="view" id="view"><div class="plane"><div class="glass" id="glass"></div></div><div class="therm" id="therm" hidden></div></div>
+          <div class="board" id="board" hidden></div>
+          <div class="panel"><div class="sent" id="sent"></div><div class="bank" id="bank"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/numbers.js"></script>
+<script src="../shared/npcs.js"></script>
+<script src="../units/airport/art.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.weather, WX = C.weather, WART = window.WART, NUM = window.ShihNum;
+  const $ = id => document.getElementById(id);
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh.replace('？', ''), C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  $('timeUpRuby').innerHTML = Shih.ruby('时间到了', 'shí jiān dào le');
+  $('tip').innerHTML = C.tips.map(t => `<span class="ruby">${Shih.ruby(t.zh, t.py)}</span><span>${t.en}</span>`).join('');
+  Shih.soundButton($('soundBtn'));
+
+  // ---- 计时：答对 target 题就马上结束、给金币；时间到了还没达标就没有金币 ----
+  const timerEl = $('timer');
+  const LIMIT = lv => C.time[lv - 1] * 1000, GOAL = () => C.target[level - 1];
+  let left = 0, lastT = 0, tick = 0, running = false;
+  const fmt = ms => { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  function loop() {
+    if (!running) return;
+    const now = performance.now(); left -= now - lastT; lastT = now;
+    timerEl.textContent = '⏱ ' + fmt(Math.max(0, left)); timerEl.classList.toggle('low', left < 15000);
+    if (left <= 0) { finish(); return; }
+    tick = requestAnimationFrame(loop);
+  }
+  function finish() {
+    running = false; cancelAnimationFrame(tick);
+    if (done >= GOAL()) { $('winTime').textContent = 'Time left: ' + fmt(Math.max(0, left)); $('winMsg').hidden = false; Shih.speak('太棒了'); }
+    else { $('timeUpTxt').textContent = `You got ${done} of ${GOAL()}. Try again!`; $('timeUp').hidden = false; Shih.speak('时间到了'); }
+  }
+
+  const LEVELS = [{ note: 'What is the weather? + pinyin' }, { note: '+ temperature (°F)' }, { note: 'Read the city weather board' }];
+  let level = Shih.startLevel('weatherLevel', 3);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('weatherLevel', lv); setup(); });
+  const HELP = ['The pilot asks: how is the weather today? Look out the window and tap the right weather.',
+                'Look out the window and at the thermometer. Tap the right weather and the right temperature.',
+                'Read the weather board. How is the weather in that city? Put the weather in the sentence, type the temperature with 一～十 (⌫ to erase), then press Submit.'];
+  const oops = el => { el.classList.remove('oops'); void el.offsetWidth; el.classList.add('oops'); setTimeout(() => el.classList.remove('oops'), 400); };
+  const card = w => `<span class="ruby">${Shih.ruby(w.zh, w.py)}</span>`;
+  // 数字 → 中文＋拼音（75 → 七十五 qī shí wǔ）
+  const numW = n => { const p = NUM.parts(n); return { zh: p.map(x => x[0]).join(''), py: p.map(x => x[1]).join(' '), n }; };
+  const tempOf = w => rnd(w.temp[0], w.temp[1]);
+  const NUMS = '一二三四五六七八九十'.split('').map((zh, i) => ({ zh, py: ['yī', 'èr', 'sān', 'sì', 'wǔ', 'liù', 'qī', 'bā', 'jiǔ', 'shí'][i] }));
+
+  const thermo = n => `<svg viewBox="0 0 46 120" aria-hidden="true"><rect x="15" y="6" width="16" height="88" rx="8" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="3.5"/>` +
+    `<rect x="19" y="${90 - Math.max(8, Math.min(80, n * .8))}" width="8" height="${Math.max(8, Math.min(80, n * .8)) + 4}" fill="#E5483B"/><circle cx="23" cy="100" r="14" fill="#E5483B" stroke="#2B2B2B" stroke-width="3.5"/></svg>`;
+
+  let done = 0, q = null, lastW = '', busy = false;
+  function makeQ() {
+    // 天气不要跟上一题一样
+    let w; do { w = WX[Math.floor(Math.random() * WX.length)]; } while (w.zh === lastW); lastW = w.zh;
+    const qq = { w, t: tempOf(w) };
+    if (level === 3) {
+      // 天气板：4 个城市，天气都不一样，温度也不一样
+      const ws = shuffle(WX.filter(x => x !== w)).slice(0, 3).concat([w]);
+      // 下雪天只给会下雪的城市（北京、哈尔滨）；其他天气给别的城市
+      const snowC = shuffle(C.cities.filter(c => c.snow)), restC = shuffle(C.cities.filter(c => !c.snow));
+      const cs = ws.map(x => x.zh === '下雪天' ? snowC.shift() : (restC.shift() || snowC.shift()));
+      // 温度也要合理：香港、台湾比较暖（min）
+      const tempIn = (x, c) => rnd(Math.max(x.temp[0], c.min || 0), x.temp[1]);
+      qq.rows = shuffle(ws.map((x, i) => ({ c: cs[i], w: x, t: tempIn(x, cs[i]) })));
+      // 温度不能重复
+      const seen = new Set();
+      qq.rows.forEach(r => { while (seen.has(r.t)) r.t = tempIn(r.w, r.c); seen.add(r.t); });
+      qq.row = qq.rows.find(r => r.w === w); qq.t = qq.row.t; qq.city = qq.row.c;
+    }
+    return qq;
+  }
+  function say(zh, py, cut) {
+    // cut：在这个字数后面也可以换行（城市名字）
+    let zs = zh.split(/(?<=[，。？])/).filter(Boolean), ps = py.split(/(?<=[,.?]) /);
+    if (cut) { const pc = py.split(' '); zs = [zh.slice(0, cut), zh.slice(cut)]; ps = [pc.slice(0, cut).join(' '), pc.slice(cut).join(' ')]; }
+    $('bub').innerHTML = `<span class="ruby">${zs.map((z, i) => `<span class="nb">${Shih.rubyText(z, ps[i] || '')}</span>`).join('')}</span><button type="button" class="again" id="again" aria-label="Listen again">🔊</button>`;
+    $('again').addEventListener('click', () => Shih.speak(zh));
+    q.say = zh;
+    if (running) Shih.speak(zh);
+  }
+  function show() {
+    q = makeQ(); busy = false;
+    $('view').hidden = level === 3; $('board').hidden = level !== 3;
+    $('glass').innerHTML = WART.sky(q.w.zh);
+    $('therm').hidden = level !== 2;
+    $('therm').innerHTML = thermo(q.t) + `<span>${q.t}°F</span>`;
+    if (level === 3) {
+      $('board').innerHTML = `<div class="head"><span class="ruby">${Shih.ruby('今天的天气', 'jīn tiān de tiān qì')}</span></div><table>` +
+        q.rows.map(r => `<tr><td>${card(r.c)}</td><td>${WART.icon(r.w.zh)}</td><td>${r.t}°F</td></tr>`).join('') + '</table>';
+      say(`${q.city.zh}今天天气怎么样？`, `${q.city.py} jīn tiān tiān qì zěn me yàng?`, q.city.zh.length);
+    } else say('今天天气怎么样？', 'jīn tiān tiān qì zěn me yàng?');
+    level === 1 ? pickWeather() : sentence();
+  }
+  // Level 1：点天气
+  function pickWeather() {
+    document.querySelectorAll('.numpad').forEach(x => x.remove());
+    $('sent').innerHTML = `<span class="ruby">${Shih.rubyText('今天的天气是', 'jīn tiān de tiān qì shì')}</span><span class="dropSlot" id="slot"></span><span class="ruby">${Shih.rubyText('。', '')}</span>`;
+    $('bank').innerHTML = '';
+    shuffle(WX).forEach(w => {
+      const el = document.createElement('div');
+      el.className = 'wcard'; el.dataset.zh = w.zh; el.innerHTML = card(w);
+      el.addEventListener('click', () => {
+        if (!running || busy) return;
+        if (w !== q.w) { oops(el); return; }                       // 点错：摇一摇（不算错）
+        el.classList.add('used'); $('slot').classList.add('filled'); $('slot').innerHTML = card(w);
+        Shih.speak(`今天的天气是${w.zh}。`); good();
+      });
+      $('bank').appendChild(el);
+    });
+    window.__wx = { w: q.w.zh, step: 'pick', done };
+  }
+  // Level 2、3：「（城市）今天的天气是＿＿，＿＿度。」
+  function sentence() {
+    const head = level === 3 ? { zh: `${q.city.zh}今天的天气是`, py: `${q.city.py} jīn tiān de tiān qì shì` } : { zh: '今天的天气是', py: 'jīn tiān de tiān qì shì' };
+    const T = numW(q.t);
+    // Level 2、3：温度一个字一格，学生用「一～十」自己拼出来（五十七 = 五、十、七）
+    // Level 2：温度给三个选项，点对的填进去；Level 3：温度只有一个空格（不告诉几个字），学生自己按一～十填，按 Submit
+    const tParts = level === 3 ? [{ box: true }] : [{ want: T.zh, kind: 't' }];
+    const parts = [head, { want: q.w.zh, kind: 'w' }, { zh: '，', py: '' }].concat(tParts, [{ zh: '度。', py: 'dù.' }]);
+    $('sent').innerHTML = parts.map(x => x.box ? `<span class="dropSlot numbox" id="numbox"></span>` : x.want ? `<span class="dropSlot" data-kind="${x.kind}" data-want="${x.want}"></span>` : `<span class="ruby">${Shih.rubyText(x.zh, x.py)}</span>`).join('');
+    let typed = [];
+    // 混淆的选项：别的天气、别的温度（Level 3 用天气板上别的城市）、数字颠倒（75 ↔ 57）
+    let wOpts, tOpts;
+    if (level === 3) {
+      const others = q.rows.filter(r => r !== q.row);
+      wOpts = [q.w].concat(shuffle(others).slice(0, 2).map(r => r.w));
+      tOpts = [q.t].concat(shuffle(others).slice(0, 1).map(r => r.t));
+    } else {
+      wOpts = [q.w].concat(shuffle(WX.filter(x => x !== q.w)).slice(0, 2));
+      tOpts = [q.t];
+    }
+    const flip = Number(String(q.t).split('').reverse().join(''));
+    if (q.t >= 10 && flip !== q.t && flip >= 10 && !tOpts.includes(flip)) tOpts.push(flip);
+    while (tOpts.length < 3) { const x = q.t + (Math.random() < .5 ? -1 : 1) * rnd(1, 2) * 10; if (x > 0 && x < 100 && !tOpts.includes(x)) tOpts.push(x); }
+    const opts = level === 3 ? shuffle(wOpts).map(x => ({ ...x, kind: 'w' })) : shuffle(wOpts).map(x => ({ ...x, kind: 'w' })).concat(shuffle(tOpts).map(n => ({ ...numW(n), kind: 't' })));
+    $('bank').innerHTML = ''; document.querySelectorAll('.numpad').forEach(x => x.remove());
+    const cards = opts.map(t => {
+      const el = document.createElement('div');
+      el.className = 'wcard'; el.dataset.zh = t.zh; el.dataset.kind = t.kind; el.innerHTML = card(t);
+      $('bank').appendChild(el); return el;
+    });
+    const paintBox = () => { $('numbox').innerHTML = typed.length ? `<span class="ruby">${typed.map(x => Shih.ruby(x.zh, x.py)).join('')}</span>` : ''; };
+    const finished = () => { if (level !== 3 && !$('sent').querySelector('.dropSlot:not(.filled)')) { Shih.speak(`${head.zh}${q.w.zh}，${T.zh}度。`); good(); } };
+    const place = (cd, slot) => {
+      if (!running || busy || !slot) return true;
+      if (cd.dataset.zh !== slot.dataset.want) { oops(cd); return true; }     // 拉错：摇一摇（不算错）
+      const t = opts.find(x => x.zh === cd.dataset.zh);
+      cd.classList.add('used'); slot.classList.add('filled'); slot.innerHTML = card(t);
+      finished();
+      return true;
+    };
+    // 天气卡：点一下就自动放进天气的格子（也可以拖）
+    const dnd = Shih.dragCards(cards, {
+      slots: () => [...$('sent').querySelectorAll('.dropSlot:not(.filled):not(.numbox)')],
+      accept: place,
+      onTapCard: cd => { if (!cd.classList.contains('used')) place(cd, $('sent').querySelector(`.dropSlot[data-kind="${cd.dataset.kind}"]:not(.filled)`)); }   // 天气卡放天气格、温度卡放温度格
+    });
+    $('sent').querySelectorAll('.dropSlot:not(.numbox)').forEach(d => d.addEventListener('click', () => { if (!d.classList.contains('filled')) dnd.tapSlot(d); }));
+    // Level 3：数字键「一～十」，按一下就加在温度空格的后面（可以一直用）
+    if (level === 3) {
+      const pad = document.createElement('div'); pad.className = 'numpad';
+      NUMS.forEach(n => {
+        const el = document.createElement('button');
+        el.type = 'button'; el.className = 'wcard nk'; el.dataset.zh = n.zh; el.innerHTML = card(n);
+        el.addEventListener('click', () => {
+          if (!running || busy) return;
+          if (typed.length < 4) { typed.push(n); paintBox(); }     // 一直往后加
+        });
+        pad.appendChild(el);
+      });
+      {
+        // ⌫ 删掉一个字；Submit 好了，检查
+        pad.insertAdjacentHTML('beforeend', `<button type="button" class="wcard nk tool" id="del" aria-label="Delete">⌫</button><button type="button" class="wcard nk tool ok" id="chk">✓ Submit</button>`);
+        pad.querySelector('#del').addEventListener('click', () => { typed.pop(); paintBox(); });
+        pad.querySelector('#chk').addEventListener('click', e => {
+          if (!running || busy) return;
+          const wSlot = $('sent').querySelector('.dropSlot[data-kind="w"]');
+          if (!wSlot.classList.contains('filled')) { oops(e.currentTarget); return; }                        // 天气还没放
+          if (typed.map(x => x.zh).join('') !== T.zh) { oops($('numbox')); oops(e.currentTarget); return; }   // 温度不对：摇一摇，改一改
+          $('numbox').classList.add('filled');
+          Shih.speak(`${head.zh}${q.w.zh}，${T.zh}度。`); good();
+        });
+      }
+      $('bank').after(pad);
+    }
+    window.__wx = { w: q.w.zh, t: T.zh, slots: [...$('sent').querySelectorAll('.dropSlot')].map(s => s.dataset.want), step: 'say', done };
+  }
+  function good() {
+    busy = true; done++; update();
+    if (done >= GOAL()) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 1200); return; }   // 达标了：马上结束，给金币
+    setTimeout(() => { if (running) show(); }, 1300);
+  }
+  function setup() {
+    paintLevels(level);
+    $('help').textContent = HELP[level - 1] + ` Get ${GOAL()} right in ${fmt(LIMIT(level))} to get coins!`;
+    $('tip').hidden = level === 1;
+    $('pilot').innerHTML = WART.pilot(Math.random() < .5 ? 'man' : 'woman');
+    done = 0; lastW = '';
+    running = false; cancelAnimationFrame(tick); left = LIMIT(level); timerEl.textContent = '⏱ ' + fmt(left); timerEl.classList.remove('low');
+    $('winMsg').hidden = true; $('timeUp').hidden = true; update();
+    show(); wait();
+  }
+  function update() { $('score').textContent = `${done} / ${GOAL()}`; }
+  const wait = Shih.startCover($('playArea'), () => { running = true; lastT = performance.now(); tick = requestAnimationFrame(loop); Shih.speak(q.say); });
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

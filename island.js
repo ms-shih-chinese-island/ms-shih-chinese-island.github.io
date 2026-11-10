@@ -67,8 +67,15 @@ window.ISLANDS = {
       { zh: '动物园', py: 'dòng wù yuán', en: 'Zoo & Farm', x: 1454, y: 46, color: 'me', games: [] },
       { zh: '运动场', py: 'yùn dòng chǎng', en: 'Sports Field', x: 1758, y: 166, color: 'sun', games: [] },
       { zh: '水族馆', py: 'shuǐ zú guǎn', en: 'Aquarium', x: 2194, y: 148, color: 'sea', games: [] },
-      { zh: '机场', py: 'jī chǎng', en: 'Airport', x: 1566, y: 412, color: 'night', games: [] },
-      { zh: '海滩', py: 'hǎi tān', en: 'Beach', x: 2110, y: 594, color: 'sun', games: [] },
+      { id: 'airport', zh: '机场', py: 'jī chǎng', en: 'Airport', x: 1566, y: 412, color: 'night',
+        games: [
+          { zh: '天气怎么样？', py: 'tiān qì zěn me yàng', en: "How's the Weather?", note: 'The pilot asks about the weather. Look out the window (or at the weather board) and answer!', href: 'games/weather.html?unit=airport' }
+        ] },
+      { id: 'beach', zh: '海滩', py: 'hǎi tān', en: 'Beach', x: 2110, y: 594, color: 'sun',
+        games: [
+          { zh: '能去海滩吗？', py: 'néng qù hǎi tān ma', en: 'Beach Day?', note: 'Listen to the weather report on the radio. Can we go to the beach today? (Listening: more coins!)', href: 'games/forecast.html?unit=beach' },
+          { zh: '我是谁？', py: 'wǒ shì shéi', en: 'Who Am I?', note: 'Listen: what does the kid have? Find the right kid on the beach! (Listening: more coins!)', href: 'games/whoami.html?unit=beach' }
+        ] },
       { zh: '花园', py: 'huā yuán', en: 'Garden', x: 1250, y: 520, color: 'me', games: [] },
       { id: 'restaurant', zh: '餐厅', py: 'cān tīng', en: 'Restaurant', x: 1076, y: 546, color: 'dad',
         games: [

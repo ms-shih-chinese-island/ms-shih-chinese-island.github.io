@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>我是谁？</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 我是谁？（海滩）：一个小朋友说「我有红色的球。我是谁？」（只有声音），学生在海滩上点对的人。
+   Level 1 一个提示；Level 2 两个；Level 3 三个，而且有只差一样的人。
+   答对 target 题就马上结束、给金币。点错了摇一摇（不算错）。设定在 units/beach/words.js 的 UNIT.whoami */
+body.game { background: #FBEFD5; }
+.top { max-width: 1100px; margin: 0 auto 12px; display: flex; gap: 14px; align-items: stretch; flex-wrap: wrap; }
+.ask { display: flex; align-items: center; gap: 12px; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 20px; padding: 8px 16px; }
+.ask .ruby .py { font-size: 12px; } .ask .ruby .zh { font-size: 26px; }
+.play { font: 800 20px var(--f-latin); background: #FFF6D6; border: 3px solid #2B2B2B; border-radius: 16px; padding: 8px 16px; cursor: pointer; }
+.play:hover { background: #FFE9A8; }
+.tip { flex: 1; min-width: 300px; background: #FFF6D6; border: 2px solid #E9B949; border-radius: 16px; padding: 6px 10px; display: grid; grid-template-columns: repeat(3, auto); gap: 4px 18px; align-items: center; justify-content: center; font: 600 14px var(--f-latin); }   /* 提示的字：三个一行 */
+.tip > span { display: inline-flex; align-items: center; gap: 5px; }
+.tip svg { width: 34px; height: 26px; }
+.tip .ruby .py { font-size: 10px; } .tip .ruby .zh { font-size: 17px; }
+/* 海滩 */
+.beach { max-width: 1100px; margin: 0 auto; background: linear-gradient(#9ED3F0 0 14%, #6FB7E0 14% 22%, #F2DDB0 22%); border: 4px solid #2B2B2B; border-radius: 20px; padding: 46px 16px 10px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px 14px; }
+.kd { background: none; border: 3px solid transparent; border-radius: 18px; padding: 0; cursor: pointer; }
+.kd svg { width: 100%; height: 160px; display: block; }
+.kd:hover { background: rgba(255, 255, 255, .45); }
+.kd.oops { animation: shake .35s; border-color: var(--bad); }
+.kd.ok { border-color: var(--me); background: rgba(227, 244, 220, .8); }
+.timer.low { background: #FCE3E0; border-color: var(--bad); }
+.timeUp { text-align: center; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 10px; margin: 0 auto 10px; max-width: 640px; font: 700 18px var(--f-latin); display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.timeUp .ruby .py { font-size: 12px; } .timeUp .ruby .zh { font-size: 26px; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill timer" id="timer">0:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="timeUp" id="timeUp" hidden><span class="ruby" id="timeUpRuby"></span><span id="timeUpTxt"></span><button class="ctl" id="again2" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="top">
+        <div class="ask"><span class="ruby" id="askRuby"></span><button type="button" class="play" id="play">🔊 Listen again</button></div>
+        <div class="tip" id="tip"></div>
+      </div>
+      <div class="beach" id="beach"></div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/npcs.js"></script>
+<script src="../units/beach/art.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.whoami, COLORS = C.colors, ITEMS = C.items, BART = window.BART;
+  const $ = id => document.getElementById(id);
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh.replace('？', ''), C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  $('timeUpRuby').innerHTML = Shih.ruby('时间到了', 'shí jiān dào le');
+  $('askRuby').innerHTML = Shih.ruby('我是谁', 'wǒ shì shéi') + '<span class="zh">？</span>';
+  // 提示：东西的图＋中文＋英文（不会说是谁）
+  // 顺序：第一行 太阳眼镜、帽子、球；第二行 游泳圈、水桶、冰淇淋
+  const IT = zh => ITEMS.find(x => x.zh === zh);
+  $('tip').innerHTML = [[BART.glasses, C.glasses], [BART.hat('#E5483B'), C.hat], [BART.icon('球', '#3B78D8'), IT('球')],
+                        [BART.icon('游泳圈', '#3B78D8'), IT('游泳圈')], [BART.icon('水桶', '#3B78D8'), IT('水桶')], [BART.icon('冰淇淋'), IT('冰淇淋')]]
+    .map(([svg, w]) => `<span>${svg}<span class="ruby">${Shih.ruby(w.zh, w.py)}</span>${w.en}</span>`).join('');
+  Shih.soundButton($('soundBtn'));
+
+  // ---- 计时：答对 target 题就马上结束、给金币；时间到了还没达标就没有金币 ----
+  const timerEl = $('timer');
+  const LIMIT = lv => C.time[lv - 1] * 1000, GOAL = () => C.target[level - 1];
+  let left = 0, lastT = 0, tick = 0, running = false;
+  const fmt = ms => { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  function loop() {
+    if (!running) return;
+    const now = performance.now(); left -= now - lastT; lastT = now;
+    timerEl.textContent = '⏱ ' + fmt(Math.max(0, left)); timerEl.classList.toggle('low', left < 15000);
+    if (left <= 0) { finish(); return; }
+    tick = requestAnimationFrame(loop);
+  }
+  function finish() {
+    running = false; cancelAnimationFrame(tick);
+    if (done >= GOAL()) { $('winTime').textContent = 'Time left: ' + fmt(Math.max(0, left)); $('winMsg').hidden = false; Shih.speak('太棒了'); }
+    else { $('timeUpTxt').textContent = `You found ${done} of ${GOAL()}. Try again!`; $('timeUp').hidden = false; Shih.speak('时间到了'); }
+  }
+
+  const LEVELS = [{ note: 'Listen: 1 clue' }, { note: 'Listen: 2 clues' }, { note: 'Listen: 3 clues' }];
+  let level = Shih.startLevel('whoamiLevel', 3);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('whoamiLevel', lv); setup(); });
+  const HELP = ['Listen (🔊 to listen again): what does the kid have? Tap the right kid on the beach.',
+                'Listen to 2 clues. Some kids match only one clue — find the kid who matches both!',
+                'Listen to 3 clues. Some kids match two of them — find the kid who matches all three!'];
+  const oops = el => { el.classList.remove('oops'); void el.offsetWidth; el.classList.add('oops'); setTimeout(() => el.classList.remove('oops'), 400); };
+
+  // ---- 小朋友和提示 ----
+  // 小朋友：{ kind, top, hat（颜色或 null）, glasses, item, ic（东西的颜色，冰淇淋没有） }
+  const TOPS = ['#FFFFFF', '#F28C28', '#F49AC1', '#7FC4D8', '#C9A27A', '#9CCB8A'];   // 衣服的颜色（不是题目，只是不一样）
+  const randKid = () => { const it = pick(ITEMS); return { kind: pick(['boy', 'girl']), top: pick(TOPS), hat: Math.random() < .5 ? pick(COLORS) : null, glasses: Math.random() < .4, item: it, ic: it.color ? pick(COLORS) : null }; };
+  const clone = k => Object.assign({}, k, { kind: pick(['boy', 'girl']), top: pick(TOPS) });
+  // 提示：hat / glasses / item
+  const fits = (k, h) => h === 'hat' ? !!k.hat && k.hat === T.hat : h === 'glasses' ? k.glasses : k.item === T.item && (!T.item.color || k.ic === T.ic);
+  const fitsAll = (k, H) => H.every(h => fits(k, h));
+  function breakOne(k, h) {             // 让这个小朋友「只差这一样」
+    if (h === 'hat') k.hat = pick(COLORS.filter(c => c !== T.hat));
+    else if (h === 'glasses') k.glasses = false;
+    else if (T.item.color) k.ic = pick(COLORS.filter(c => c !== T.ic));
+    else { k.item = pick(ITEMS.filter(x => x !== T.item)); k.ic = k.item.color ? pick(COLORS) : null; }
+    return k;
+  }
+  const phrase = h => h === 'hat' ? { zh: `${T.hat.zh}的帽子`, py: `${T.hat.py} de mào zi` } : h === 'glasses' ? C.glasses
+    : T.item.color ? { zh: `${T.ic.zh}的${T.item.zh}`, py: `${T.ic.py} de ${T.item.py}` } : T.item;
+
+  let done = 0, T = null, H = [], kids = [], say = '', busy = false;
+  function makeQ() {
+    for (let tries = 0; tries < 300; tries++) {
+      T = randKid();
+      if (level === 3) { T.hat = pick(COLORS); T.glasses = true; }
+      const avail = ['item'].concat(T.hat ? ['hat'] : [], T.glasses ? ['glasses'] : []);
+      const n = level;                          // 几个提示
+      if (avail.length < n) continue;
+      H = shuffle(avail).slice(0, n);
+      if (level === 1 && H[0] === 'glasses') continue;     // 一个提示的时候不用太阳眼镜（太简单）
+      kids = [T];
+      if (level >= 2) H.forEach(h => kids.push(breakOne(clone(T), h)));   // 只差一样的人
+      while (kids.length < C.kids) kids.push(randKid());
+      // 除了 T，不能有人全部符合
+      let ok = true;
+      for (let i = 1; i < kids.length; i++) {
+        let g = 0;
+        while (fitsAll(kids[i], H) && g++ < 30) kids[i] = i <= (level >= 2 ? H.length : 0) ? breakOne(clone(T), H[i - 1]) : randKid();
+        if (fitsAll(kids[i], H)) ok = false;
+      }
+      if (!ok) continue;
+      // Level 2、3：每一个提示单独听，都不只一个人符合
+      if (level >= 2 && !H.every(h => kids.filter(k => fits(k, h)).length >= 2)) continue;
+      kids = shuffle(kids);
+      return;
+    }
+  }
+  function show() {
+    makeQ(); busy = false;
+    const P = H.map(phrase);
+    const list = P.length === 1 ? P[0].zh : P.slice(0, -1).map(p => p.zh).join('、') + '和' + P[P.length - 1].zh;
+    say = `我有${list}。我是谁？`;
+    $('beach').innerHTML = '';
+    kids.forEach((k, i) => {
+      const el = document.createElement('button');
+      el.type = 'button'; el.className = 'kd'; el.dataset.i = i; if (k === T) el.dataset.me = '1';
+      el.innerHTML = BART.kid({ kind: k.kind, top: k.top, hat: k.hat && k.hat.hex, glasses: k.glasses, item: k.item.zh, itemColor: k.ic ? k.ic.hex : '' });
+      el.setAttribute('aria-label', 'kid ' + (i + 1));
+      el.addEventListener('click', () => tap(k, el));
+      $('beach').appendChild(el);
+    });
+    if (running) Shih.speak(say);
+    window.__who = { say, done, all: kids.filter(k => fitsAll(k, H)).length, single: H.map(h => kids.filter(k => fits(k, h)).length) };
+  }
+  function tap(k, el) {
+    if (!running || busy) return;
+    if (k !== T) { oops(el); return; }                                // 点错：摇一摇（不算错）
+    el.classList.add('ok'); busy = true; done++; update();
+    Shih.speak('对！');
+    if (done >= GOAL()) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 900); return; }   // 达标了：马上结束，给金币
+    setTimeout(() => { if (running) show(); }, 1100);
+  }
+  function setup() {
+    paintLevels(level);
+    $('help').textContent = HELP[level - 1] + ` Find ${GOAL()} kids in ${fmt(LIMIT(level))} to get coins!`;
+    done = 0;
+    running = false; cancelAnimationFrame(tick); left = LIMIT(level); timerEl.textContent = '⏱ ' + fmt(left); timerEl.classList.remove('low');
+    $('winMsg').hidden = true; $('timeUp').hidden = true; update();
+    show(); wait();
+  }
+  function update() { $('score').textContent = `${done} / ${GOAL()}`; }
+  $('play').addEventListener('click', () => Shih.speak(say));
+  const wait = Shih.startCover($('playArea'), () => { running = true; lastT = performance.now(); tick = requestAnimationFrame(loop); Shih.speak(say); });
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>
