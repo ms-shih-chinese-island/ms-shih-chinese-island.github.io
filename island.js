@@ -50,14 +50,17 @@ window.ISLANDS = {
       { id: 'hospital', zh: '医院', py: 'yī yuàn', en: 'Hospital', x: 158, y: 548, color: 'mom',
         games: [
           { zh: '看医生', py: 'kàn yī shēng', en: 'See the Doctor', note: 'Pick the word, or read or listen and tap the body part (Level 2: put on the bandage).', href: 'games/doctor.html?unit=body' },
-          { zh: '候诊室', py: 'hòu zhěn shì', en: 'Waiting Room', note: 'Drag the right sentence into each speech bubble.', href: 'games/waiting.html?unit=body' }
+          { zh: '候诊室', py: 'hòu zhěn shì', en: 'Waiting Room', note: 'Drag the right sentence into each speech bubble.', href: 'games/waiting.html?unit=body' },
+          { zh: '西门说', py: 'xī mén shuō', en: 'Simon Says', note: 'Only tap when Simon says! 西门说，摸摸你的＿＿。', href: 'games/simon.html?unit=body' },
+          { zh: '转盘', py: 'zhuàn pán', en: 'Wheel of Body Parts', note: 'Spin the wheel. Point to that body part on the kid. 指一指你的＿＿。', href: 'games/wheel.html?unit=body' }
         ] },
       // ---- 往右滑：城镇区 ----
       { id: 'mall', zh: '购物中心', py: 'gòu wù zhōng xīn', en: 'Shopping Mall', x: 1016, y: 84, color: 'night',
         games: [
-          { zh: '服务台', py: 'fú wù tái', en: 'Lost Kid Announcement', note: 'Tap 🔊 to hear the top and bottom of the lost kid. Then find the lost kid in the crowd.', href: 'games/lost.html?unit=clothes' },
-          { zh: '找朋友', py: 'zhǎo péng yǒu', en: 'Find My Friends', note: "Read your friend's message to see their top and bottom. Then find your friend in the crowd.", href: 'games/find.html?unit=clothes' },
-          { zh: '衣服走一走', py: 'yī fú zǒu yi zǒu', en: 'Clothes Board Game', note: 'Roll the dice and say the clothes on your square. Get to the end in time!', href: 'games/clothesboard.html?unit=clothes' }
+          { zh: '服务台', py: 'fú wù tái', en: 'Lost Kid Announcement', note: 'Tap 🔊 to hear what the lost kid has on (top, bottom, dress, shoes, hat). Then find the lost kid in the crowd.', href: 'games/lost.html?unit=clothes' },
+          { zh: '找朋友', py: 'zhǎo péng yǒu', en: 'Find My Friends', note: "Read your friend's message to see what they have on. Then find your friend in the crowd.", href: 'games/find.html?unit=clothes' },
+          { zh: '衣服走一走', py: 'yī fú zǒu yi zǒu', en: 'Clothes Board Game', note: 'Roll the dice and say the clothes on your square. Get to the end in time!', href: 'games/clothesboard.html?unit=clothes' },
+          { zh: '我想买', py: 'wǒ xiǎng mǎi', en: 'I Want to Buy', note: 'Find the clothes the kid wants. How much is it? Shop with your budget!', href: 'games/wantbuy.html?unit=clothes' }
         ] },
       { id: 'petshop', zh: '宠物店', py: 'chǒng wù diàn', en: 'Pet Shop', x: 1268, y: 132, color: 'mom', games: [
           { zh: '找宠物', py: 'zhǎo chǒng wù', en: 'Find the Pets', note: 'Read the sentence. Find the cat, dog, rabbit or bird in the right color!', href: 'games/animals.html?unit=petshop' }

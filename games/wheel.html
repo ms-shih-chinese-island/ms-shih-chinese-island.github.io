@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>转盘</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 转盘 Wheel of Body Parts（医院）：转转盘，停在哪一个部位，就「指一指你的＿＿」：点小朋友身上那个部位。
+   Level 1：7 个字（有拼音）；Level 2：所有的字（有拼音）；Level 3：所有的字，转盘上只有中文。
+   答对 target 题就马上结束、给金币。点错了摇一摇（不扣分）。设定在 units/body/words.js 的 UNIT.wheel */
+body.game { background: #FFF6E8; }
+.room { display: flex; gap: 18px; align-items: center; justify-content: center; max-width: 1060px; margin: 0 auto; }
+.patient { flex: none; background: #FFFFFF; border: 4px solid var(--ink); border-radius: 22px; padding: 6px; }
+.patient svg { display: block; height: calc(100vh - 240px); min-height: 300px; max-height: 460px; width: auto; touch-action: manipulation; cursor: pointer; }
+.patient.oops { animation: nope .4s; border-color: var(--bad); }
+.patient.off svg { cursor: default; opacity: .75; }
+@keyframes nope { 0%,100% { translate: 0 } 25% { translate: -7px 0 } 75% { translate: 7px 0 } }
+.side { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.wheelBox { position: relative; width: min(400px, calc(100vh - 330px)); min-width: 260px; aspect-ratio: 1; }
+.wheelBox svg.w { width: 100%; height: 100%; display: block; transition: transform 2.6s cubic-bezier(.2, .8, .2, 1); }
+.wheelBox .clip { width: 100%; height: 100%; border-radius: 50%; overflow: hidden; }
+.pointer { position: absolute; left: 50%; top: -8px; transform: translateX(-50%); width: 0; height: 0; border-left: 18px solid transparent; border-right: 18px solid transparent; border-top: 34px solid #E5483B; filter: drop-shadow(0 2px 0 #2B2B2B); z-index: 2; }
+.spin { font: 800 22px var(--f-latin); background: #E2557A; color: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 14px; padding: 6px 28px; cursor: pointer; box-shadow: 0 4px 0 #2B2B2B; }
+.spin:disabled { opacity: .4; cursor: default; }
+.say { background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 8px 16px; min-height: 66px; min-width: 300px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.say .ruby .py { font-size: 14px; } .say .ruby .zh { font-size: 30px; font-weight: 700; }
+.say .msg { font: 700 18px var(--f-latin); color: #555555; }
+.timer.low { background: #FCE3E0; border-color: var(--bad); }
+.timeUp { text-align: center; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 10px; margin: 0 auto 10px; max-width: 640px; font: 700 18px var(--f-latin); display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.timeUp .ruby .py { font-size: 12px; } .timeUp .ruby .zh { font-size: 26px; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill timer" id="timer">0:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="timeUp" id="timeUp" hidden><span class="ruby" id="timeUpRuby"></span><span id="timeUpTxt"></span><button class="ctl" id="again2" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="room">
+        <div class="side">
+          <div class="wheelBox"><div class="pointer"></div><div class="clip"><svg class="w" id="wheel" viewBox="-110 -110 220 220" aria-label="Wheel"></svg></div></div>
+          <button class="spin" id="spin" type="button">🎡 Spin!</button>
+          <div class="say" id="say"></div>
+        </div>
+        <div class="patient off" id="patient"><svg id="kid" viewBox="0 0 240 350" aria-label="Kid"></svg></div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/kids.js"></script>
+<script src="../shared/patient.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.wheel, PT = window.ShihPatient;
+  const $ = id => document.getElementById(id);
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  $('timeUpRuby').innerHTML = Shih.ruby('时间到了', 'shí jiān dào le');
+  Shih.soundButton($('soundBtn'));
+
+  const timerEl = $('timer');
+  const LIMIT = lv => C.time[lv - 1] * 1000, GOAL = () => C.target[level - 1];
+  let left = 0, lastT = 0, tick = 0, running = false;
+  const fmt = ms => { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  function loop() {
+    if (!running) return;
+    const now = performance.now(); left -= now - lastT; lastT = now;
+    timerEl.textContent = '⏱ ' + fmt(Math.max(0, left)); timerEl.classList.toggle('low', left < 15000);
+    if (left <= 0) { finish(); return; }
+    tick = requestAnimationFrame(loop);
+  }
+  function finish() {
+    running = false; cancelAnimationFrame(tick); $('spin').disabled = true;
+    if (done >= GOAL()) { $('winTime').textContent = 'Time left: ' + fmt(Math.max(0, left)); $('winMsg').hidden = false; Shih.speak('太棒了'); }
+    else { $('timeUpTxt').textContent = `You got ${done} of ${GOAL()}. Try again!`; $('timeUp').hidden = false; Shih.speak('时间到了'); }
+  }
+
+  const LEVELS = [{ note: '7 words + pinyin' }, { note: 'All words + pinyin' }, { note: 'All words, no pinyin' }];
+  let level = Shih.startLevel('wheelLevel', 3);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('wheelLevel', lv); setup(); });
+  const HELP = ['Spin the wheel! Read the word and tap that body part on the kid.',
+                'Spin the wheel! More words now. Tap that body part on the kid.',
+                'Spin the wheel! No pinyin on the wheel this time. Tap that body part on the kid.'];
+  // 转盘上的字：Level 1 是一／二年级投影片的 7 个字；Level 2、3 是可以点的所有部位
+  const POOL = lv => lv === 1 ? C.first.map(z => UNIT.words.find(w => w.zh === z)) : UNIT.words.filter(w => PT.CAN_TAP.includes(w.zh));
+  const COLORS = ['#F5C531', '#7FC4D8', '#F49AC1', '#9CCB8A', '#F2A65A', '#B58BE0', '#FFFFFF', '#8FA9D0'];
+  let done = 0, words = [], angle = 0, busy = false, q = null, look = null, last = -1;
+  function drawWheel() {
+    words = shuffle(POOL(level));
+    const n = words.length, a = 360 / n;
+    let g = '';
+    words.forEach((w, i) => {
+      const a0 = (i * a - 90 - a / 2) * Math.PI / 180, a1 = ((i + 1) * a - 90 - a / 2) * Math.PI / 180;
+      g += `<path d="M0 0 L${100 * Math.cos(a0)} ${100 * Math.sin(a0)} A100 100 0 0 1 ${100 * Math.cos(a1)} ${100 * Math.sin(a1)} Z" fill="${COLORS[i % COLORS.length]}" stroke="#2B2B2B" stroke-width="2.5"/>`;
+      const zs = n > 10 ? 11 : 14, ys = level === 3 ? 0 : 4;
+      g += `<g transform="rotate(${i * a})"><text x="0" y="${-62 + ys}" text-anchor="middle" font-family="Noto Sans SC, sans-serif" font-weight="700" font-size="${w.zh.length > 2 ? zs - 2 : zs}" fill="#2B2B2B">${w.zh}</text>` +
+        (level === 3 ? '' : `<text x="0" y="-80" text-anchor="middle" font-family="Andika, sans-serif" font-size="${n > 10 ? 7 : 8}" fill="#B4471C">${w.py}</text>`) + `</g>`;
+    });
+    g += `<circle r="100" fill="none" stroke="#2B2B2B" stroke-width="5"/><circle r="14" fill="#E5483B" stroke="#2B2B2B" stroke-width="4"/>`;
+    $('wheel').innerHTML = g;
+  }
+  const msg = t => { $('say').innerHTML = `<span class="msg">${t}</span>`; };
+  $('spin').addEventListener('click', () => {
+    if (!running || busy || q) return;
+    busy = true; $('spin').disabled = true; msg('…');
+    let k; do { k = Math.floor(Math.random() * words.length); } while (k === last && words.length > 1); last = k;
+    const a = 360 / words.length;
+    // 转好几圈，停在第 k 格（第 k 格转到最上面）
+    angle += 360 * (3 + Math.floor(Math.random() * 2)) + ((360 - (k * a) - (angle % 360)) + 360) % 360 + (Math.random() - .5) * a * .6;
+    $('wheel').style.transform = `rotate(${angle}deg)`;
+    window.__w = { spinning: true, done };
+    setTimeout(() => stop(words[k]), 2700);
+  });
+  function stop(w) {
+    if (!running) return;
+    q = { w }; busy = false;
+    const zh = `指一指你的${w.zh}。`, py = `zhǐ yi zhǐ nǐ de ${w.py}.`;
+    $('say').innerHTML = `<span class="ruby">${Shih.rubyText(zh, level === 3 ? '' : py)}</span>`;
+    Shih.speak(zh); $('patient').classList.remove('off');
+    window.__w = { zh: w.zh, done, at: PT.PARTS[w.zh].hit[0] };
+  }
+  $('kid').addEventListener('pointerdown', e => {
+    if (!running || busy || !q) return;
+    const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform($('kid').getScreenCTM().inverse());
+    if (PT.tapHits(q.w.zh, [pt.x, pt.y], 2)) {
+      const P = PT.PARTS[q.w.zh], side = P.at.map((a, i) => ({ i, d: Math.hypot(a[0] - pt.x, a[1] - pt.y) })).sort((a, b) => a.d - b.d)[0].i;
+      $('kid').innerHTML = PT.svg({ zh: q.w.zh, look, mark: 'arrow', side });
+      busy = true; done++; update(); Shih.speak('对！');
+      q = null; $('patient').classList.add('off');
+      if (done >= GOAL()) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 1100); return; }
+      setTimeout(() => { if (!running) return; busy = false; $('spin').disabled = false; msg('Spin again! 🎡'); $('kid').innerHTML = PT.svg({ zh: '头', look }); }, 1200);
+    } else {
+     
+      $('patient').classList.remove('oops'); void $('patient').offsetWidth; $('patient').classList.add('oops');
+      setTimeout(() => $('patient').classList.remove('oops'), 450);
+    }
+  });
+  function setup() {
+    paintLevels(level);
+    $('help').textContent = HELP[level - 1] + ` Get ${GOAL()} right in ${fmt(LIMIT(level))} to get coins!`;
+    done = 0; q = null; busy = false; last = -1; look = PT.look();
+    running = false; cancelAnimationFrame(tick); left = LIMIT(level); timerEl.textContent = '⏱ ' + fmt(left); timerEl.classList.remove('low');
+    $('winMsg').hidden = true; $('timeUp').hidden = true; update();
+    drawWheel(); $('kid').innerHTML = PT.svg({ zh: '头', look }); $('patient').classList.add('off');
+    $('spin').disabled = false; msg('Press Spin! 🎡');
+    wait();
+  }
+  function update() { $('score').textContent = `${done} / ${GOAL()}`; }
+  const wait = Shih.startCover($('playArea'), () => { running = true; lastT = performance.now(); tick = requestAnimationFrame(loop); });
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

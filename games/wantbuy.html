@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>我想买</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 我想买（购物中心）：衣服店。
+   Level 1「我想买帽子。」点对的衣服。
+   Level 2「我想买红色的T恤。」点对的衣服，再选「多少钱？」（＿＿美元）。
+   Level 3「你有三十美元。」自己选两件、不超过预算，按 Next；再用字卡拼出「我想买红色的T恤和蓝色的帽子。」、打出「一共＿＿美元」，按 Submit。
+   答对 target 题就马上结束、给金币。点错了摇一摇（不扣分）。设定在 units/clothes/words.js 的 UNIT.wantbuy */
+body.game { background: #F6F1FF; }
+.box { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+.top { display: flex; gap: 12px; align-items: center; }
+.kid { width: 84px; height: 84px; flex: none; } .kid svg { width: 100%; height: 100%; display: block; }
+.bub { position: relative; flex: 1; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 20px; padding: 8px 16px; min-height: 70px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.bub::before { content: ''; position: absolute; left: -18px; top: 50%; margin-top: -9px; border: 9px solid transparent; border-right: 10px solid #2B2B2B; }
+.bub .ruby .py { font-size: 14px; } .bub .ruby .zh { font-size: 28px; font-weight: 700; }
+.bub .dropSlot { min-height: 54px; min-width: 120px; padding: 2px 8px; box-sizing: border-box; cursor: pointer; }
+.bub .dropSlot .ruby .zh { font-size: 24px; }
+.again { background: #FFF6D6; border: 2px solid #2B2B2B; border-radius: 10px; font-size: 18px; cursor: pointer; }
+.shop { background: linear-gradient(#EADCC4 0 48%, #B98A55 48% 51%, #EADCC4 51% 97%, #B98A55 97%); border: 4px solid #2B2B2B; border-radius: 20px; padding: 8px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.item { position: relative; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 16px; padding: 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; }
+.item svg { width: 78px; height: 78px; display: block; }
+.item .tag { font: 800 20px var(--f-latin); background: #FFF6D6; border: 2px solid #2B2B2B; border-radius: 10px; padding: 0 10px; color: #2E7D32; }
+.item.oops { animation: shake .35s; border-color: var(--bad); }
+.item.ok { border-color: var(--me); background: #E3F4DC; }
+.item.inBag { border-color: #5B6FD6; background: #E6E9FB; box-shadow: 0 0 0 4px #5B6FD6; }
+.item.inBag::after { content: '🛍'; position: absolute; top: 2px; right: 6px; font-size: 22px; }
+.under { display: flex; gap: 12px; align-items: stretch; }
+.under[hidden] { display: none; }
+.panel { flex: 1; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 10px; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.bank { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.bank .wcard { min-width: 80px; justify-content: center; }
+.bank .wcard .py { font-size: 13px; } .bank .wcard .zh { font-size: 24px; font-weight: 700; }
+.bank .wcard.oops { animation: shake .35s; border-color: var(--bad); }
+.bag { font: 700 18px var(--f-latin); }
+.sentRow { display: flex; flex-wrap: wrap; gap: 4px; align-items: flex-end; justify-content: center; }
+.slot3 { min-width: 54px; min-height: 52px; padding: 2px 4px; box-sizing: border-box; cursor: pointer; }
+.bank .wcard.used { visibility: hidden; }
+.panel .ruby .py { font-size: 13px; } .panel .ruby .zh { font-size: 26px; font-weight: 700; }
+.panel .bank .ruby .zh { font-size: 24px; }
+.bag b { font-size: 24px; color: #2E7D32; }
+.bag.over b { color: var(--bad); }
+.typed { min-width: 220px; min-height: 50px; border: 3px solid #2B2B2B; border-radius: 12px; background: #FFFBF2; display: flex; align-items: center; justify-content: center; font: 800 30px 'Noto Sans SC', sans-serif; }
+.typed.oops { animation: shake .35s; border-color: var(--bad); }
+.keys { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.keys button { min-width: 50px; font: 700 24px 'Noto Sans SC', sans-serif; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 10px; box-shadow: 0 3px 0 #2B2B2B; cursor: pointer; padding: 2px 6px; }
+.keys button .py { display: block; font: 400 11px var(--f-latin); color: #B4471C; }
+.go { font: 800 18px var(--f-latin); background: var(--me); color: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 12px; padding: 4px 22px; cursor: pointer; }
+.note { font: 700 17px var(--f-latin); color: var(--bad); min-height: 22px; }
+.timer.low { background: #FCE3E0; border-color: var(--bad); }
+.timeUp { text-align: center; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 10px; margin: 0 auto 10px; max-width: 640px; font: 700 18px var(--f-latin); display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.timeUp .ruby .py { font-size: 12px; } .timeUp .ruby .zh { font-size: 26px; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill timer" id="timer">0:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="timeUp" id="timeUp" hidden><span class="ruby" id="timeUpRuby"></span><span id="timeUpTxt"></span><button class="ctl" id="again2" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="box">
+        <div class="top"><div class="kid" id="kid"></div><div class="bub" id="bub"></div></div>
+        <div class="shop" id="shop"></div>
+        <div class="under" id="under" hidden><div class="panel" id="panel"></div></div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/kids.js"></script>
+<script src="../shared/numbers.js"></script>
+<script src="../shared/clothes-art.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.wantbuy, CL = UNIT.clothes, CA = window.CLOTHES_ART, NUM = window.ShihNum, KIDS = window.ART;
+  const $ = id => document.getElementById(id);
+  const shuffle = NUM.shuffle, pick = NUM.pick, rnd = NUM.rnd;
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  $('timeUpRuby').innerHTML = Shih.ruby('时间到了', 'shí jiān dào le');
+  Shih.soundButton($('soundBtn'));
+
+  const timerEl = $('timer');
+  const LIMIT = lv => C.time[lv - 1] * 1000, GOAL = () => C.target[level - 1];
+  let left = 0, lastT = 0, tick = 0, running = false;
+  const fmt = ms => { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  function loop() {
+    if (!running) return;
+    const now = performance.now(); left -= now - lastT; lastT = now;
+    timerEl.textContent = '⏱ ' + fmt(Math.max(0, left)); timerEl.classList.toggle('low', left < 15000);
+    if (left <= 0) { finish(); return; }
+    tick = requestAnimationFrame(loop);
+  }
+  function finish() {
+    running = false; cancelAnimationFrame(tick);
+    if (done >= GOAL()) { $('winTime').textContent = 'Time left: ' + fmt(Math.max(0, left)); $('winMsg').hidden = false; Shih.speak('太棒了'); }
+    else { $('timeUpTxt').textContent = `You got ${done} of ${GOAL()}. Try again!`; $('timeUp').hidden = false; Shih.speak('时间到了'); }
+  }
+
+  const LEVELS = [{ note: '我想买＿＿。' }, { note: '＿＿色的＿＿ + 多少钱？' }, { note: 'Budget: 你有＿＿美元' }];
+  let level = Shih.startLevel('wantbuyLevel', 3);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('wantbuyLevel', lv); setup(); });
+  const HELP = ['Read what the kid wants to buy. Tap it!',
+                'Find the right color and clothes. Then answer: how much is it? (美元 = dollars)',
+                'How much money do you have? Pick 2 clothes you can buy and press Next. Then build the sentence (我想买…和…), type how much in Chinese, and press Submit.'];
+  const oops = el => { el.classList.remove('oops'); void el.offsetWidth; el.classList.add('oops'); setTimeout(() => el.classList.remove('oops'), 400); };
+  const COLS = UNIT.colors.filter(c => c.zh !== '黑色');      // 黑色的衣服跟黑线混在一起看不清楚
+  const money = n => ({ zh: NUM.zh(n) + '美元', py: NUM.py(n) + ' měi yuán' });
+  const kidOf = () => KIDS.kid(kidP, 'good');
+  let done = 0, q = null, busy = false, kidP = null, lastKey = '';
+
+  function itemHTML(x) { return CA.svg(x.w.zh, x.c.hex) + `<span class="tag">$${x.p}</span>`; }
+  function show() {
+    busy = false; kidP = pick(KIDS.people);
+    $('kid').innerHTML = kidOf(); $('under').hidden = true; $('panel').innerHTML = '';
+    let items, zh, py;
+    if (level < 3) {
+      let t; do { t = { w: pick(CL), c: pick(COLS) }; } while (t.w.zh + t.c.zh === lastKey); lastKey = t.w.zh + t.c.zh;
+      t.p = rnd(C.price[0], C.price[1]);
+      if (level === 1) {
+        // 每一种衣服只有一件（颜色随便）
+        items = [t].concat(shuffle(CL.filter(w => w !== t.w)).slice(0, 7).map(w => ({ w, c: pick(COLS), p: rnd(C.price[0], C.price[1]) })));
+        zh = `我想买${t.w.zh}。`; py = `wǒ xiǎng mǎi ${t.w.py}.`;
+      } else {
+        // 同一种衣服别的颜色、同一个颜色别的衣服，都放进来混淆
+        const oc = shuffle(COLS.filter(c => c !== t.c)), ow = shuffle(CL.filter(w => w !== t.w));
+        items = [t, { w: t.w, c: oc[0] }, { w: t.w, c: oc[1] }, { w: ow[0], c: t.c }, { w: ow[1], c: t.c }].concat(ow.slice(2, 5).map(w => ({ w, c: pick(oc) })));
+        items.forEach(x => { if (!x.p) x.p = rnd(C.price[0], C.price[1]); });
+        zh = `我想买${t.c.zh}的${t.w.zh}。`; py = `wǒ xiǎng mǎi ${t.c.py} de ${t.w.py}.`;
+      }
+      q = { t, zh, py };
+    } else {
+      // 预算：八件衣服，价钱不一样；预算一定买得起两件以上
+      items = shuffle(CL).slice(0, 8).map(w => ({ w, c: pick(COLS), p: rnd(C.price3[0], C.price3[1]) }));
+      const cheap = items.map(x => x.p).sort((a, b) => a - b);
+      const budget = Math.max(cheap[0] + cheap[1] + rnd(5, 15), pick(C.budgets));
+      q = { budget, bag: [] };
+      zh = `你有${NUM.zh(budget)}美元。你想买什么？`; py = `nǐ yǒu ${NUM.py(budget)} měi yuán. nǐ xiǎng mǎi shén me?`;
+      q.zh = zh; q.py = py;
+      showBudgetPanel();
+    }
+    q.items = shuffle(items);
+    $('bub').innerHTML = `<span class="ruby">${Shih.rubyText(zh, py)}</span><button type="button" class="again" id="again" aria-label="Listen again">🔊</button>`;
+    $('again').addEventListener('click', () => Shih.speak(zh));
+    $('shop').innerHTML = '';
+    q.items.forEach((x, i) => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'item'; b.dataset.i = i; b.innerHTML = itemHTML(x);
+      b.setAttribute('aria-label', `${x.c.zh} ${x.w.en} $${x.p}`);
+      b.addEventListener('click', () => tapItem(x, b)); $('shop').appendChild(b);
+    });
+    if (running) Shih.speak(zh);
+    window.__wb = { level, done, t: q.t ? q.items.indexOf(q.t) : -1, price: q.t ? q.t.p : 0, budget: q.budget || 0, prices: q.items.map(x => x.p) };
+  }
+  function tapItem(x, el) {
+    if (!running || busy) return;
+    if (level === 3) {
+      if (q.step === 'say') return;                                  // 拼句子的时候不能换（按 Change 回去换）
+      const k = q.bag.indexOf(x);
+      if (k < 0 && q.bag.length >= 2) { note('Pick only 2!'); oops(el); return; }
+      if (k >= 0) q.bag.splice(k, 1); else q.bag.push(x);
+      el.classList.toggle('inBag', k < 0); paintBag(); return;
+    }
+    if (x !== q.t) { oops(el); return; }                             // 不对：摇一摇（不扣分）
+    el.classList.add('ok');
+    if (level === 1) { good(q.zh); return; }
+    busy = true; askPrice(el);
+  }
+  // Level 2：多少钱？
+  function askPrice() {
+    const t = q.t;
+    const near = shuffle([t.p + 1, t.p - 1, t.p + 10, t.p - 10, Math.floor(t.p / 10) + (t.p % 10) * 10].filter(n => n >= 1 && n <= 99 && n !== t.p && NUM.ok(n)));
+    const opts = shuffle([t.p].concat([...new Set(near)].slice(0, 2)));
+    $('under').hidden = false;
+    $('panel').innerHTML = `<div class="sentRow"><span class="ruby">${Shih.rubyText(`${t.c.zh}的${t.w.zh}多少钱？`, `${t.c.py} de ${t.w.py} duō shǎo qián?`)}</span></div><div class="bank" id="bank"></div>`;
+    opts.forEach(n => {
+      const m = money(n), b = document.createElement('button'); b.type = 'button'; b.className = 'wcard'; b.dataset.n = n;
+      b.innerHTML = `<span class="ruby">${Shih.ruby(m.zh, m.py)}</span>`;
+      b.addEventListener('click', () => { if (!running) return; if (n !== t.p) { oops(b); return; } good(`${m.zh}。`); });
+      $('bank').appendChild(b);
+    });
+    busy = false; q.pricing = true;
+    Shih.speak(`${t.c.zh}的${t.w.zh}多少钱？`);
+  }
+  // Level 3：袋子里有几件、一共多少钱；用中文打出一共多少钱
+  // Level 3 第一步：选两件（不超过预算），按 Next
+  function showBudgetPanel() {
+    $('under').hidden = false; q.step = 'pick';
+    $('panel').innerHTML = `<div class="bag" id="bag"></div><div class="note" id="note"></div><button type="button" class="go" id="next">Next ➜</button>`;
+    $('next').addEventListener('click', toSay);
+    paintBag();
+  }
+  function paintBag() {
+    const tot = q.bag.reduce((a, x) => a + x.p, 0);
+    $('bag').classList.toggle('over', tot > q.budget);
+    $('bag').innerHTML = `🛍 Pick 2 clothes: ${q.bag.length} / 2 · $<b>${tot}</b> / $${q.budget}`;
+    window.__wb && (window.__wb.total = tot);
+  }
+  const note = t => { $('note').innerHTML = t; clearTimeout(q.nt); q.nt = setTimeout(() => { if ($('note')) $('note').textContent = ''; }, 2500); };
+  function toSay() {
+    if (!running || busy) return;
+    const tot = q.bag.reduce((a, x) => a + x.p, 0);
+    if (q.bag.length !== 2) { note('Pick 2 clothes!'); oops($('bag')); return; }
+    if (tot > q.budget) { note(`${Shih.ruby('太贵了', 'tài guì le')}！ Too expensive! Pick something else.`); Shih.speak('太贵了！'); oops($('bag')); return; }
+    showSay();
+  }
+  // Level 3 第二步：自己拼句子「我想买红色的T恤和蓝色的帽子。」再打「一共＿＿美元」
+  function showSay() {
+    q.step = 'say';
+    const [A, B] = q.bag, W = (zh, py) => ({ zh, py });
+    const oc = shuffle(COLS.filter(c => c !== A.c && c !== B.c))[0], ow = shuffle(CL.filter(w => w !== A.w && w !== B.w))[0];
+    const cards = shuffle([W('我', 'wǒ'), W('想', 'xiǎng'), W('买', 'mǎi'), A.c, W('的', 'de'), A.w, W('和', 'hé'), B.c, W('的', 'de'), B.w, W('卖', 'mài'), oc, ow]);
+    const K = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十'], PYK = ['yī', 'èr', 'sān', 'sì', 'wǔ', 'liù', 'qī', 'bā', 'jiǔ', 'shí'];
+    $('panel').innerHTML = `<div class="sentRow" id="sent">${Array.from({ length: 10 }, () => '<span class="dropSlot slot3"></span>').join('')}<span class="ruby">${Shih.rubyText('。', '')}</span></div>` +
+      `<div class="bank" id="bank">${cards.map((w, i) => `<button type="button" class="wcard" data-i="${i}" data-zh="${w.zh}"><span class="ruby">${Shih.ruby(w.zh, w.py)}</span></button>`).join('')}</div>` +
+      `<div style="display:flex;gap:8px;align-items:center"><span class="ruby">${Shih.rubyText('一共', 'yí gòng')}</span><div class="typed" id="typed"></div><span class="ruby">${Shih.rubyText('美元。', 'měi yuán.')}</span></div>` +
+      `<div class="keys" id="keys">${K.map((k, i) => `<button type="button" data-k="${k}">${k}<span class="py">${PYK[i]}</span></button>`).join('')}<button type="button" data-k="⌫">⌫</button></div>` +
+      `<div class="note" id="note"></div><div style="display:flex;gap:10px"><button type="button" class="ctl" id="back">↩ Change</button><button type="button" class="go" id="go">✓ Submit</button></div>`;
+    q.typed = '';
+    const slots = [...$('sent').querySelectorAll('.dropSlot')];
+    $('bank').querySelectorAll('.wcard').forEach(b => b.addEventListener('click', () => {
+      if (!running || busy || b.classList.contains('used')) return;
+      const s = slots.find(x => !x.dataset.zh); if (!s) return;
+      s.dataset.zh = b.dataset.zh; s.dataset.from = b.dataset.i; s.innerHTML = b.innerHTML; s.classList.add('filled'); b.classList.add('used');
+    }));
+    const clear = s => { const b = $('bank').querySelector(`.wcard[data-i="${s.dataset.from}"]`); if (b) b.classList.remove('used'); delete s.dataset.zh; s.innerHTML = ''; s.classList.remove('filled'); };
+    slots.forEach(s => s.addEventListener('click', () => { if (running && !busy && s.dataset.zh) clear(s); }));
+    $('keys').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      if (!running || busy) return;
+      q.typed = b.dataset.k === '⌫' ? q.typed.slice(0, -1) : (q.typed + b.dataset.k).slice(0, 4);
+      $('typed').textContent = q.typed;
+    }));
+    $('back').addEventListener('click', () => { if (running && !busy) showBudgetPanel(); });
+    $('go').addEventListener('click', () => submit3(slots, clear));
+    window.__wb.say = { A: [A.c.zh, A.w.zh], B: [B.c.zh, B.w.zh], total: A.p + B.p };
+  }
+  function submit3(slots, clear) {
+    if (!running || busy) return;
+    const [A, B] = q.bag, tot = A.p + B.p;
+    // 两件衣服谁先说都可以
+    const want = (X, Y) => ['我', '想', '买', X.c.zh, '的', X.w.zh, '和', Y.c.zh, '的', Y.w.zh];
+    const got = slots.map(s => s.dataset.zh || '');
+    const w = got[3] === B.c.zh || got[5] === B.w.zh ? want(B, A) : want(A, B);
+    let ok = true;
+    slots.forEach((s, i) => { if (got[i] !== w[i]) { ok = false; if (s.dataset.zh) clear(s); oops(s); } });
+    if (!ok) { note('Check your sentence!'); return; }
+    if (q.typed !== NUM.zh(tot)) { note(`How much is $${tot} in Chinese?`); oops($('typed')); return; }
+    good(`我想买${w[3]}的${w[5]}和${w[7]}的${w[9]}。一共${NUM.zh(tot)}美元。`);
+  }
+  function good(say) {
+    busy = true; done++; update();
+    $('kid').innerHTML = KIDS.kid(kidP, 'great'); Shih.speak(say);
+    if (done >= GOAL()) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 1500); return; }   // 达标了：马上结束，给金币
+    setTimeout(() => { if (running) show(); }, 1600);
+  }
+  function setup() {
+    paintLevels(level);
+    $('help').textContent = HELP[level - 1] + ` Get ${GOAL()} right in ${fmt(LIMIT(level))} to get coins!`;
+    done = 0; lastKey = '';
+    running = false; cancelAnimationFrame(tick); left = LIMIT(level); timerEl.textContent = '⏱ ' + fmt(left); timerEl.classList.remove('low');
+    $('winMsg').hidden = true; $('timeUp').hidden = true; update();
+    show(); wait();
+  }
+  function update() { $('score').textContent = `${done} / ${GOAL()}`; }
+  const wait = Shih.startCover($('playArea'), () => { running = true; lastT = performance.now(); tick = requestAnimationFrame(loop); Shih.speak(q.zh); });
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

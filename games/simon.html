@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>西门说</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 西门说 Simon Says（医院）：听／读指令，点小朋友身上的部位。
+   有「西门说」才点；没有「西门说」就不要点（等 3 秒，没有点就算对）。
+   Level 1：摸摸你的＿＿（二年级的字）；Level 2：摸摸／指一指你的＿＿（所有的字）；Level 3：只用听的（字等答完才出来）。
+   答对 target 题就马上结束、给金币。点错了摇一摇（不扣分）。设定在 units/body/words.js 的 UNIT.simon */
+body.game { background: #F2F8FB; }
+.room { display: flex; gap: 18px; align-items: stretch; justify-content: center; max-width: 1060px; margin: 0 auto; }
+.patient { flex: none; position: relative; background: #FFFFFF; border: 4px solid var(--ink); border-radius: 22px; padding: 6px; }
+.patient svg { display: block; height: calc(100vh - 240px); min-height: 300px; max-height: 470px; width: auto; touch-action: manipulation; cursor: pointer; }
+.patient.oops { animation: nope .4s; border-color: var(--bad); }
+@keyframes nope { 0%,100% { translate: 0 } 25% { translate: -7px 0 } 75% { translate: 7px 0 } }
+.ask { flex: 1; max-width: 560px; display: flex; flex-direction: column; justify-content: center; gap: 16px; }
+.simon { display: flex; align-items: center; gap: 12px; }
+.simon svg { width: 96px; height: 96px; flex: none; }
+.bub { position: relative; flex: 1; background: #FFFFFF; border: 3px solid var(--ink); border-radius: 20px; padding: 12px 16px; min-height: 84px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.bub::before { content: ''; position: absolute; left: -18px; top: 50%; margin-top: -9px; border: 9px solid transparent; border-right: 10px solid #2B2B2B; }
+.bub .ruby .py { font-size: 15px; } .bub .ruby .zh { font-size: 32px; font-weight: 700; }
+.bub .listen { font: 700 22px var(--f-latin); color: #3B6EA8; }
+.again { background: #FFF6D6; border: 2px solid #2B2B2B; border-radius: 10px; font-size: 20px; cursor: pointer; }
+.state { min-height: 54px; text-align: center; font: 700 20px var(--f-latin); border-radius: 14px; padding: 8px; }
+.state .ruby .py { font-size: 13px; } .state .ruby .zh { font-size: 26px; }
+.state.good { background: #E3F4DC; } .state.bad { background: #FCE3E0; }
+.waitBar { height: 14px; border: 3px solid #2B2B2B; border-radius: 10px; overflow: hidden; background: #FFFFFF; }
+.waitBar i { display: block; height: 100%; width: 0; background: #F5C531; }
+.waitBar[hidden] { display: none; }
+.rule { font: 600 15px var(--f-latin); color: #555555; background: #FFFBF2; border: 2px dashed #2B2B2B; border-radius: 12px; padding: 8px 12px; }
+.timer.low { background: #FCE3E0; border-color: var(--bad); }
+.timeUp { text-align: center; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 10px; margin: 0 auto 10px; max-width: 640px; font: 700 18px var(--f-latin); display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.timeUp .ruby .py { font-size: 12px; } .timeUp .ruby .zh { font-size: 26px; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill timer" id="timer">0:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> Great job! <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="timeUp" id="timeUp" hidden><span class="ruby" id="timeUpRuby"></span><span id="timeUpTxt"></span><button class="ctl" id="again2" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="room">
+        <div class="patient" id="patient"><svg id="kid" viewBox="0 0 240 350" aria-label="Kid"></svg></div>
+        <div class="ask">
+          <div class="simon"><svg viewBox="0 0 100 100" aria-hidden="true" id="simonFace"></svg><div class="bub" id="bub"></div></div>
+          <div class="waitBar" id="waitBar" hidden><i id="waitFill"></i></div>
+          <div class="state" id="state"></div>
+          <div class="rule" id="rule"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/kids.js"></script>
+<script src="../shared/patient.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.simon, PT = window.ShihPatient;
+  const $ = id => document.getElementById(id);
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.ruby('太棒了', 'tài bàng le');
+  $('timeUpRuby').innerHTML = Shih.ruby('时间到了', 'shí jiān dào le');
+  $('rule').innerHTML = `Only tap when you hear <b>西门说</b> (xī mén shuō = Simon says)! No 西门说? Don't tap — wait!`;
+  // 西门：戴帽子的小老师
+  $('simonFace').innerHTML = `<circle cx="50" cy="56" r="34" fill="#F6D9B5" stroke="#2B2B2B" stroke-width="4"/><path d="M18 40 Q50 22 82 40 L76 30 Q50 6 24 30 Z" fill="#3B6EA8" stroke="#2B2B2B" stroke-width="4" stroke-linejoin="round"/>` +
+    `<circle cx="38" cy="56" r="4" fill="#2B2B2B"/><circle cx="62" cy="56" r="4" fill="#2B2B2B"/><path d="M38 70 Q50 80 62 70" fill="none" stroke="#2B2B2B" stroke-width="4" stroke-linecap="round"/><circle cx="28" cy="66" r="5" fill="#F29BA6" opacity=".7"/><circle cx="72" cy="66" r="5" fill="#F29BA6" opacity=".7"/>`;
+  Shih.soundButton($('soundBtn'));
+
+  // ---- 计时：答对 target 题就马上结束、给金币；时间到了还没达标就没有金币 ----
+  const timerEl = $('timer');
+  const LIMIT = lv => C.time[lv - 1] * 1000, GOAL = () => C.target[level - 1];
+  let left = 0, lastT = 0, tick = 0, running = false;
+  const fmt = ms => { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  function loop() {
+    if (!running) return;
+    const now = performance.now(); left -= now - lastT; lastT = now;
+    timerEl.textContent = '⏱ ' + fmt(Math.max(0, left)); timerEl.classList.toggle('low', left < 15000);
+    if (q && q.waitUntil) { const f = 1 - (q.waitUntil - now) / C.wait / 1000; $('waitFill').style.width = Math.min(100, f * 100) + '%'; if (now >= q.waitUntil && !busy) waited(); }
+    if (left <= 0) { finish(); return; }
+    tick = requestAnimationFrame(loop);
+  }
+  function finish() {
+    running = false; cancelAnimationFrame(tick);
+    if (done >= GOAL()) { $('winTime').textContent = 'Time left: ' + fmt(Math.max(0, left)); $('winMsg').hidden = false; Shih.speak('太棒了'); }
+    else { $('timeUpTxt').textContent = `You got ${done} of ${GOAL()}. Try again!`; $('timeUp').hidden = false; Shih.speak('时间到了'); }
+  }
+
+  const LEVELS = [{ note: '摸摸你的＿＿' }, { note: '摸摸／指一指 + more words' }, { note: 'Listen only 🔊' }];
+  let level = Shih.startLevel('simonLevel', 3);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('simonLevel', lv); setup(); });
+  const HELP = ['Read and listen. Tap the body part — but only if Simon says!',
+                'Read and listen: 摸摸 (touch) or 指一指 (point to). Only if Simon says!',
+                'Listen only! Tap 🔊 to hear it again. Only if Simon says!'];
+  // 可以点的部位（背、手指头、脚趾头不能点）：Level 1 二年级的字，Level 2、3 全部
+  const POOL = lv => UNIT.words.filter(w => PT.CAN_TAP.includes(w.zh) && (lv === 1 ? (w.level || 1) === 1 : true));
+  const VERB = [{ zh: '摸摸你的', py: 'mō mo nǐ de' }, { zh: '指一指你的', py: 'zhǐ yi zhǐ nǐ de' }];
+  let done = 0, q = null, busy = false, look = null, last = '', simonRun = 0;
+  const kid = mark => { $('kid').innerHTML = PT.svg(Object.assign({ zh: q.w.zh, look, face: 'good' }, mark || {})); };
+  function show() {
+    busy = false;
+    let w; do { w = pick(POOL(level)); } while (w.zh === last); last = w.zh;
+    // 大约三分之一没有「西门说」；不会连续三次都没有（也不会连续很多次都有）
+    let simon = Math.random() < C.simonShare;
+    if (simonRun >= 3) simon = false; if (simonRun <= -2) simon = true;
+    simonRun = simon ? Math.max(1, simonRun + 1) : Math.min(-1, simonRun - 1);
+    const v = level === 1 ? VERB[0] : pick(VERB);
+    const zh = `${simon ? '西门说，' : ''}${v.zh}${w.zh}。`, py = `${simon ? 'xī mén shuō, ' : ''}${v.py} ${w.py}.`;
+    q = { w, simon, zh, py, waitUntil: simon ? 0 : performance.now() + C.wait * 1000 };
+    kid();
+    $('bub').innerHTML = (level === 3 ? `<span class="listen">🔊 Listen!</span>` : `<span class="ruby">${Shih.rubyText(zh, py)}</span>`) + `<button type="button" class="again" id="again" aria-label="Listen again">🔊</button>`;
+    $('again').addEventListener('click', () => Shih.speak(q.zh));
+    $('state').className = 'state'; $('state').innerHTML = '';
+    $('waitBar').hidden = simon; $('waitFill').style.width = '0%';
+    if (running) Shih.speak(zh);
+    window.__s = { zh: w.zh, simon, done, at: PT.PARTS[w.zh].hit[0] };
+  }
+  const reveal = () => { if (level === 3) $('bub').innerHTML = `<span class="ruby">${Shih.rubyText(q.zh, q.py)}</span>`; };
+  function tap(e) {
+    if (!running || busy || !q) return;
+    const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform($('kid').getScreenCTM().inverse());
+    if (!q.simon) {
+      // 没有「西门说」还点了：这一题不算，换下一题（不扣分）
+      busy = true; q.waitUntil = 0; $('waitBar').hidden = true; reveal();
+      $('patient').classList.remove('oops'); void $('patient').offsetWidth; $('patient').classList.add('oops');
+      $('state').className = 'state bad'; $('state').innerHTML = `<span class="ruby">${Shih.ruby('西门没有说', 'xī mén méi yǒu shuō')}</span> Simon didn't say!`;
+      Shih.speak('西门没有说！');
+      setTimeout(() => { if (running) show(); }, 1600);
+      return;
+    }
+    if (PT.tapHits(q.w.zh, [pt.x, pt.y], 2)) {
+      const P = PT.PARTS[q.w.zh];
+      const side = P.at.map((a, i) => ({ i, d: Math.hypot(a[0] - pt.x, a[1] - pt.y) })).sort((a, b) => a.d - b.d)[0].i;
+      kid({ mark: 'arrow', side });
+      good('对！');
+    } else {
+     
+      $('patient').classList.remove('oops'); void $('patient').offsetWidth; $('patient').classList.add('oops');
+      setTimeout(() => $('patient').classList.remove('oops'), 450);
+    }
+  }
+  // 没有「西门说」，学生忍住没点：对！
+  function waited() { q.waitUntil = 0; $('waitBar').hidden = true; good('对！西门没有说。', true); }
+  function good(say, still) {
+    busy = true; done++; update(); reveal();
+    $('state').className = 'state good';
+    $('state').innerHTML = still ? `👍 <span class="ruby">${Shih.ruby('西门没有说', 'xī mén méi yǒu shuō')}</span> You didn't tap. Good!` : '👍';
+    Shih.speak(say);
+    if (done >= GOAL()) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 1200); return; }   // 达标了：马上结束，给金币
+    setTimeout(() => { if (running) show(); }, 1300);
+  }
+  $('kid').addEventListener('pointerdown', tap);
+  function setup() {
+    paintLevels(level);
+    $('help').textContent = HELP[level - 1] + ` Get ${GOAL()} right in ${fmt(LIMIT(level))} to get coins!`;
+    done = 0; last = ''; simonRun = 0; look = PT.look();
+    running = false; cancelAnimationFrame(tick); left = LIMIT(level); timerEl.textContent = '⏱ ' + fmt(left); timerEl.classList.remove('low');
+    $('winMsg').hidden = true; $('timeUp').hidden = true; update();
+    show(); if (q) q.waitUntil = 0; wait();
+  }
+  function update() { $('score').textContent = `${done} / ${GOAL()}`; }
+  const wait = Shih.startCover($('playArea'), () => {
+    running = true; lastT = performance.now(); tick = requestAnimationFrame(loop);
+    if (!q.simon) q.waitUntil = performance.now() + C.wait * 1000;
+    Shih.speak(q.zh);
+  });
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

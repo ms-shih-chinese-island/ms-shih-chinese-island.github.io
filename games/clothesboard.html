@@ -13,19 +13,23 @@
    答对了才能再掷骰子；放错了摇一摇（不算错）。时间内走到终点就有金币。设定在 units/clothes/words.js 的 UNIT.board */
 body.game { background: #EEF0FA; }
 .box { max-width: 1060px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
-.board { position: relative; display: grid; grid-template-columns: 92px repeat(7, 1fr); grid-template-rows: repeat(3, 86px); gap: 6px; background: #C9CFEA; border: 4px solid #2B2B2B; border-radius: 20px; padding: 8px; }
-.sq { position: relative; background: #FFFDF6; border: 3px solid #2B2B2B; border-radius: 14px; display: flex; align-items: center; justify-content: center; }
+.board { position: relative; display: grid; grid-template-columns: 84px repeat(10, 1fr); grid-template-rows: repeat(4, 72px); gap: 12px 12px; background: #C9CFEA; border: 4px solid #2B2B2B; border-radius: 20px; padding: 8px; }
+.sq { position: relative; z-index: 1; background: #FFFDF6; border: 3px solid #2B2B2B; border-radius: 14px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 0 rgba(0, 0, 0, .25); }
+.sq::after { content: ''; position: absolute; inset: 4px; border-radius: 9px; background: var(--tint, transparent); opacity: .35; z-index: -1; }
+.road { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+.board { background: #7FB069 !important; }
 .sq .n { position: absolute; top: 2px; left: 6px; font: 800 14px var(--f-latin); color: #666666; }
-.sq svg { width: 62px; height: 62px; display: block; }
+.sq svg { width: 52px; height: 52px; display: block; }
 .sq.sp { background: #FFF1C9; flex-direction: column; text-align: center; padding: 2px; }
-.sq.sp .ruby .py { font-size: 10px; } .sq.sp .ruby .zh { font-size: 17px; font-weight: 700; }
+.sq.sp .ruby .py { font-size: 9px; } .sq.sp .ruby .zh { font-size: 16px; font-weight: 700; }
+.sq.sp .n, .sq.end .n, .sq.start .en { display: none; } .sq.sp .en { font-size: 10px; }
 .sq.sp .en { font: 600 11px var(--f-latin); color: #555555; }
-.sq.end { background: #D9F2D0; }
+.sq.end { background: #D9F2D0; } .sq.end::before { content: '🏁'; position: absolute; top: 2px; right: 6px; font-size: 22px; }
 .sq.end .ruby .py { font-size: 12px; } .sq.end .ruby .zh { font-size: 24px; font-weight: 800; }
-.sq.start { background: #E3E8FA; flex-direction: column; }
-.sq.start .ruby .py { font-size: 12px; } .sq.start .ruby .zh { font-size: 22px; font-weight: 800; }
+.sq.start { background: #FFFFFF; flex-direction: column; align-items: flex-start; padding: 12px 0 0 6px; } .sq.start::before { content: '🚩'; position: absolute; top: 2px; left: 4px; font-size: 14px; }
+.sq.start .ruby .py { font-size: 10px; } .sq.start .ruby .zh { font-size: 19px; font-weight: 800; }
 .sq.here { box-shadow: 0 0 0 4px #F5C531; }
-.pawn { position: absolute; width: 44px; height: 54px; transition: left .22s, top .22s; pointer-events: none; z-index: 2; }
+.pawn { position: absolute; width: 36px; height: 44px; transition: left .22s, top .22s; pointer-events: none; z-index: 2; }
 .pawn svg { width: 100%; height: 100%; display: block; }
 .ctrl { display: flex; gap: 14px; align-items: stretch; }
 .dice { flex: none; width: 150px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 20px; padding: 8px; }
@@ -61,7 +65,7 @@ body.game { background: #EEF0FA; }
   <div class="gameHead">
     <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
     <div class="controls">
-      <span class="pill" id="score">0 / 21</span>
+      <span class="pill" id="score">0 / 40</span>
       <span class="pill timer" id="timer">0:00</span>
       <button class="ctl" id="soundBtn" type="button"></button>
       <button class="ctl" id="resetBtn" type="button">Start over</button>
@@ -131,9 +135,10 @@ Shih.loadUnit().then(UNIT => {
 
   // ---- 棋盘：第 0 格是起点；1～21 蛇形排（第一排左到右、第二排右到左、第三排左到右）；21 是终点 ----
   let squares = [], pos = 0, busy = false, q = null;
-  const cellOf = i => { if (i === 0) return [0, 0]; const r = Math.floor((i - 1) / 7), k = (i - 1) % 7; return [r, r === 1 ? 7 - k : k + 1]; };
+  const COLN = C.cols || 7;
+  const cellOf = i => { if (i === 0) return [0, 0]; const r = Math.floor((i - 1) / COLN), k = (i - 1) % COLN; return [r, r % 2 ? COLN - k : k + 1]; };
   function drawBoard() {
-    const cl = shuffle(CL.concat(CL)), co = COLS();
+    const cl = shuffle(CL.concat(CL, CL, CL)), co = COLS();
     squares = Array.from({ length: N + 1 }, (_, i) => i === 0 || i === N || C.special[i] ? null : { w: cl.pop(), c: pick(co) });
     $('board').innerHTML = '';
     for (let i = 0; i <= N; i++) {
@@ -143,14 +148,28 @@ Shih.loadUnit().then(UNIT => {
       else if (i === N) { d.classList.add('end'); d.innerHTML = `<span class="n">${i}</span><span class="ruby">${Shih.ruby('终点', 'zhōng diǎn')}</span>`; }
       else if (C.special[i]) { const s = C.special[i]; d.classList.add('sp'); d.innerHTML = `<span class="n">${i}</span><span class="ruby">${Shih.ruby(s.zh, s.py)}</span><span class="en">${s.en}</span>`; }
       else d.innerHTML = `<span class="n">${i}</span>` + CA.svg(squares[i].w.zh, squares[i].c.hex);
+      d.style.setProperty('--tint', ['#F28C28', '#3B78D8', '#E2557A', '#45A852', '#9B6BC9', '#F5C531'][i % 6]);
       $('board').appendChild(d);
     }
     // 棋子（小朋友的头＋身体）
     $('board').insertAdjacentHTML('beforeend', `<div class="pawn" id="pawn"><svg viewBox="0 0 44 54" aria-hidden="true"><path d="M6 52 Q6 30 22 30 Q38 30 38 52 Z" fill="#E2557A" stroke="#2B2B2B" stroke-width="3"/><circle cx="22" cy="17" r="13" fill="#F6D9B5" stroke="#2B2B2B" stroke-width="3"/><path d="M9 15 Q10 3 22 3 Q34 3 35 15 Q28 9 22 11 Q14 9 9 15 Z" fill="#4A3424" stroke="#2B2B2B" stroke-width="2.5"/><circle cx="17" cy="18" r="2" fill="#2B2B2B"/><circle cx="27" cy="18" r="2" fill="#2B2B2B"/><path d="M18 23 Q22 26 26 23" fill="none" stroke="#2B2B2B" stroke-width="2" stroke-linecap="round"/></svg></div>`);
   }
+  // 路：灰色的路把格子照顺序连起来，转弯的地方有箭头，看得出要往哪里走
+  function drawRoad() {
+    const b = $('board'), old = b.querySelector('.road'); if (old) old.remove();
+    const pts = [];
+    for (let i = 0; i <= N; i++) { const q = b.querySelector(`.sq[data-i="${i}"]`); pts.push([q.offsetLeft + q.offsetWidth / 2, q.offsetTop + q.offsetHeight / 2]); }
+    const d = 'M' + pts.map(p => p.join(' ')).join(' L');
+    let arrows = '';
+    for (let i = 0; i < N; i++) {
+      const [x0, y0] = pts[i], [x1, y1] = pts[i + 1], mx = (x0 + x1) / 2, my = (y0 + y1) / 2, a = Math.atan2(y1 - y0, x1 - x0) * 180 / Math.PI;
+      arrows += `<path d="M-7 -9 L5 0 L-7 9" transform="translate(${mx} ${my}) rotate(${a})" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`;
+    }
+    b.insertAdjacentHTML('afterbegin', `<svg class="road" viewBox="0 0 ${b.clientWidth} ${b.clientHeight}" preserveAspectRatio="none"><path d="${d}" fill="none" stroke="#2B2B2B" stroke-width="34" stroke-linejoin="round" stroke-linecap="round"/><path d="${d}" fill="none" stroke="#B9A07A" stroke-width="26" stroke-linejoin="round" stroke-linecap="round"/>${arrows}</svg>`);
+  }
   function placePawn() {
     const sq = $('board').querySelector(`.sq[data-i="${pos}"]`), pw = $('pawn');
-    pw.style.left = (sq.offsetLeft + sq.offsetWidth - 46) + 'px'; pw.style.top = (sq.offsetTop + sq.offsetHeight - 56) + 'px';
+    pw.style.left = (sq.offsetLeft + sq.offsetWidth - 38) + 'px'; pw.style.top = (sq.offsetTop + sq.offsetHeight - 46) + 'px';
     $('board').querySelectorAll('.sq.here').forEach(x => x.classList.remove('here')); sq.classList.add('here');
     $('score').textContent = `${pos} / ${N}`;
   }
@@ -261,14 +280,14 @@ Shih.loadUnit().then(UNIT => {
     $('winMsg').hidden = true; $('timeUp').hidden = true;
     pos = 0; busy = false; q = null;
     drawBoard(); showDie(1); msg('Roll the dice! 🎲'); $('roll').disabled = false;
-    requestAnimationFrame(placePawn);
+    requestAnimationFrame(() => { drawRoad(); placePawn(); });
     wait();
   }
-  const wait = Shih.startCover($('playArea'), () => { running = true; lastT = performance.now(); tick = requestAnimationFrame(loop); placePawn(); });
+  const wait = Shih.startCover($('playArea'), () => { running = true; lastT = performance.now(); tick = requestAnimationFrame(loop); drawRoad(); placePawn(); });
   $('resetBtn').addEventListener('click', setup);
   $('againBtn').addEventListener('click', setup);
   $('again2').addEventListener('click', setup);
-  window.addEventListener('resize', () => placePawn());
+  window.addEventListener('resize', () => { drawRoad(); placePawn(); });
   setup();
 });
 </script>
