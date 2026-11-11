@@ -3,7 +3,9 @@
    服务台（听，找走失的小朋友）、找朋友（读，找约好见面的朋友）
    用法：games/lost.html、games/find.html 先设定 window.CROWD_MODE = 'listen' 或 'read'，再载入这一份。
    颜色、衣服、秒数都在 units/clothes/words.js。
-   题目：Top、Bottom 两行，写出颜色和衣服（例如：红色的球衣、黑色的牛仔裤）。
+   题目：两三行，写出颜色和衣服（例如：红色的球衣、黑色的牛仔裤）。
+         四年级（Level 3）还会考连衣裙、鞋子、帽子：Dress（红色的连衣裙）＋Shoes（白色的运动鞋），
+         或 Top＋Bottom 再加一行 Shoes 或 Hat（黄色的帽子）。12 件衣服都会出题。
    规则：找人只看颜色。整张图里只有走失的小朋友是「上红、下黑」（看得到的上衣和下身颜色都对）；
          其他每个人，上衣或下身一定有一件看得清楚、而且颜色不对。鞋子不算。
          走失的小朋友上衣和下身都一定看得清楚。
@@ -39,16 +41,18 @@
     '短裤': (c, s) => legs(s, 200) + `<path d="M42 176 L98 176 L98 206 L74 206 L70 192 L66 206 L42 206 Z" fill="${c}" ${sw}/>`,
     '裙子': (c, s) => legs(s, 196) + `<path d="M44 176 L96 176 L108 210 Q70 218 32 210 Z" fill="${c}" ${sw}/><path d="M58 180 L54 212 M70 180 L70 214 M82 180 L86 212" stroke="${c === '#FFFFFF' ? '#C9CCC8' : shade(c, .82)}" stroke-width="2"/>`
   };
+  // 鞋子：画大一点，三种看得出来（运动鞋：白色厚鞋底、鞋带；皮鞋：黑色鞋底、亮亮的；高跟鞋：细细的高跟）
   const SHOES = {
-    '运动鞋': c => `<path d="M44 226 L66 226 L68 243 L34 243 Q34 230 44 226 Z" fill="${c}" ${sw}/><path d="M74 226 L96 226 Q106 230 106 243 L72 243 Z" fill="${c}" ${sw}/>` +
-      `<path d="M33 243 L69 243 L69 251 L33 251 Z M71 243 L107 243 L107 251 L71 251 Z" fill="#FFFFFF" ${sw}/><path d="M49 230 L59 235 M49 235 L59 230 M81 230 L91 235 M81 235 L91 230" stroke="${onDark(c)}" stroke-width="2"/>`,
-    '皮鞋': c => `<path d="M48 230 L66 230 L67 247 L34 247 Q32 235 48 230 Z" fill="${c}" ${sw}/><path d="M74 230 L92 230 Q108 235 106 247 L73 247 Z" fill="${c}" ${sw}/>` +
-      `<path d="M33 247 L68 247 M72 247 L107 247" stroke="${INK}" stroke-width="4"/><path d="M40 237 Q45 234 51 235 M89 235 Q95 234 100 237" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity=".85"/>`,
-    '高跟鞋': c => `<path d="M53 228 L66 228 L66 240 L36 244 Q34 236 53 228 Z" fill="${c}" ${sw}/><path d="M60 240 L66 240 L65 253 L61 253 Z" fill="${c}" ${sw}/>` +
-      `<path d="M74 228 L87 228 Q106 236 104 244 L74 240 Z" fill="${c}" ${sw}/><path d="M74 240 L80 240 L79 253 L75 253 Z" fill="${c}" ${sw}/>`
+    '运动鞋': c => `<path d="M46 224 L66 224 L68 242 L30 242 Q30 228 46 224 Z" fill="${c}" ${sw}/><path d="M74 224 L94 224 Q110 228 110 242 L72 242 Z" fill="${c}" ${sw}/>` +
+      `<path d="M29 242 L69 242 L69 252 L29 252 Z M71 242 L111 242 L111 252 L71 252 Z" fill="#FFFFFF" ${sw}/><path d="M48 228 L60 236 M48 236 L60 228 M80 228 L92 236 M80 236 L92 228" stroke="${onDark(c)}" stroke-width="2.4"/>`,
+    '皮鞋': c => `<path d="M48 230 L66 230 L67 246 L30 246 Q28 234 48 230 Z" fill="${c}" ${sw}/><path d="M74 230 L92 230 Q112 234 110 246 L73 246 Z" fill="${c}" ${sw}/>` +
+      `<path d="M29 246 L68 246 L68 251 L29 251 Z M72 246 L111 246 L111 251 L72 251 Z" fill="${INK}"/><path d="M36 237 Q42 233 50 234 M90 234 Q98 233 104 237" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity=".85"/>`,
+    '高跟鞋': c => `<path d="M52 226 L66 226 L66 238 L32 244 Q30 234 52 226 Z" fill="${c}" ${sw}/><path d="M60 238 L67 237 L65 254 L61 254 Z" fill="${INK}"/>` +
+      `<path d="M74 226 L88 226 Q110 234 108 244 L74 238 Z" fill="${c}" ${sw}/><path d="M73 237 L80 238 L79 254 L75 254 Z" fill="${INK}"/>`
   };
   const DRESS = (c, s) => legs(s, 200) + `<path d="M46 102 Q70 96 94 102 L96 158 L112 214 Q70 222 28 214 L44 158 Z" fill="${c}" ${sw}/><path d="M44 158 Q70 164 96 158" fill="none" ${sw}/><path d="M60 102 Q70 112 80 102" fill="none" ${sw}/>`;
-  const CAP = c => `<path d="M40 52 Q40 28 70 28 Q100 28 100 52 Z" fill="${c}" ${sw}/><path d="M40 52 L22 54 Q22 48 40 47" fill="${c}" ${sw}/><circle cx="70" cy="28" r="3.5" fill="${c}" ${sw}/>`;
+  // 帽子：跟岛上、投影片的帽子一样（宽宽的帽檐、白色的帽带）
+  const CAP = c => `<path d="M46 46 Q48 20 70 19 Q92 20 94 46 Z" fill="${c}" ${sw}/><path d="M18 50 Q70 36 122 50 Q112 58 70 55 Q28 58 18 50 Z" fill="${c}" ${sw}/><path d="M48 41 Q70 37 92 41" fill="none" stroke="#FFFFFF" stroke-width="4"/>`;
 
   // o: { p: 岛上的小朋友, top, bottom, shoes, dress, hat }；衣服 = { item: 衣服, color: 颜色 }
   function bodyKid(o) {
@@ -67,7 +71,7 @@
 
   // 一个人挡住别人的范围、自己每一件衣服的范围（140 × 256 里）
   const BLOCK = [[38, 28, 102, 96], [24, 98, 116, 180], [40, 176, 100, 236], [32, 224, 108, 253]];
-  const PART = { top: [46, 106, 94, 174], bottom: [46, 182, 94, 230], shoes: [36, 230, 104, 250] };
+  const PART = { top: [46, 106, 94, 174], bottom: [46, 182, 94, 230], shoes: [32, 228, 108, 252], hat: [30, 22, 110, 54] };
   const CLEAR = 0.6;           // 露出来 6 成以上才算「看得清楚」
 
   // ================= 购物中心的背景（1000 × 600） =================
@@ -125,7 +129,9 @@
     const strict = () => !listen && level >= 3;         // 衣服的种类也要对
     let COLORS = UNIT.colors;
     const useLevel = () => { COLORS = UNIT.colors.filter(c => (c.level || 1) <= level); };
-    const KEYS = ['top', 'bottom'];
+    const KEYS = ['top', 'bottom'];                     // 每个人一定看上衣、下身（有没有看得清楚）
+    const VKEYS = ['top', 'bottom', 'shoes', 'hat'];    // 算「露出来几成」的部位（连衣裙＝上衣或下身看得到）
+    const CAT = k => UNIT.clothes.find(c => c.kind === k);    // 连衣裙、帽子各只有一件
     const same = (a, b) => a && b && a.item.zh === b.item.zh && a.color.zh === b.color.zh;
     const phrase = p => (level < 3 && !listen) ? { zh: p.color.zh, py: p.color.py } : { zh: p.color.zh + '的' + p.item.zh, py: p.color.py + ' de ' + p.item.py.replace(/^T /, '') };
 
@@ -152,7 +158,7 @@
       return spots.map((q, i) => {
         const front = spots.filter((o, j) => j > i && alive[j]).map(o => BLOCK.map(b => box(o, b))).flat();
         const v = {};
-        KEYS.forEach(k => {
+        VKEYS.forEach(k => {
           const [x0, y0, x1, y1] = box(q, PART[k]);
           let open = 0, all = 0;
           for (let a = 0; a < 6; a++) for (let b = 0; b < 6; b++) {
@@ -162,6 +168,7 @@
           }
           v[k] = open / all;
         });
+        v.dress = Math.max(v.top, v.bottom);
         return v;
       });
     }
@@ -169,9 +176,15 @@
     // Level 2 只比颜色；Level 3 颜色和衣服都要一样（穿连衣裙的人：上衣、下身都是连衣裙，衣服种类一定不一样）
     const colorOf = (o, k) => o.dress ? o.dress.color : o[k].color;
     const itemOf = (o, k) => o.dress ? '连衣裙' : o[k].item.zh;
-    const matches = (o, clue, k) => colorOf(o, k).zh === clue[k].color.zh && (!strict() || itemOf(o, k) === clue[k].item.zh);
-    // 规则：这个人露出来、看得清楚的上衣或下身，有没有一件颜色跟条件不一样
-    const ruledOut = (o, v, clue) => KEYS.some(k => v[k] >= CLEAR && !matches(o, clue, k));
+    // 连衣裙：一定要穿连衣裙、颜色对；鞋子：颜色对（找朋友 Level 3 种类也要对）；帽子：要戴帽子、颜色对
+    const matches = (o, clue, k) => {
+      if (k === 'dress') return !!o.dress && o.dress.color.zh === clue.dress.color.zh;
+      if (k === 'hat') return !!o.hat && o.hat.zh === clue.hat.color.zh;
+      if (k === 'shoes') return o.shoes.color.zh === clue.shoes.color.zh && (!strict() || o.shoes.item.zh === clue.shoes.item.zh);
+      return colorOf(o, k).zh === clue[k].color.zh && (!strict() || itemOf(o, k) === clue[k].item.zh);
+    };
+    // 规则：这个人露出来、看得清楚的部位（题目考的），有没有一件跟条件不一样
+    const ruledOut = (o, v, clue) => clue.keys.some(k => v[k] >= CLEAR && !matches(o, clue, k));
 
     const randPart = (k, boy, color) => ({ item: pick(KIND(k, boy)), color: color || pick(COLORS) });
     // 挑颜色：看旁边（左右 2 格、前后 2 排以内）的人，尽量挑旁边比较少人穿的颜色，免得同一个颜色挤成一团
@@ -188,16 +201,61 @@
       else { o.top = randPart('top', boy, colorFor('top')); o.bottom = randPart('bottom', boy, colorFor('bottom')); }
       return o;
     }
-    // 只差一点的人：上衣或下身换一个颜色，或上下颜色对调（衣服的种类随便）
-    function nearMiss(clue, k, boy) {
-      const o = { top: { item: strict() ? clue.top.item : pick(KIND('top', boy)), color: clue.top.color }, bottom: { item: strict() ? clue.bottom.item : pick(KIND('bottom', boy)), color: clue.bottom.color }, shoes: randPart('shoes', boy), hat: Math.random() < .25 ? pick(COLORS) : null };
-      // Level 3：一半的人颜色都对，只差衣服的种类（例如红色的毛衣，不是红色的球衣）
-      const other = KIND(k, boy).filter(c => c.zh !== clue[k].item.zh);
-      if (strict() && other.length && Math.random() < .5) { o[k].item = pick(other); return o; }
-      if (Math.random() < .3) { o.top.color = clue.bottom.color; o.bottom.color = clue.top.color; }
-      else o[k].color = pick(COLORS.filter(c => c.zh !== clue[k].color.zh && c.zh !== clue[k === 'top' ? 'bottom' : 'top'].color.zh));
+    // 只差一点的人：跟答案穿得一样，只有一个部位（k）不一样
+    const copy = o => JSON.parse(JSON.stringify(o));
+    function dressOf(clue, boy) {          // 照着条件穿：条件没说的部位随便穿
+      const o = { shoes: clue.shoes ? copy(clue.shoes) : randPart('shoes', boy), hat: clue.hat ? clue.hat.color : null };
+      if (clue.dress) o.dress = copy(clue.dress);
+      else { o.top = copy(clue.top); o.bottom = copy(clue.bottom); }
       return o;
     }
+    function nearMiss(clue, k, boy) {
+      if (boy && clue.dress) return null;
+      const o = dressOf(clue, boy);
+      if (!strict() && o.top) { o.top.item = pick(KIND('top', boy)); o.bottom.item = pick(KIND('bottom', boy)); }
+      const otherColor = c => pick(COLORS.filter(x => x.zh !== c.zh));
+      if (k === 'top' || k === 'bottom') {
+        const other = KIND(k, boy).filter(c => c.zh !== clue[k].item.zh);
+        if (strict() && other.length && Math.random() < .5) { o[k].item = pick(other); return o; }      // 颜色对，衣服不对
+        if (Math.random() < .3) { o.top.color = clue.bottom.color; o.bottom.color = clue.top.color; }   // 上下颜色对调
+        else o[k].color = pick(COLORS.filter(c => c.zh !== clue[k].color.zh && c.zh !== clue[k === 'top' ? 'bottom' : 'top'].color.zh));
+      } else if (k === 'dress') {
+        if (Math.random() < .5) o.dress.color = otherColor(clue.dress.color);
+        else { delete o.dress; o.top = { item: pick(KIND('top', boy)), color: clue.dress.color }; o.bottom = { item: pick(KIND('bottom', false)), color: clue.dress.color }; }   // 上下一样的颜色，可是不是连衣裙
+      } else if (k === 'shoes') {
+        const other = KIND('shoes', boy).filter(c => c.zh !== clue.shoes.item.zh);
+        if (strict() && other.length && Math.random() < .5) o.shoes.item = pick(other);                // 颜色对，鞋子的种类不对
+        else o.shoes.color = otherColor(clue.shoes.color);
+      } else if (k === 'hat') {
+        o.hat = Math.random() < .4 ? null : otherColor(clue.hat.color);
+      }
+      return o;
+    }
+    // 出题：找朋友 Level 2 只有 Top／Bottom（颜色）；Level 3（和服务台）也会考连衣裙、鞋子、帽子
+    function makeClue(boy) {
+      const L3 = listen || level >= 3;
+      const c = { keys: ['top', 'bottom'], top: randPart('top', boy), bottom: randPart('bottom', boy), shoes: randPart('shoes', boy) };
+      if (!L3) return c;
+      if (!boy && Math.random() < .4) {
+        delete c.top; delete c.bottom; c.dress = { item: CAT('dress'), color: pick(COLORS) }; c.keys = ['dress', 'shoes'];
+        if (Math.random() < .35) { c.hat = { item: CAT('hat'), color: pick(COLORS) }; c.keys.push('hat'); }
+        return c;
+      }
+      const r = Math.random();
+      if (r < .35) c.keys.push('shoes');
+      else if (r < .65) { c.hat = { item: CAT('hat'), color: pick(COLORS) }; c.keys.push('hat'); }
+      return c;
+    }
+    const clueOk = c => c.dress || c.top.color.zh !== c.bottom.color.zh;   // 上下不同颜色，比较清楚
+    // 换某一个部位的颜色（规则检查的时候用）
+    const setColor = (o, k, c) => {
+      const n = copy(o);
+      if (k === 'hat') n.hat = c;
+      else if (k === 'shoes') n.shoes.color = c;
+      else if (n.dress) n.dress.color = c;
+      else if (k !== 'dress') n[k].color = c;
+      return n;
+    };
 
     // ---- 排一张图：位置、3 个走失的小朋友、只差一件的人、其他人，再检查规则 ----
     function build(n) {
@@ -210,26 +268,26 @@
           if (keep.length === spots.length) break;
           spots = keep;
         }
-        // 走失的小朋友：上衣和下身都要看得清楚
-        const canLost = shuffle(spots.map((q, i) => i).filter(i => KEYS.every(k => vis[i][k] >= CLEAR)));
-        if (canLost.length < n) continue;
-        const lostIdx = canLost.slice(0, n);
+        // 先出题，再找一个「题目考的部位都看得清楚」的位置当答案
         const heads = spots.map(() => pick(ART.people));            // 每个位置是哪一个小朋友（男生、女生）
-        const clues = [];
-        while (clues.length < n) {
-          const boy = heads[lostIdx[clues.length]].boy;
-          const c = { top: randPart('top', boy), bottom: randPart('bottom', boy), shoes: randPart('shoes', boy) };
-          if (c.top.color.zh === c.bottom.color.zh) continue;          // 上下不同颜色，比较清楚
-          if (clues.every(d => d.top.color.zh !== c.top.color.zh || d.bottom.color.zh !== c.bottom.color.zh)) clues.push(c);
+        const clues = [], lostIdx = [];
+        for (let t = 0; clues.length < n && t < 200; t++) {
+          const i = pick(spots.map((q, i) => i).filter(i => !lostIdx.includes(i)));
+          const c = makeClue(heads[i].boy);
+          if (!clueOk(c)) continue;
+          const can = shuffle(spots.map((q, j) => j).filter(j => !lostIdx.includes(j) && heads[j].boy === heads[i].boy && KEYS.concat(c.keys).every(k => vis[j][k] >= CLEAR)));
+          if (!can.length) continue;
+          clues.push(c); lostIdx.push(can[0]);
         }
+        if (clues.length < n) continue;
         const outfits = spots.map(() => null);
-        lostIdx.forEach((i, n) => { outfits[i] = Object.assign({ hat: null }, clues[n]); });
+        lostIdx.forEach((i, m) => { outfits[i] = dressOf(clues[m], heads[i].boy); });
         // 只差一件的人：差的那一件一定要看得清楚
         let ok = true;
         clues.forEach(clue => {
           for (let m = 0; m < C.near; m++) {
-            const k = pick(KEYS);
-            const cand = shuffle(spots.map((q, i) => i).filter(i => !outfits[i] && vis[i][k] >= CLEAR));
+            const k = pick(clue.keys);
+            const cand = shuffle(spots.map((q, i) => i).filter(i => !outfits[i] && vis[i][k] >= CLEAR && (!clue.dress || !heads[i].boy)));
             if (!cand.length) { ok = false; return; }
             outfits[cand[0]] = nearMiss(clue, k, heads[cand[0]].boy);
           }
@@ -250,13 +308,14 @@
               if (lostIdx[n] === i || ruledOut(outfits[i], vis[i], clue)) return;
               bad++;
               if (lostIdx.includes(i)) return;        // 走失的小朋友不改，等一下整张重排
-              // 换一件看得清楚的衣服的颜色：9 个颜色都可以挑，只要换完以后，每个条件都不会把他误认成走失的小朋友
-              const k = pick(KEYS.filter(k => vis[i][k] >= CLEAR));
+              // 换一件看得清楚、题目有考的衣服的颜色：只要换完以后，每个条件都不会把他误认成走失的小朋友
               const o = outfits[i];
-              const recolor = c => o.dress ? Object.assign({}, o, { dress: { color: c } }) : Object.assign({}, o, { [k]: { item: o[k].item, color: c } });
-              const okColors = COLORS.filter(c => clues.every((cl, m) => lostIdx[m] === i || ruledOut(recolor(c), vis[i], cl)));
-              const fresh = okColors.length ? quietColor(spots, outfits, i, k, okColors) : pick(COLORS.filter(c => clues.every(cl => cl[k].color.zh !== c.zh)));
-              outfits[i] = recolor(fresh);
+              const ks = clue.keys.filter(k => vis[i][k] >= CLEAR && !(k === 'dress' && !o.dress));
+              if (!ks.length) return;
+              const k = pick(ks);
+              const okColors = COLORS.filter(c => clues.every((cl, m) => lostIdx[m] === i || ruledOut(setColor(o, k, c), vis[i], cl)));
+              if (!okColors.length) return;
+              outfits[i] = setColor(o, k, (k === 'top' || k === 'bottom') && !o.dress ? quietColor(spots, outfits, i, k, okColors) : pick(okColors));
             });
           });
           if (!bad) return { spots, outfits, lostIdx, clues, heads };
@@ -289,11 +348,11 @@
         return e;
       });
     }
-    const ROWLAB = { top: 'Top', bottom: 'Bottom' };
+    const ROWLAB = { top: 'Top', bottom: 'Bottom', dress: 'Dress', shoes: 'Shoes', hat: 'Hat' };
     function showClue() {
       const clue = game.clues[at()];
       $('clueNo').textContent = `${G.card.who} ${step + 1} of ${C.count}`;
-      $('rows').innerHTML = KEYS.map(k => {
+      $('rows').innerHTML = clue.keys.map(k => {
         const p = phrase(clue[k]);
         const what = mode === 'listen'
           ? `<button type="button" class="say" data-k="${k}" aria-label="Listen: ${ROWLAB[k]}">🔊</button>`
@@ -307,7 +366,7 @@
     }
     function marks(o) {
       const clue = game.clues[at()];
-      KEYS.forEach(k => {
+      clue.keys.forEach(k => {
         const m = $('rows').querySelector(`.row[data-k="${k}"] .mark`);
         m.textContent = matches(o, clue, k) ? '✅' : '❌';
       });

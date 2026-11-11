@@ -45,7 +45,7 @@ UNIT.colors = [
 
 /* ---------------- 找人（服务台、找一找共用） ----------------
    一张挤挤的购物中心图。一关要找 count 个人，找到一个就换下一个人的条件（newPicture 决定要不要换新图）。
-   条件分两行：Top／Bottom。
+   条件：Level 2 两行 Top／Bottom；Level 3（和服务台）也会考 Dress 连衣裙、Shoes 鞋子、Hat 帽子（两三行）。
    找朋友 Level 2：只写颜色（红色／黑色），找人只看颜色。
    找朋友 Level 3：写颜色和衣服（红色的球衣／黑色的牛仔裤），颜色和衣服都要对；图里会有只差衣服种类的人。
    服务台：只有 Level 3。广播念颜色和衣服（红色的球衣），可是找人只看颜色。
@@ -67,13 +67,13 @@ UNIT.crowd = {
   lost: {
     title: { zh: '服务台', py: 'fú wù tái', en: 'Lost Kid Announcement' },
     card: { icon: '📢', head: 'Lost kid!', who: 'Lost kid', many: 'lost kids' },
-    help: 'Tap 🔊 to hear Top and Bottom. Then tap the lost kid in the crowd.'
+    help: 'Tap 🔊 to hear each line (Top, Bottom, Dress, Shoes or Hat). Then tap the lost kid in the crowd.'
   },
   // 找朋友：跟朋友约好见面，朋友传讯息说今天的衣服（用读的）
   find: {
     title: { zh: '找朋友', py: 'zhǎo péng yǒu', en: 'Find My Friends' },
     card: { icon: '📱', head: "My friend's message", who: 'Friend', many: 'friends' },
-    help: "Your friend is at the mall. Read the message to see the top and bottom they have on today. Then find that friend in the crowd and tap them!"
+    help: "Your friend is at the mall. Read the message to see what they have on today (Level 3: also dress, shoes or hat). Then find that friend in the crowd and tap them!"
   },
   done: { zh: '都找到了！', py: 'dōu zhǎo dào le!' }
 };
@@ -83,15 +83,33 @@ UNIT.crowd = {
    Level 1「这是＿＿。」（只说衣服）
    Level 2「这是＿＿的＿＿。」（颜色＋衣服）
    Level 3 字卡自己排成整句「我想买红色的T恤。」再按 Submit
-   特别格（special）：前进两格、后退一格、再掷一次。时间内走到终点（第 21 格）就有金币（1/2/3）
+   特别格（special）：前进两格、后退一格、再掷一次。时间内走到终点（第 40 格）就有金币（1/2/3）
    每一格的衣服和颜色每次都会重新随机 */
 UNIT.board = {
   title: { zh: '衣服走一走', py: 'yī fú zǒu yi zǒu', en: 'Clothes Board Game' },
-  squares: 21,
-  time: [150, 180, 240],
+  squares: 40,                  // 第 40 格是终点
+  cols: 10,                     // 一排几格（蛇形：第一排左到右、第二排右到左……）
+  time: [240, 300, 420],
   special: {
     5:  { zh: '前进两格', py: 'qián jìn liǎng gé', en: 'Go forward 2', move: 2 },
     11: { zh: '后退一格', py: 'hòu tuì yì gé', en: 'Go back 1', move: -1 },
-    16: { zh: '再掷一次', py: 'zài zhì yí cì', en: 'Roll again', again: true }
+    16: { zh: '再掷一次', py: 'zài zhì yí cì', en: 'Roll again', again: true },
+    23: { zh: '前进两格', py: 'qián jìn liǎng gé', en: 'Go forward 2', move: 2 },
+    29: { zh: '后退一格', py: 'hòu tuì yì gé', en: 'Go back 1', move: -1 },
+    34: { zh: '再掷一次', py: 'zài zhì yí cì', en: 'Roll again', again: true }
   }
+};
+
+/* ---------------- 我想买（衣服店） ----------------
+   Level 1「我想买帽子。」点对的衣服（每一种只有一件）
+   Level 2「我想买红色的T恤。」点对的（有同一种别的颜色、同一个颜色别的衣服混淆），再选「多少钱？」＿＿美元
+   Level 3「你有三十美元。你想买什么？」自己选两件、不超过预算，按 Next；再用字卡拼出「我想买＿＿的＿＿和＿＿的＿＿。」，打出「一共＿＿美元」，按 Submit
+   price：Level 1、2 的价钱范围（美元）；price3、budgets：Level 3 的价钱和预算。答对 target 题就马上结束、给金币（1/2/3） */
+UNIT.wantbuy = {
+  title: { zh: '我想买', py: 'wǒ xiǎng mǎi', en: 'I Want to Buy' },
+  time: [60, 90, 150],
+  target: [8, 6, 4],
+  price: [5, 30],
+  price3: [5, 25],
+  budgets: [30, 40, 50]
 };

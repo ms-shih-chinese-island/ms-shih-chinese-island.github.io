@@ -83,3 +83,26 @@ UNIT.waiting = {
   traps: 3,             // 每张图多放几张干扰卡（长得像、位置靠近的部位，见 games/waiting.html 的 LIKE）
   done: { zh: '太棒了！', py: 'tài bàng le!' }
 };
+
+/* ---------------- 西门说 Simon Says ----------------
+   有「西门说」才点小朋友身上的部位；没有「西门说」就不要点（等 wait 秒，没有点就算对）。
+   Level 1「摸摸你的＿＿」（二年级的字）；Level 2「摸摸／指一指你的＿＿」（所有可以点的字）；Level 3 一样，可是只用听的。
+   simonShare：有「西门说」的机会（其他的是没有「西门说」的陷阱题）。答对 target 题就马上结束、给金币（1/2/3） */
+UNIT.simon = {
+  title: { zh: '西门说', py: 'xī mén shuō', en: 'Simon Says' },
+  time: [60, 75, 90],
+  target: [8, 8, 8],
+  wait: 4,
+  simonShare: 0.65
+};
+
+/* ---------------- 转盘 Wheel of Body Parts ----------------
+   转转盘，停在哪一个字，就「指一指你的＿＿」：点小朋友身上那个部位。
+   Level 1：first 这 7 个字（一／二年级投影片）有拼音；Level 2：所有可以点的字，有拼音；Level 3：一样，转盘上只有中文。
+   答对 target 题就马上结束、给金币（1/2/3） */
+UNIT.wheel = {
+  title: { zh: '转盘', py: 'zhuàn pán', en: 'Wheel of Body Parts' },
+  time: [75, 90, 90],
+  target: [6, 6, 6],
+  first: ['头', '眼睛', '耳朵', '鼻子', '嘴巴', '手', '脚']
+};

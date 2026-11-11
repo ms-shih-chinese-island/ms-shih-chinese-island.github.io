@@ -24,7 +24,7 @@
     'post|community': [1, 2, 3], 'counter|community': [1, 2, 3], 'sort|community': [1, 2, 3],
     'seek|police': [1, 2, 3], 'lostfound|police': [1, 2, 3], 'where|police': [1, 2, 3],
     'gear|fire': [2, 3, 4], 'douse|fire': [2, 3, 4],
-    'weather|airport': [1, 2, 3], 'clock|airport': [1, 2, 3], 'flags|airport': [1, 2, 3], 'trip|airport': [1, 2, 3], 'forecast|beach': [2, 3, 4], 'whoami|beach': [2, 3, 4], 'beachfind|beach': [1, 2, 3], 'animals|petshop': [1, 2, 3], 'animals|garden': [1, 2, 3], 'animals|zoo': [1, 2, 3], 'zoolike|zoo': [1, 2, 3], 'zoosize|zoo': 2, 'pa|garden': [1, 2, 3], 'animals|aquarium': [1, 2, 3], 'pa|aquarium': [1, 2, 3], 'hearts|qixi': [1, 2, 3], 'clothesboard|clothes': [1, 2, 3]
+    'weather|airport': [1, 2, 3], 'clock|airport': [1, 2, 3], 'flags|airport': [1, 2, 3], 'trip|airport': [1, 2, 3], 'forecast|beach': [2, 3, 4], 'whoami|beach': [2, 3, 4], 'beachfind|beach': [1, 2, 3], 'animals|petshop': [1, 2, 3], 'animals|garden': [1, 2, 3], 'animals|zoo': [1, 2, 3], 'zoolike|zoo': [1, 2, 3], 'zoosize|zoo': 2, 'pa|garden': [1, 2, 3], 'animals|aquarium': [1, 2, 3], 'pa|aquarium': [1, 2, 3], 'hearts|qixi': [1, 2, 3], 'clothesboard|clothes': [1, 2, 3], 'simon|body': [1, 2, 3], 'wheel|body': [1, 2, 3], 'wantbuy|clothes': [1, 2, 3]
   };
   const COIN = '<svg class="coinIc" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17" fill="#F5C531" stroke="#2B2B2B" stroke-width="3"/><circle cx="20" cy="20" r="11.5" fill="none" stroke="#D99A1E" stroke-width="2.5"/><path d="M20 12.5 L22.2 17.4 L27.5 17.9 L23.5 21.4 L24.7 26.6 L20 23.9 L15.3 26.6 L16.5 21.4 L12.5 17.9 L17.8 17.4 Z" fill="#FFF3C2" stroke="#D99A1E" stroke-width="1.5" stroke-linejoin="round"/></svg>';
   window.ShihCoins = {
