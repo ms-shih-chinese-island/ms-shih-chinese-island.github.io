@@ -75,7 +75,10 @@ window.ISLANDS = {
           { zh: '我喜欢动物', py: 'wǒ xǐ huān dòng wù', en: 'My Favorite Animal', note: 'Which animal do you like? Why? 我喜欢＿＿，因为＿＿很＿＿。', href: 'games/zoolike.html?unit=zoo' },
           { zh: '排大小', py: 'pái dà xiǎo', en: 'Small to Big', note: 'Put the animals in order from small to big. Which is the biggest?', href: 'games/zoosize.html?unit=zoo' }
         ] },
-      { zh: '运动场', py: 'yùn dòng chǎng', en: 'Sports Field', x: 1758, y: 166, color: 'sun', games: [] },
+      { id: 'sports', zh: '运动场', py: 'yùn dòng chǎng', en: 'Sports Field', x: 1758, y: 166, color: 'sun', games: [
+          { zh: '我喜欢打球', py: 'wǒ xǐ huān dǎ qiú', en: 'Sports I Like', note: 'Read the sports card: 我喜欢／我最棒的是／我不会／我想学＿＿。', href: 'games/sportstalk.html?unit=sports' },
+          { zh: '谁在打什么球？', py: 'shéi zài dǎ shén me qiú?', en: 'Who Plays What?', note: 'Who plays which ball? Read names, shirt colors and count!', href: 'games/whoball.html?unit=sports' }
+        ] },
       { id: 'aquarium', zh: '水族馆', py: 'shuǐ zú guǎn', en: 'Aquarium', x: 2194, y: 148, color: 'sea', games: [
           { zh: '在水族馆', py: 'zài shuǐ zú guǎn', en: 'At the Aquarium', note: 'Read the sentence. Find the sea animals — how many?', href: 'games/animals.html?unit=aquarium' },
           { zh: '我怕／我不怕', py: 'wǒ pà / wǒ bú pà', en: 'Afraid or Not?', note: 'Look at the face. Are you afraid of the sea animal? 我怕／我不怕，大／小', href: 'games/pa.html?unit=aquarium' }
@@ -158,9 +161,13 @@ window.ISLANDS = {
           { zh: '年夜饭找一找', py: 'nián yè fàn zhǎo yì zhǎo', en: 'New Year Feast Hunt', note: 'Tap a circle to see what is there. Drag the word into the sentence.', href: 'games/feast.html?unit=cny' }
         ] },
       { id: 'qixi', zh: '七夕情人节', py: 'qī xī qíng rén jié', en: "Chinese Valentine's Day", x: 510, y: 578, color: 'mom', games: [
-          { zh: '送爱心', py: 'sòng ài xīn', en: 'Send Hearts', note: 'Read the numbers and send hearts to your family. 我爱你！情人节快乐！', href: 'games/hearts.html?unit=qixi' }
+          { zh: '送爱心', py: 'sòng ài xīn', en: 'Send Hearts', note: 'Read the numbers and send hearts to your family and friends. 我爱你！情人节快乐！', href: 'games/hearts.html?unit=qixi' },
+          { zh: '送礼物', py: 'sòng lǐ wù', en: 'Give a Gift', note: 'Read the gift card and find the gift. 祝你节日快乐！这是我送你的＿＿。', href: 'games/gift.html?unit=qixi' }
         ] },
-      { zh: '端午节', py: 'duān wǔ jié', en: 'Dragon Boat Festival', x: 1060, y: 52, color: 'sea', games: [] },
+      { id: 'duanwu', zh: '端午节', py: 'duān wǔ jié', en: 'Dragon Boat Festival', x: 1060, y: 52, color: 'sea', games: [
+          { zh: '划龙舟', py: 'huá lóng zhōu', en: 'Dragon Boat Race', note: 'Answer the numbers to row your dragon boat. Win the race! 我爱吃粽子！', href: 'games/dragonboat.html?unit=duanwu' },
+          { zh: '找龙舟', py: 'zhǎo lóng zhōu', en: 'Dragon Boat Crew', note: 'Read the colors. Put the right crew on the dragon boat and send it off!', href: 'games/findboat.html?unit=duanwu' }
+        ] },
       { id: 'market', zh: '感恩节', py: 'gǎn ēn jié', en: 'Thanksgiving', x: 950, y: 170, color: 'dad',
         games: [
           { zh: '快手买一买', py: 'kuài shǒu mǎi yi mǎi', en: 'Quick Shopper', note: 'Tap a falling food, then its word on the belt. Buy everything on your list!', href: 'games/shop.html?unit=thanksgiving' },

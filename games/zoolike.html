@@ -191,8 +191,8 @@ Shih.loadUnit().then(UNIT => {
     // 念整句
     const zh = [...$('sent').children].map(x => x.dataset && x.dataset.zh ? x.dataset.zh : x.textContent.replace(/[a-zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜü\s]/g, '')).join('');
     Shih.speak(zh || '对！');
-    if (done >= GOAL()) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 1800); return; }   // 达标了：马上结束，给金币
-    setTimeout(() => { if (running) show(); }, level === 1 ? 1300 : 2200);
+    if (done >= GOAL()) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 800); return; }   // 达标了：马上结束，给金币
+    setTimeout(() => { if (running) show(); }, 700);
   }
   function setup() {
     paintLevels(level);

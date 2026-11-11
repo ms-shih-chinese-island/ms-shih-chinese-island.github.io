@@ -191,7 +191,7 @@ Shih.loadUnit().then(UNIT => {
           Shih.speak(zh);
           done++; left--; update();
           if (!left) {
-            if (r + 1 < rounds.length) setTimeout(() => { r++; showRound(true); }, 1100);
+            if (r + 1 < rounds.length) setTimeout(() => { r++; showRound(true); }, 700);
             else setTimeout(() => { $('winMsg').hidden = false; Shih.speak(C.done.zh); }, 800);
           }
         }

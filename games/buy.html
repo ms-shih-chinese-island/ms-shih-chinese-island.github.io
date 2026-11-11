@@ -339,7 +339,7 @@ Shih.loadUnit().then(UNIT => {
         busy = false;
         if (done >= qs.length) return finish(true);
         qi++; showQuestion();
-      }, 1100);
+      }, 700);
     } else {
       // 买错了：篮子上一个大大的红色 ✗、篮子摇一摇；停一下，袋子再一袋一袋飞回架上（不扣分）
       busy = true;

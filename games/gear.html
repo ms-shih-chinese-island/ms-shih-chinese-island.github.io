@@ -211,8 +211,8 @@ Shih.loadUnit().then(UNIT => {
     busy = true; done++; update();
     const full = !plan.length;
     if (full) { $('man').innerHTML = FART.man(worn, 'great'); setTimeout(() => Shih.speak('谢谢！出发！'), 500); }
-    if (done >= GOAL()) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 1200); return; }   // 达标了：马上结束，给金币
-    setTimeout(() => { if (running) show(); }, full ? 1800 : (level === 1 ? 500 : 1200));
+    if (done >= GOAL()) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 800); return; }   // 达标了：马上结束，给金币
+    setTimeout(() => { if (running) show(); }, full ? 1000 : (level === 1 ? 500 : 700));
   }
   function setup() {
     paintLevels(level);

@@ -271,7 +271,7 @@ Shih.loadUnit().then(UNIT => {
   });
   function right() {
     Shih.speak(q.say); q = null; $('go').hidden = true;
-    setTimeout(() => { if (!running) return; msg('👍 Roll the dice! 🎲'); busy = false; $('roll').disabled = false; }, 1200);
+    setTimeout(() => { if (!running) return; msg('👍 Roll the dice! 🎲'); busy = false; $('roll').disabled = false; }, 600);
   }
   function setup() {
     paintLevels(level);

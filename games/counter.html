@@ -201,7 +201,7 @@ Shih.loadUnit().then(UNIT => {
           running = false; cancelAnimationFrame(tick);
           $('winTime').textContent = 'Time left: ' + fmt(Math.max(0, left));
           setTimeout(() => { $('winMsg').hidden = false; Shih.speak('太棒了'); }, 900);
-        } else setTimeout(() => { if (running) show(); }, 1300);
+        } else setTimeout(() => { if (running) show(); }, 700);
         return true;
       }
     });

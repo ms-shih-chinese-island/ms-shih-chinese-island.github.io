@@ -113,7 +113,7 @@ Shih.loadUnit().then(UNIT => {
     else { $('timeUpTxt').textContent = `You got ${done} of ${GOAL()}. Try again!`; $('timeUp').hidden = false; Shih.speak('时间到了'); }
   }
 
-  const LEVELS = [{ note: 'Number → 中文 + pinyin' }, { note: 'Send hearts to family' }, { note: '+ shirt colors' }];
+  const LEVELS = [{ note: 'Number → 中文 + pinyin' }, { note: 'Family & friends' }, { note: '+ shirt colors' }];
   let level = Shih.startLevel('heartsLevel', 3);
   const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('heartsLevel', lv); setup(); });
   const HELP = ['Look at the number on the heart. Choose the Chinese number.',
@@ -171,19 +171,22 @@ Shih.loadUnit().then(UNIT => {
       });
       $('task').querySelector('.dropSlot').addEventListener('click', e => { if (!e.currentTarget.classList.contains('filled')) dnd.tapSlot(e.currentTarget); });
     } else if (level === 2) {
-      // 五个家人；「我爱我的家人。把五个心送给妈妈。」
-      const fs = shuffle(FAM).slice(0, 5), to = pick(fs), N = cnt(n);
+      // 四个家人＋一个朋友；「我爱我的家人。把五个心送给妈妈。」或「我爱我的朋友。把五个心送给我的朋友。」
+      const fr = pick(C.friends), fs = shuffle(shuffle(FAM).slice(0, 4).concat([fr])), N = cnt(n);
+      const to = Math.random() < .3 ? fr : pick(fs.filter(f => f !== fr));
       const people = fs.map((f, i) => ({ f, top: SHIRT[i], got: 0 }));
-      q = { n, people, to: people[fs.indexOf(to)], say: `我爱我的家人。把${N.zh}个心送给${to.zh}。` };
-      setTask(`我爱我的家人。把${N.zh}个心送给${to.zh}。`, `wǒ ài wǒ de jiā rén. bǎ ${N.py} ge xīn sòng gěi ${to.py}.`);
+      const who = to === fr ? { zh: '我的朋友', py: 'wǒ de péng yǒu' } : to, love = to === fr ? { zh: '我爱我的朋友。', py: 'wǒ ài wǒ de péng yǒu.' } : { zh: '我爱我的家人。', py: 'wǒ ài wǒ de jiā rén.' };
+      q = { n, people, to: people[fs.indexOf(to)], say: `${love.zh}把${N.zh}个心送给${who.zh}。` };
+      setTask(`${love.zh}把${N.zh}个心送给${who.zh}。`, `${love.py} bǎ ${N.py} ge xīn sòng gěi ${who.py}.`);
       people.forEach((p, i) => $('scene').appendChild(makeWho(p, i)));
       $('bank').hidden = true; $('bar').hidden = false;
     } else {
       // 穿红色衣服的哥哥，把十二个心送给穿蓝色衣服的妹妹。
       // 送的人、收的人；同一个称呼、别的颜色的人；同一个颜色、别的称呼的人
-      const [fa, fb] = shuffle(FAM), [ca, cb, cc, cd] = shuffle(COL);
+      const POOL = FAM.concat([pick(C.friends)]);           // 家人＋一个朋友（谁送给谁）
+      const [fa, fb] = shuffle(POOL), [ca, cb, cc, cd] = shuffle(COL);
       const A = { f: fa, c: ca }, B = { f: fb, c: cb };
-      const others = [{ f: fa, c: cc }, { f: fb, c: ca }, { f: shuffle(FAM.filter(f => f !== fa && f !== fb))[0], c: cb }, { f: fb, c: cd }];
+      const others = [{ f: fa, c: cc }, { f: fb, c: ca }, { f: shuffle(POOL.filter(f => f !== fa && f !== fb))[0], c: cb }, { f: fb, c: cd }];
       const people = shuffle([A, B].concat(shuffle(others).slice(0, 3))).map(p => ({ f: p.f, c: p.c, top: p.c.hex, got: 0 }));
       const N = cnt(n);
       q = { n, people, from: people.find(p => p.f === fa && p.c === ca), to: people.find(p => p.f === fb && p.c === cb), giver: null };
@@ -231,8 +234,8 @@ Shih.loadUnit().then(UNIT => {
   function good() {
     busy = true; done++; update();
     Shih.speak(level === 1 ? q.say : '我爱你！');
-    if (done >= GOAL()) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 1500); return; }   // 达标了：马上结束，给金币
-    setTimeout(() => { if (running) show(); }, 1500);
+    if (done >= GOAL()) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 800); return; }   // 达标了：马上结束，给金币
+    setTimeout(() => { if (running) show(); }, 700);
   }
   function setup() {
     paintLevels(level);

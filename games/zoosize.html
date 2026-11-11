@@ -175,8 +175,8 @@ Shih.loadUnit().then(UNIT => {
     busy = true; done++; update();
     const o = q.order;
     Shih.speak(`最大的是${o[o.length - 1].zh}。最小的是${o[0].zh}。`);
-    if (done >= GOAL) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 2200); return; }   // 达标了：马上结束，给金币
-    setTimeout(() => { if (running) show(); }, 2600);
+    if (done >= GOAL) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 800); return; }   // 达标了：马上结束，给金币
+    setTimeout(() => { if (running) show(); }, 700);
   }
   function setup() {
     done = 0;

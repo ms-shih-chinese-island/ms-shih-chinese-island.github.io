@@ -323,7 +323,7 @@ Shih.loadUnit().then(UNIT => {
         $('winTime').textContent = timerOn() ? 'Time: ' + Shih.fmt(ms) : '';
         $('winMsg').hidden = false; Shih.speak('太棒了');
       } else show();
-    }, 1300);
+    }, 700);
   }
   function update() { $('score').textContent = `${done} / ${rounds.length}`; }
   const wait = Shih.startCover($('playArea'), () => { playing = true; if (timerOn()) timer.start(); if (listen()) speakFriends(); });

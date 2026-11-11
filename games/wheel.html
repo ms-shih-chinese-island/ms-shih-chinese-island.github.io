@@ -147,8 +147,8 @@ Shih.loadUnit().then(UNIT => {
       $('kid').innerHTML = PT.svg({ zh: q.w.zh, look, mark: 'arrow', side });
       busy = true; done++; update(); Shih.speak('对！');
       q = null; $('patient').classList.add('off');
-      if (done >= GOAL()) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 1100); return; }
-      setTimeout(() => { if (!running) return; busy = false; $('spin').disabled = false; msg('Spin again! 🎡'); $('kid').innerHTML = PT.svg({ zh: '头', look }); }, 1200);
+      if (done >= GOAL()) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 800); return; }
+      setTimeout(() => { if (!running) return; busy = false; $('spin').disabled = false; msg('Spin again! 🎡'); $('kid').innerHTML = PT.svg({ zh: '头', look }); }, 600);
     } else {
      
       $('patient').classList.remove('oops'); void $('patient').offsetWidth; $('patient').classList.add('oops');

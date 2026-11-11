@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>找龙舟</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 找龙舟（端午节）：码头上一排人，衣服、帽子颜色都不一样。看题目，把对的船员送上龙舟，龙舟就出发。
+   Level 1 一个颜色（衣服）；Level 2 两个颜色（衣服＋帽子）；Level 3 船员名单（两组），自己拖人上船，按 Submit。
+   答错了摇一摇（不扣分）。让 boats 条龙舟出发就过关、给金币。设定在 units/duanwu/words.js 的 UNIT.findboat */
+body.game { background: #E8F4F8; }
+.box { max-width: 1060px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+.scene { position: relative; height: 290px; border: 4px solid #2B2B2B; border-radius: 22px; overflow: hidden; background: linear-gradient(#BFE3F2 0 30%, #9CCB8A 30% 36%, #5BA7D6 36%); }
+.wave { position: absolute; height: 0; width: 60px; border-top: 3px solid rgba(255, 255, 255, .6); border-radius: 50%; }
+.boatWrap { position: absolute; left: 50%; bottom: 6px; width: 660px; height: 270px; margin-left: -330px; transition: transform .6s ease-in; }
+.boatWrap.leave { transform: translateX(140%); }
+.boatWrap.away { transform: translateX(-140%); transition: none; }
+.boatWrap.arrive { transition: transform .45s ease-out; }
+.hull { position: absolute; left: 0; bottom: 0; width: 660px; height: 130px; pointer-events: none; z-index: 2; }
+.seats.dropSlot { position: absolute; inset: 0; z-index: 1; display: flex; align-items: flex-end; justify-content: center; gap: 0; padding: 0 76px 30px; border: 3px dashed transparent; border-radius: 20px; background: none; min-width: 0; min-height: 0; flex-direction: row; }
+.seats.dropSlot.hover { border-color: #FFFFFF; background: rgba(255, 255, 255, .18); }
+.panel { background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 20px; padding: 10px 14px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.order { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.order .ruby .py { font-size: 15px; } .order .ruby .zh { font-size: 30px; font-weight: 700; }
+.lead { font: 800 22px var(--f-latin); }
+.ruby.wrap { flex-wrap: wrap; justify-content: center; row-gap: 6px; }
+.again { background: #FFF6D6; border: 2px solid #2B2B2B; border-radius: 12px; font-size: 24px; cursor: pointer; padding: 2px 10px; }
+.rows { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.rows .row { display: flex; align-items: center; gap: 8px; padding: 2px 10px; border: 3px solid transparent; border-radius: 12px; }
+.rows .row .ruby .py { font-size: 14px; } .rows .row .ruby .zh { font-size: 28px; font-weight: 700; }
+.rows .row .mark { font: 800 26px var(--f-latin); min-width: 30px; }
+.rows .row.good { border-color: var(--me); background: var(--me-soft); }
+.rows .row.bad { border-color: var(--bad); background: #FCE3E0; }
+.rows .row.good .mark { color: var(--me-ink); } .rows .row.bad .mark { color: var(--bad); }
+.hint { font: 700 16px var(--f-latin); color: var(--bad); min-height: 20px; text-align: center; }
+.go { font: 800 18px var(--f-latin); background: var(--me); color: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 12px; padding: 4px 22px; cursor: pointer; }
+.dock.dropSlot { display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 6px; min-height: 140px; padding: 8px 8px 0; border: 4px solid #2B2B2B; border-radius: 18px;
+  background: linear-gradient(transparent 0 calc(100% - 22px), #A8703F calc(100% - 22px)), repeating-linear-gradient(90deg, #D9A066 0 58px, #C98E55 58px 60px); }
+.dock.dropSlot.hover { outline: 4px solid #FFFFFF; }
+.crew { width: 100px; padding: 0; border: 0; background: none; cursor: grab; touch-action: none; display: block; }
+.crew svg { width: 100%; height: auto; display: block; pointer-events: none; }
+.seats .crew { width: 84px; cursor: pointer; }
+.crew.used { cursor: default; }
+.crew.dragging { position: fixed; z-index: 50; cursor: grabbing; pointer-events: none; filter: drop-shadow(0 8px 10px rgba(43, 43, 43, .3)); }
+.crew.oops, .rows .row.oops, .go.oops { animation: shake .35s; }
+.crew.oops svg { filter: drop-shadow(0 0 6px #C2372F); }
+.timer.low { background: #FCE3E0; border-color: var(--bad); }
+.timeUp { text-align: center; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 10px; margin: 0 auto 10px; max-width: 640px; font: 700 18px var(--f-latin); display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.timeUp .ruby .py { font-size: 12px; } .timeUp .ruby .zh { font-size: 26px; }
+@media (max-width: 700px) {
+  .scene { height: 210px; }
+  .boatWrap { transform-origin: 50% 100%; scale: .62; }
+  .crew { width: 72px; }
+  .order .ruby .zh { font-size: 24px; } .rows .row .ruby .zh { font-size: 22px; }
+}
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill timer" id="timer">0:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="timeUp" id="timeUp" hidden><span class="ruby" id="timeUpRuby"></span><span id="timeUpTxt"></span><button class="ctl" id="again2" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="box">
+        <div class="scene" id="scene"></div>
+        <div class="panel" id="panel"></div>
+        <div class="dock dropSlot" id="dock"></div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/npcs.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.findboat, COLORS = UNIT.COLORS;
+  const $ = id => document.getElementById(id);
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const COL = zh => COLORS.find(c => c.zh === zh);
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('winRuby').innerHTML = Shih.rubyText(C.win.zh, C.win.py);
+  $('timeUpRuby').innerHTML = Shih.ruby('时间到了', 'shí jiān dào le');
+  Shih.soundButton($('soundBtn'));
+
+  // ---- 河和龙舟（木头色的船，龙头朝右：往右边出发） ----
+  const INK = '#2B2B2B', sw = w => `stroke="${INK}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"`;
+  const HULL = `<svg class="hull" viewBox="0 -40 660 130" aria-hidden="true">` +
+    `<path d="M40 30 L600 30 Q592 80 552 84 L96 84 Q52 80 40 30 Z" fill="#B9773E" ${sw(5)}/>` +
+    `<path d="M70 52 L580 52" stroke="#F5C531" stroke-width="6" stroke-dasharray="14 10"/>` +
+    `<path d="M80 68 L570 68" stroke="#8A5A2B" stroke-width="3"/>` +
+    // 龙头
+    `<path d="M592 34 Q596 0 620 -18 Q642 -24 650 -8 Q654 4 640 8 L628 10 Q650 18 642 34 Q624 44 600 40 Z" fill="#F5C531" ${sw(5)}/>` +
+    `<circle cx="632" cy="-8" r="5" fill="${INK}"/><path d="M612 -16 Q606 -34 618 -38 M630 -22 Q632 -40 644 -38" fill="none" ${sw(4)}/>` +
+    `<path d="M630 22 L644 24" ${sw(3)}/>` +
+    // 龙尾
+    `<path d="M46 34 Q18 12 26 -22 Q46 0 60 30 Z" fill="#F5C531" ${sw(5)}/>` +
+    // 鼓
+    `</svg>`;
+  $('scene').innerHTML = [[8, 46], [30, 70], [70, 50], [84, 80], [52, 88]].map(([x, y]) => `<span class="wave" style="left:${x}%;top:${y}%"></span>`).join('') +
+    `<div class="boatWrap" id="boatWrap"><div class="seats dropSlot" id="seats"></div>${HULL}</div>`;
+  const boatWrap = $('boatWrap'), seats = $('seats'), dock = $('dock');
+
+  // ---- 人：衣服、帽子的颜色（裤子、裙子都是卡其色，不会混淆） ----
+  const HAT = hex => `<g transform="translate(0 -6)"><path d="M40 60 Q100 44 160 60 Q150 70 100 66 Q50 70 40 60 Z" fill="${hex}" ${sw(4)}/>` +
+    `<path d="M64 60 Q66 30 100 28 Q134 30 136 60 Z" fill="${hex}" ${sw(4)}/>` +
+    `<path d="M66 52 Q100 46 134 52" fill="none" stroke="${hex === '#FFFFFF' ? '#9AA3AD' : '#FFFFFF'}" stroke-width="5"/></g>`;
+  const KINDS = ['man', 'woman', 'boy', 'girl'];
+  const drawPerson = p => NPC_ART.person({ kind: p.kind, top: COL(p.shirt).hex, bottom: '#CDB98C', hat: p.hat ? HAT(COL(p.hat).hex) : '' });
+  // 这个人合不合这一组：衣服颜色要对；有帽子的条件，帽子颜色也要对
+  const fits = (p, g) => p.shirt === g.shirt && (!g.hat || p.hat === g.hat);
+  const fitsAny = (p, groups) => groups.some(g => fits(p, g));
+
+  // ---- 出题 ----
+  const NUMS = { 1: ['一', 'yí'], 2: ['两', 'liǎng'], 3: ['三', 'sān'], 4: ['四', 'sì'] };
+  // 一组人的说法：两个穿红色衣服、戴黄色帽子的（船员／人）
+  // 一组人的说法：两个穿红色衣服、戴黄色帽子的人（分成词组，换行不会切开词）
+  function phrase(g, hatFirst) {
+    const [nz, np] = NUMS[g.n], s = COL(g.shirt), h = g.hat && COL(g.hat);
+    const wear = [`穿${s.zh}衣服`, `chuān ${s.py} yī fú`];
+    const hat = h && [`戴${h.zh}帽子`, `dài ${h.py} mào zi`];
+    const parts = !hat ? [wear] : hatFirst ? [hat, wear] : [wear, hat];
+    const words = [[nz + '个', np + ' gè']].concat(parts.map((x, i) => i < parts.length - 1 ? [x[0] + '、', x[1]] : x));
+    words[words.length - 1] = [words[words.length - 1][0] + '的人', words[words.length - 1][1] + ' de rén'];
+    return { zh: words.map(w => w[0]).join(''), html: Shih.rubyWords(words) };
+  }
+  function makeGroups() {
+    const cols = C.colors[level - 1], [lo, hi] = C.need[level - 1];
+    if (level === 1) return [{ n: rnd(lo, hi), shirt: pick(cols), hat: null }];
+    if (level === 2) { const s = pick(cols); return [{ n: rnd(lo, hi), shirt: s, hat: pick(cols.filter(c => c !== s)) }]; }
+    // Level 3：两组，衣服颜色不一样（这样一个人只会合一组）；至少一组有帽子
+    const [s1, s2] = shuffle(cols);
+    const withHat = shuffle([true, Math.random() < .5]);
+    const gs = [s1, s2].map((s, i) => ({ n: rnd(lo, hi), shirt: s, hat: withHat[i] ? pick(cols.filter(c => c !== s1 && c !== s2)) : null, hatFirst: Math.random() < .5 }));
+    while (gs[0].n + gs[1].n > 5) gs[Math.random() < .5 ? 0 : 1].n--;
+    gs.forEach(g => { if (g.n < 1) g.n = 1; });
+    return gs;
+  }
+  // 码头上的人：对的人（有时多一个）＋容易混淆的人（只对一半、颜色反过来）＋其他人
+  function makeDock(groups) {
+    const cols = C.colors[level - 1], total = C.people[level - 1];
+    const kind = () => pick(KINDS), hatOr = (p = .6) => Math.random() < p ? pick(cols) : null;
+    const right = [], tricky = [], other = [];
+    groups.forEach(g => {
+      const n = g.n + (Math.random() < .5 ? 1 : 0);
+      for (let i = 0; i < n; i++) right.push({ kind: kind(), shirt: g.shirt, hat: g.hat || hatOr() });
+      const others = cols.filter(c => c !== g.shirt);
+      if (g.hat) {
+        tricky.push({ kind: kind(), shirt: g.shirt, hat: pick(cols.filter(c => c !== g.hat)) });   // 衣服对、帽子不对
+        tricky.push({ kind: kind(), shirt: g.shirt, hat: null });                                   // 衣服对、没戴帽子
+        tricky.push({ kind: kind(), shirt: pick(others), hat: g.hat });                             // 帽子对、衣服不对
+        tricky.push({ kind: kind(), shirt: g.hat, hat: g.shirt });                                  // 颜色反过来
+      } else {
+        tricky.push({ kind: kind(), shirt: pick(others), hat: g.shirt });                           // 帽子是这个颜色、衣服不是
+        tricky.push({ kind: kind(), shirt: pick(others), hat: g.shirt });
+      }
+    });
+    let guard = 0;
+    while (right.length + tricky.length + other.length < total + 4 && guard++ < 200) other.push({ kind: kind(), shirt: pick(cols), hat: hatOr(.5) });
+    const bad = shuffle(tricky).filter(p => !fitsAny(p, groups)).concat(other.filter(p => !fitsAny(p, groups)));
+    return shuffle(right.concat(bad.slice(0, Math.max(0, total - right.length))));
+  }
+
+  const timerEl = $('timer');
+  const LIMIT = lv => C.time[lv - 1] * 1000, GOAL = () => C.boats[level - 1];
+  let left = 0, lastT = 0, tick = 0, running = false;
+  const fmt = ms => { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  function loop() {
+    if (!running) return;
+    const now = performance.now(); left -= now - lastT; lastT = now;
+    timerEl.textContent = '⏱ ' + fmt(Math.max(0, left)); timerEl.classList.toggle('low', left < 15000);
+    if (left <= 0) { finish(); return; }
+    tick = requestAnimationFrame(loop);
+  }
+  function finish() {
+    running = false; cancelAnimationFrame(tick);
+    if (done >= GOAL()) { $('winTime').textContent = 'Time left: ' + fmt(Math.max(0, left)); $('winMsg').hidden = false; Shih.speak(C.win.zh); }
+    else { $('timeUpTxt').textContent = `${done} of ${GOAL()} boats left. Try again!`; $('timeUp').hidden = false; Shih.speak('时间到了'); }
+  }
+
+  const LEVELS = [{ note: '1 color: 衣服' }, { note: '2 colors: 衣服 + 帽子' }, { note: 'Crew list · Submit' }];
+  let level = Shih.startLevel('findboatLevel', 3);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('findboatLevel', lv); setup(); });
+  const HELP = ['Read who we are looking for. Tap the right people (or drag them) onto the dragon boat!',
+                'We need the right shirt color AND the right hat color. Tap the right people onto the boat!',
+                'Read the crew list. Put the right people on the boat (tap or drag; tap again to take someone off), then press Submit.'];
+  const oops = el => { el.classList.remove('oops'); void el.offsetWidth; el.classList.add('oops'); setTimeout(() => el.classList.remove('oops'), 400); };
+  let done = 0, groups = [], busy = false, sayText = '';
+
+  function newRound() {
+    busy = false;
+    groups = makeGroups();
+    const people = makeDock(groups);
+    seats.innerHTML = ''; dock.innerHTML = '';
+    // 龙舟从左边划进来
+    boatWrap.classList.remove('leave', 'arrive'); boatWrap.classList.add('away'); void boatWrap.offsetWidth;
+    boatWrap.classList.remove('away'); boatWrap.classList.add('arrive');
+    const cards = people.map((p, i) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'crew'; b.dataset.i = i; b.dataset.shirt = p.shirt; b.dataset.hat = p.hat || '';
+      b.setAttribute('aria-label', `${COL(p.shirt).en} shirt${p.hat ? ', ' + COL(p.hat).en + ' hat' : ''}`);
+      b.innerHTML = drawPerson(p); b._p = p;
+      dock.appendChild(b);
+      return b;
+    });
+    Shih.dragCards(cards, {
+      slots: () => [seats, dock],
+      accept(card, slot) { if (slot === seats && card.parentNode === dock) board(card); else if (slot === dock && card.parentNode === seats) unboard(card); return true; },
+      onTapCard(card) { if (card.parentNode === dock) board(card); else unboard(card); }
+    });
+    const P = $('panel');
+    // 三级都一样短：英文一行「We're looking for our crew:」，下面是要找的人（Level 3 是两行名单）
+    const rows = groups.map(g => phrase(g, level === 3 && g.hatFirst));
+    sayText = rows.map(r => r.zh).join('，');
+    const LEAD = `<div class="order"><span class="lead">We're looking for our crew:</span><button type="button" class="again" id="say" aria-label="Listen again">🔊</button></div>`;
+    if (level < 3) {
+      P.innerHTML = LEAD + `<div class="order"><span class="ruby wrap">${rows[0].html}</span></div>`;
+    } else {
+      P.innerHTML = LEAD +
+        `<div class="rows" id="rows">${rows.map((r, i) => `<div class="row" data-i="${i}"><span class="ruby wrap">${r.html}</span><span class="mark"></span></div>`).join('')}</div>` +
+        `<div class="hint" id="hint"></div><button type="button" class="go" id="go">✓ Submit</button>`;
+      $('go').addEventListener('click', submit);
+    }
+    $('say').addEventListener('click', () => Shih.speak(sayText));
+    if (running) Shih.speak(sayText);
+    window.__fb = { level, groups, done, fits: el => fitsAny(el._p, groups), answer: () => { const out = []; groups.forEach(g => out.push(...cards.filter(c => fits(c._p, g)).slice(0, g.n))); return out; } };
+  }
+  const need = () => groups.reduce((s, g) => s + g.n, 0);
+  function clearMarks() {
+    document.querySelectorAll('#rows .row').forEach(r => { r.classList.remove('good', 'bad'); r.querySelector('.mark').textContent = ''; });
+    if ($('hint')) $('hint').textContent = '';
+  }
+  function board(card) {
+    if (!running || busy) return;
+    if (level < 3) {
+      if (!fits(card._p, groups[0])) { oops(card); return; }        // 答错：摇一摇（不扣分）
+      card.classList.add('used'); seats.appendChild(card);
+      if (seats.children.length >= need()) depart();
+      return;
+    }
+    if (seats.children.length >= 6) { oops(card); return; }        // 船上最多坐 6 个人
+    seats.appendChild(card); clearMarks();
+  }
+  function unboard(card) {
+    if (!running || busy || level < 3) return;
+    dock.appendChild(card); clearMarks();
+  }
+  function submit() {
+    if (!running || busy) return;
+    const on = [...seats.children];
+    if (!on.length) { oops($('go')); return; }
+    const misfit = on.filter(c => !fitsAny(c._p, groups));
+    let ok = !misfit.length;
+    groups.forEach((g, i) => {
+      const n = on.filter(c => fits(c._p, g)).length, row = document.querySelector(`#rows .row[data-i="${i}"]`);
+      const good = n === g.n; if (!good) ok = false;
+      row.classList.toggle('good', good); row.classList.toggle('bad', !good);
+      row.querySelector('.mark').textContent = good ? '✓' : '✗';
+      if (!good) oops(row);
+    });
+    if (ok) { depart(); return; }
+    misfit.forEach(oops);
+    $('hint').textContent = misfit.length ? 'Someone on the boat is not on the list. Check the shaking people!' : '✗ = the number of people is not right.';
+  }
+  function depart() {
+    busy = true; done++; update();
+    Shih.speak('出发！');
+    boatWrap.classList.remove('arrive'); boatWrap.classList.add('leave');
+    if (done >= GOAL()) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 800); return; }   // 达到目标：马上结束，给金币
+    setTimeout(() => { if (running) newRound(); }, 700);
+  }
+  function setup() {
+    paintLevels(level);
+    $('help').textContent = HELP[level - 1] + ` Send ${GOAL()} dragon boats off in ${fmt(LIMIT(level))} to get coins!`;
+    done = 0; running = false; cancelAnimationFrame(tick); left = LIMIT(level);
+    timerEl.textContent = '⏱ ' + fmt(left); timerEl.classList.remove('low');
+    $('winMsg').hidden = true; $('timeUp').hidden = true; update();
+    newRound(); wait();
+  }
+  function update() { $('score').textContent = `${done} / ${GOAL()}`; }
+  const wait = Shih.startCover($('playArea'), () => { running = true; lastT = performance.now(); tick = requestAnimationFrame(loop); Shih.speak(sayText); });
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>

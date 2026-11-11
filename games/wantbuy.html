@@ -270,8 +270,8 @@ Shih.loadUnit().then(UNIT => {
   function good(say) {
     busy = true; done++; update();
     $('kid').innerHTML = KIDS.kid(kidP, 'great'); Shih.speak(say);
-    if (done >= GOAL()) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 1500); return; }   // 达标了：马上结束，给金币
-    setTimeout(() => { if (running) show(); }, 1600);
+    if (done >= GOAL()) { running = false; cancelAnimationFrame(tick); setTimeout(finish, 800); return; }   // 达标了：马上结束，给金币
+    setTimeout(() => { if (running) show(); }, 700);
   }
   function setup() {
     paintLevels(level);
