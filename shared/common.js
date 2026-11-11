@@ -21,6 +21,8 @@
       return `<span><span class="py">${p || '&nbsp;'}</span><span class="zh">${c}</span></span>`;
     }).join('');
   };
+  // 一句话分成几个词组，换行只会在词组中间（「牛仔裤」不会被切开）：parts = [[zh, py], ...]
+  S.rubyWords = parts => parts.map(([zh, py]) => `<span class="wd">${S.rubyText(zh, py)}</span>`).join('');
   // fill a sentence pattern like { zh: '我看到{x}。', py: 'wǒ kàn dào {x}.' } with a word
   S.fill = (tpl, w) => ({ zh: tpl.zh.replace('{x}', w ? w.zh : '＿＿'), py: tpl.py.replace('{x}', w ? w.py : ''), en: (tpl.en || '').replace('{x}', w ? S.withArticle(w) : '___') });
   S.withArticle = w => {

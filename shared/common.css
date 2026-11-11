@@ -31,6 +31,8 @@ body.game {
 /* pinyin above each character */
 .ruby { display: inline-flex; gap: 3px; align-items: flex-end; }
 .ruby > span { display: flex; flex-direction: column; align-items: center; }
+.ruby > span.wd { flex-direction: row; align-items: flex-end; gap: 3px; }   /* 一个词组：里面的字不分开 */
+.ruby .wd > span { display: flex; flex-direction: column; align-items: center; }
 .ruby .py { font-family: var(--f-latin); line-height: 1.1; white-space: nowrap; }
 .ruby .zh { font-family: var(--f-zh); font-weight: 700; line-height: 1.1; }
 
