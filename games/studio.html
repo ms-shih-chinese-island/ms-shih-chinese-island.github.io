@@ -11,7 +11,7 @@
 /* 录音室（只有老师用，岛上没有入口）：把网站上念得不自然的句子，换成老师自己的录音。
    1 先去玩游戏，念过的句子会出现在「最近听过的句子」（只记在这台电脑）；也可以自己打一句。
    2 按 ⏺ 录音，再按一次停。按 ▶ 听听看，不满意就再录。录好的先存在这台电脑里（关掉网页也还在）。
-   3 按「下载录音包」→ voice.zip（里面有录音和新的 list.js）→ 传给 Claude，或解压放进网站的 shared/voice/。
+   3 按「下载录音包」→ voice.zip（里面有录音和新的 list.js）→ 传给 Claude（用 tools/install-voice.py 转 mp3、打包进 shared/voice/packs/）。
    隐私：录音只存在老师自己的电脑，不会自动传到任何地方。 */
 body.game { background: #F4EEF8; }
 .wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
@@ -206,8 +206,8 @@ Shih.islandBar();
     if (a === 'tts') { Shih.ttsSpeak(k); return; }
     if (a === 'play') {
       if (audio) audio.pause();
-      audio = recs[k] ? new Audio(URL.createObjectURL(recs[k].blob)) : new Audio(Shih.voiceBase + site()[k]);
-      audio.play().catch(() => alert('Cannot play this recording.'));
+      const go = u => { audio = new Audio(u); audio.play().catch(() => alert('Cannot play this recording.')); };
+      if (recs[k]) go(URL.createObjectURL(recs[k].blob)); else Shih.voiceSrc(site()[k]).then(go);   // 网站上的录音在 packs 里
       return;
     }
     if (a === 'del') { delRec(k).then(load); return; }
