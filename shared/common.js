@@ -89,6 +89,11 @@
       s.onload = () => window.UNIT ? resolve(window.UNIT) : reject(new Error('no UNIT in ' + s.src));
       s.onerror = () => reject(new Error('cannot load ' + s.src));
       document.head.appendChild(s);
+    }).then(U => {
+      // 单元有 prepare（例如餐厅的特餐）：先问好试算表的开关，再准备（问不到就照日期）
+      if (typeof U.prepare !== 'function') return U;
+      const st = window.ShihState ? ShihState.ready.catch(() => ({})) : Promise.resolve({});
+      return st.then(state => { try { U.prepare(state || {}); } catch (e) {} return U; });
     }).catch(err => {
       document.body.insertAdjacentHTML('beforeend',
         `<p style="font-size:20px;color:#C2372F">This game can't find its word list (units/${S.esc(id)}/words.js). Check the folder name in the link.</p>`);

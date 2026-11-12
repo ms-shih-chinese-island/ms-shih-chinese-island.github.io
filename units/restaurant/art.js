@@ -357,6 +357,64 @@
     `<ellipse cx="56" cy="38" rx="14" ry="7" fill="#D9542E" ${sw(2.4)}/>` +
     `<path d="M44 37 C50 33 58 41 66 36 M46 41 C52 38 60 44 68 39" fill="none" stroke="#8E2A14" stroke-width="2.2" stroke-linecap="round"/>`;
 
+  // ===== 节日特餐（units/restaurant/words.js 的 UNIT.SPECIALS）：中秋节、感恩节、春节、端午节，还有万圣节送的糖果 =====
+  // 月饼：盘子上两个金黄色的月饼，边是一圈一圈的花边，中间印一个圆框
+  const cake = (x, y, r) => {
+    let edge = '';
+    for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; edge += `<circle cx="${(x + r * Math.cos(a)).toFixed(1)}" cy="${(y + r * 0.55 * Math.sin(a)).toFixed(1)}" r="${(r * 0.28).toFixed(1)}" fill="#D9963F" ${sw(2.2)}/>`; }
+    return edge + `<ellipse cx="${x}" cy="${y}" rx="${r}" ry="${r * 0.55}" fill="#E9B05A" ${sw(2.5)}/>` +
+      `<ellipse cx="${x}" cy="${y}" rx="${r * 0.55}" ry="${r * 0.3}" fill="none" stroke="#B9772E" stroke-width="2.5"/>` +
+      `<path d="M${x - r * 0.25} ${y} L${x + r * 0.25} ${y} M${x} ${y - r * 0.15} L${x} ${y + r * 0.15}" stroke="#B9772E" stroke-width="2.2" stroke-linecap="round"/>`;
+  };
+  DRAW['月饼'] = () => plate(cake(36, 62, 18) + cake(62, 66, 20));
+  // 火鸡：烤得金黄的火鸡，两只腿套着白色纸花
+  DRAW['火鸡'] = () => plate(
+    `<path d="M20 70 C14 50 30 34 50 34 C70 34 86 50 80 70 C70 78 30 78 20 70 Z" fill="#C9772E" ${sw()}/>` +
+    shine('M32 46 C38 40 46 38 54 39') +
+    `<path d="M24 56 C14 50 10 42 14 38" fill="none" stroke="${K}" stroke-width="12" stroke-linecap="round"/><path d="M24 56 C14 50 10 42 14 38" fill="none" stroke="#B56622" stroke-width="7" stroke-linecap="round"/>` +
+    `<path d="M76 56 C86 50 90 42 86 38" fill="none" stroke="${K}" stroke-width="12" stroke-linecap="round"/><path d="M76 56 C86 50 90 42 86 38" fill="none" stroke="#B56622" stroke-width="7" stroke-linecap="round"/>` +
+    `<path d="M8 36 L14 30 L20 36 L14 42 Z M80 36 L86 30 L92 36 L86 42 Z" fill="#FFFFFF" ${sw(2.2)}/>` +
+    `<path d="M40 60 C46 64 54 64 60 60" fill="none" stroke="#9E5418" stroke-width="2.5" stroke-linecap="round"/>`);
+  // 南瓜糕：一片南瓜派（橘色的派、咖啡色的派皮），上面一团鲜奶油
+  DRAW['南瓜糕'] = () => plate(
+    `<path d="M16 70 L74 44 L84 66 Z" fill="#E8A157" ${sw()}/>` +
+    `<path d="M16 70 L74 44 L78 52 L22 74 Z" fill="#F28C28" ${sw(2.5)}/>` +
+    `<path d="M74 44 Q86 48 84 66" fill="#C98E55" ${sw(3)}/>` +
+    `<path d="M56 48 Q50 40 56 36 Q58 30 64 32 Q70 30 70 36 Q76 40 70 46 Z" fill="#FFFFFF" ${sw(2.5)}/>`);
+  // 玉米：一根黄色的玉米，一格一格的玉米粒，两边绿色的叶子
+  DRAW['玉米'] = () => {
+    let k = '';
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) k += `<ellipse cx="${30 + c * 8 + (r % 2) * 4}" cy="${46 + r * 7}" rx="3.4" ry="3" fill="#FFE07A" stroke="#C9961C" stroke-width="1.4"/>`;
+    return plate(`<path d="M22 64 C14 54 18 40 30 40 L72 40 C84 40 86 54 78 64 Z" fill="#F5C531" ${sw()}/>` + k +
+      `<path d="M78 64 C88 66 96 56 92 46 C88 54 82 56 74 54 Z" fill="#6DAA4F" ${sw(2.5)}/><path d="M76 40 C86 34 94 38 94 46 C88 42 82 44 76 48 Z" fill="#8CC46E" ${sw(2.5)}/>`);
+  };
+  // 番薯：两个长长的红紫色番薯，切开的那一头是橘色的
+  DRAW['番薯'] = () => plate(
+    `<path d="M14 62 C14 50 30 46 46 50 C56 52 62 56 62 62 C62 70 50 74 36 72 C22 70 14 68 14 62 Z" fill="#A9446A" ${sw()}/>` +
+    `<path d="M40 70 C40 58 54 52 70 54 C80 56 88 60 88 66 C88 72 80 76 70 76 L46 76 Z" fill="#A9446A" ${sw()}/>` +
+    `<ellipse cx="70" cy="66" rx="10" ry="8" fill="#F28C28" ${sw(2.5)}/><ellipse cx="70" cy="66" rx="5" ry="4" fill="#F7B267"/>` +
+    shine('M22 56 C28 52 36 51 42 52', 4));
+  // 鱼：长盘子上一条清蒸鱼，上面放绿色的葱丝（年年有余）
+  DRAW['鱼'] = () =>
+    `<ellipse cx="50" cy="72" rx="47" ry="20" fill="#FFFFFF" ${sw()}/><ellipse cx="50" cy="70" rx="38" ry="14" fill="#EEF4F8"/>` +
+    `<path d="M20 66 C30 50 62 48 76 64 C62 80 30 80 20 66 Z" fill="#BFC8CF" ${sw()}/>` +
+    `<path d="M76 64 L92 52 L90 76 Z" fill="#BFC8CF" ${sw()}/>` +
+    `<circle cx="30" cy="62" r="3" fill="${K}"/><path d="M38 56 C42 62 42 70 38 74" fill="none" ${sw(2.5)}/>` +
+    `<path d="M44 58 L66 62 M46 66 L70 66 M44 72 L64 70" stroke="#5FAE3E" stroke-width="3.2" stroke-linecap="round"/>` +
+    `<path d="M50 56 L56 74" stroke="#F28C28" stroke-width="2.4" stroke-linecap="round"/>`;
+  // 粽子：盘子上一个绿色的粽子（竹叶包成三角形），中间绑一条绳子
+  DRAW['粽子'] = () => plate(
+    `<path d="M50 22 Q55 22 58 28 L82 70 Q84 76 76 76 L24 76 Q16 76 18 70 L42 28 Q45 22 50 22 Z" fill="#6DAA4F" ${sw()}/>` +
+    `<path d="M50 26 L38 74 M50 26 L62 74" stroke="#4E8A36" stroke-width="2.6" fill="none"/>` +
+    `<path d="M24 58 Q50 66 76 58" fill="none" stroke="${K}" stroke-width="7" stroke-linecap="round"/><path d="M24 58 Q50 66 76 58" fill="none" stroke="#D9B27A" stroke-width="3.5" stroke-linecap="round"/>` +
+    shine('M44 36 Q48 32 52 34', 4));
+  DRAW['猪肉粽子'] = DRAW['粽子'];   // 后面会加上猪肉、鸡肉的圆章
+  DRAW['鸡肉粽子'] = DRAW['粽子'];
+  // 糖果：三颗包着糖纸的糖果（两头扭起来）
+  const candy = (x, y, c) => `<path d="M${x - 10} ${y} L${x - 20} ${y - 8} L${x - 20} ${y + 8} Z M${x + 10} ${y} L${x + 20} ${y - 8} L${x + 20} ${y + 8} Z" fill="${c}" ${sw(2.2)}/>` +
+    `<ellipse cx="${x}" cy="${y}" rx="12" ry="9" fill="${c}" ${sw(2.5)}/><path d="M${x - 5} ${y - 4} Q${x} ${y - 7} ${x + 5} ${y - 4}" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2.5" stroke-linecap="round"/>`;
+  DRAW['糖果'] = () => candy(30, 66, '#E5483B') + candy(70, 70, '#8E5CC2') + candy(50, 44, '#F28C28');
+
   const g = zh => DRAW[zh] ? `<g>${DRAW[zh]()}</g>` : '';
   const svg = zh => `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${g(zh)}</svg>`;
   const items = {};
@@ -380,7 +438,7 @@
   };
   const badge = (zh, x = 80, y = 20, r = 17) => BADGE[zh] ? `<g transform="translate(${x} ${y})"><circle r="${r}" fill="#FFF6D6" ${sw(2.5)}/><g transform="scale(${r / 17})">${BADGE[zh]}</g></g>` : '';
   // 肉的菜加圆章
-  [['芥兰鸡肉', '鸡肉'], ['芥兰牛肉', '牛肉'], ['芝麻鸡', '鸡肉'], ['糖醋排骨', '猪肉']].forEach(([dish, meat]) => { const f = DRAW[dish]; if (f) DRAW[dish] = () => f() + badge(meat, 84, 16, 14); });
+  [['芥兰鸡肉', '鸡肉'], ['芥兰牛肉', '牛肉'], ['芝麻鸡', '鸡肉'], ['糖醋排骨', '猪肉'], ['猪肉粽子', '猪肉'], ['鸡肉粽子', '鸡肉']].forEach(([dish, meat]) => { const f = DRAW[dish]; if (f) DRAW[dish] = () => f() + badge(meat, 84, 16, 14); });
   // 组合菜：主食的图＋角落一个圆章，例如 combo('鸡肉', '炒饭')
   const combo = (fill, base) => `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${g(base)}${badge(fill)}</svg>`;
   const badgeSvg = zh => `<svg viewBox="-20 -20 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${badge(zh, 0, 0, 17)}</svg>`;

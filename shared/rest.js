@@ -33,5 +33,28 @@
   R.shuffle = shuffle;
   R.pick = a => a[Math.floor(Math.random() * a.length)];
   R.take = (a, n) => shuffle(a).slice(0, n);
+  // ---- 节日送的东西（万圣节送糖果）：点菜算一算、餐厅对话框、快手出菜玩完的时候，在「太棒了」下面出现 ----
+  //   UNIT.gift 是 units/restaurant/words.js 的特餐设定放的；不用回答，跟金币没有关系
+  const GIFT_GAMES = ['pay', 'dine', 'serve'];
+  function showGift() {
+    const U = window.UNIT, win = document.getElementById('winMsg');
+    if (!U || !U.gift || !win || win.hidden || win.querySelector('.giftNote')) return;
+    const g = U.gift, art = window.RART && RART.has(g.zh) ? RART.svg(g.zh) : '';
+    const d = document.createElement('div');
+    d.className = 'giftNote';
+    d.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:10px;flex-basis:100%;margin-top:6px;color:#7A3E9D';
+    d.innerHTML = `<span style="width:56px;height:56px;display:inline-flex">${art.replace('<svg ', '<svg width="56" height="56" ')}</span>` +
+      `<span class="ruby">${S.rubyText(g.say.zh, g.say.py)}</span><span style="font-size:15px;color:#555">${S.esc(g.say.en)}</span>`;
+    win.style.flexWrap = 'wrap';
+    win.appendChild(d);
+    setTimeout(() => R.speak(g.say.zh), 1200);
+  }
+  function watchGift() {
+    const win = document.getElementById('winMsg');
+    if (!win || !GIFT_GAMES.includes(S.gameId())) return;
+    new MutationObserver(() => { if (win.hidden) { const n = win.querySelector('.giftNote'); if (n) n.remove(); } else showGift(); })
+      .observe(win, { attributes: true, attributeFilter: ['hidden'] });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watchGift); else watchGift();
   window.Rest = R;
 })();

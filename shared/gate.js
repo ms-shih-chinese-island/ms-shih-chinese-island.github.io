@@ -44,7 +44,7 @@ const SHIH_DEMO = false;   // 试玩版用：不连试算表，一直包场，�
 (function () {
   const get = (k, d) => { try { const v = localStorage.getItem('shih:' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
   const keys = () => { const k = get('keys', {}); return k && typeof k === 'object' ? k : {}; };
-  const OFF = { open: true, flash: false, quiz: false, land: false, on: false, ok: [] };
+  const OFF = { open: true, flash: false, quiz: false, land: false, on: false, ok: [], special: '' };
   function ask(params) {
     const q = Object.keys(params).map(k => k + '=' + encodeURIComponent(params[k])).join('&');
     return Promise.race([
@@ -64,7 +64,7 @@ const SHIH_DEMO = false;   // 试玩版用：不连试算表，一直包场，�
     return ask({ a: 'state', codes }).then(r => {
       const flash = !!(r && r.flash);
       // 快闪活动有两个：抢答、抢地盘（旧版的 Code.gs 只说 flash = 抢答）
-      const s = { open: !(r && r.open === false), flash, quiz: flash && (r.quiz === undefined ? true : !!r.quiz), land: flash && !!r.land, on: !!(r && r.on), ok: (r && r.ok) || [] };
+      const s = { open: !(r && r.open === false), flash, quiz: flash && (r.quiz === undefined ? true : !!r.quiz), land: flash && !!r.land, on: !!(r && r.on), ok: (r && r.ok) || [], special: (r && typeof r.special === 'string') ? r.special : '' };
       try { sessionStorage.setItem('shih:state', JSON.stringify({ codes, t: Date.now(), s })); } catch (e) {}
       return s;
     }).catch(() => OFF);
