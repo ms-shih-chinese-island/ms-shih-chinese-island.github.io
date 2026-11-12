@@ -113,13 +113,39 @@
   }
   if ('speechSynthesis' in window) { findVoice(); speechSynthesis.onvoiceschanged = findVoice; }
   S.soundOn = S.get('sound', true);
-  S.speak = function (text) {
-    if (!S.soundOn || !('speechSynthesis' in window)) return;
+  // 电脑的声音（录音室的「🔊 电脑念」也用这个）
+  S.ttsSpeak = function (text) {
+    if (!('speechSynthesis' in window)) return;
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(String(text).replace(/（[^）]*）/g, ''));   // 括号里的不念（例如「痛（疼）」只念「痛」）
     u.lang = 'zh-CN'; u.rate = S.SPEED;
     if (zhVoice) u.voice = zhVoice;
     speechSynthesis.speak(u);
+  };
+  // ---- 老师的录音：shared/voice/list.js 写着哪些句子有录音（SHIH_VOICE = { 句子: 档名 }）----
+  //   念一句话的时候，有老师的录音就放录音，没有（或放不出来）才用电脑的声音。录音在录音室录（games/studio.html）
+  const VOICE_BASE = ((document.currentScript && document.currentScript.src) || '').replace(/common\.js[^/]*$/, 'voice/');
+  S.voiceBase = VOICE_BASE;
+  S.voiceKey = t => String(t).replace(/（[^）]*）/g, '').replace(/\s+/g, '').trim();
+  if (VOICE_BASE) { const vs = document.createElement('script'); vs.src = VOICE_BASE + 'list.js'; vs.onerror = () => {}; document.head.appendChild(vs); }
+  // 这台电脑最近念过的句子（只记在这台电脑，给老师在录音室挑句子录；有英文字母的不记）
+  function heard(k) {
+    if (!k || /[A-Za-z]/.test(k)) return;
+    const L = S.get('heard', []).filter(x => x !== k); L.push(k); S.set('heard', L.slice(-300));
+  }
+  let playing = null;
+  S.speak = function (text) {
+    if (!S.soundOn) return;
+    const k = S.voiceKey(text); heard(k);
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+    if (playing) { playing.pause(); playing = null; }
+    const f = window.SHIH_VOICE && window.SHIH_VOICE[k];
+    if (!f) { S.ttsSpeak(text); return; }
+    const a = new Audio(VOICE_BASE + f); playing = a;
+    let fell = false;
+    const tts = () => { if (fell || playing !== a) return; fell = true; S.ttsSpeak(text); };   // 录音放不出来：改用电脑的声音
+    a.onerror = tts;
+    const p = a.play(); if (p && p.catch) p.catch(tts);
   };
 
   // ---- on / off 按钮（声音、计时器） ----

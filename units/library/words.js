@@ -178,6 +178,11 @@ window.LIBRARY = {
       { zh: '狗', py: 'gǒu', en: 'dog' },
       { zh: '兔子', py: 'tù zi', en: 'rabbit' },
       { zh: '小鸟', py: 'xiǎo niǎo', en: 'bird' },
+      { zh: '仓鼠', py: 'cāng shǔ', en: 'hamster' },
+      { zh: '鱼', py: 'yú', en: 'fish' },
+      { zh: '龟', py: 'guī', en: 'turtle' },
+      { zh: '蛇', py: 'shé', en: 'snake' },
+      { zh: '蜥蜴', py: 'xī yì', en: 'lizard' },
       { zh: '只', py: 'zhī', en: '(measure word for animals)' }
     ] },
     { id: 'garden', zh: '花园', py: 'huā yuán', en: 'Garden', words: [
@@ -195,7 +200,7 @@ window.LIBRARY = {
       { zh: '我怕', py: 'wǒ pà', en: "I'm afraid" },
       { zh: '我不怕', py: 'wǒ bú pà', en: "I'm not afraid" }
     ] },
-    { id: 'zoo', zh: '动物园', py: 'dòng wù yuán', en: 'Zoo', words: [
+    { id: 'zoo', zh: '动物园', py: 'dòng wù yuán', en: 'Zoo & Farm', words: [
       { zh: '动物园', py: 'dòng wù yuán', en: 'zoo' },
       { zh: '动物', py: 'dòng wù', en: 'animal' },
       { zh: '大象', py: 'dà xiàng', en: 'elephant' },
@@ -210,6 +215,17 @@ window.LIBRARY = {
       { zh: '骆驼', py: 'luò tuó', en: 'camel' },
       { zh: '熊', py: 'xióng', en: 'bear' },
       { zh: '斑马', py: 'bān mǎ', en: 'zebra' },
+      { zh: '农场', py: 'nóng chǎng', en: 'farm' },
+      { zh: '母牛', py: 'mǔ niú', en: 'cow' },
+      { zh: '猪', py: 'zhū', en: 'pig' },
+      { zh: '马', py: 'mǎ', en: 'horse' },
+      { zh: '山羊', py: 'shān yáng', en: 'goat' },
+      { zh: '绵羊', py: 'mián yáng', en: 'sheep' },
+      { zh: '鸭子', py: 'yā zi', en: 'duck' },
+      { zh: '公鸡', py: 'gōng jī', en: 'rooster' },
+      { zh: '母鸡', py: 'mǔ jī', en: 'hen' },
+      { zh: '火鸡', py: 'huǒ jī', en: 'turkey' },
+      { zh: '这是', py: 'zhè shì', en: 'this is' },
       { zh: '我喜欢', py: 'wǒ xǐ huān', en: 'I like' },
       { zh: '因为', py: 'yīn wèi', en: 'because' },
       { zh: '漂亮', py: 'piào liàng', en: 'pretty' },

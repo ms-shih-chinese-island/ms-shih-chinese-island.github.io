@@ -18,7 +18,7 @@ window.UNIT = {};
 /* 每一级的说明（Level 按钮上的小字） */
 UNIT.levels = [
   { note: '6 colors · 8 rings' },
-  { note: '+ orange, purple · 10 rings' },
+  { note: '+ orange, purple, brown · 10 rings' },
   { note: '+ pink, gold, silver · 12 rings' }
 ];
 
@@ -34,6 +34,7 @@ UNIT.words = [
   // ---- Level 2（三年级） ----
   { zh: '橙色',   py: 'chéng sè',    en: 'orange', hex: '#F28C28', level: 2 },
   { zh: '紫色',   py: 'zǐ sè',       en: 'purple', hex: '#8E5CC2', level: 2 },
+  { zh: '棕色',   py: 'zōng sè',     en: 'brown',  hex: '#9C6234', level: 2 },   // 课纲二年级 12 月（2026-11 补上）
   // ---- Level 3（四年级） ----
   { zh: '粉红色', py: 'fěn hóng sè', en: 'pink',   hex: '#F49AC1', level: 3, trad: '粉紅色' },
   { zh: '金色',   py: 'jīn sè',      en: 'gold',   hex: '#D9A520', level: 3 },
