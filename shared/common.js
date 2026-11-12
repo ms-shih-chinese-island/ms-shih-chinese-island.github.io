@@ -133,19 +133,63 @@
     if (!k || /[A-Za-z]/.test(k)) return;
     const L = S.get('heard', []).filter(x => x !== k); L.push(k); S.set('heard', L.slice(-300));
   }
-  let playing = null;
+  // ---- 把句子拆成老师录过的字词，接起来念（关卡的句子是随机组合的，整句录不完）----
+  //   先找整句；没有就一段一段（遇到标点停一下）找录过的字词，长的先用（「一个」不会拆成「一」「个」）
+  //   只要有一段没录到，整句就用电脑的声音（不会一半人声、一半电脑声）
+  const PUNCT = /[，。！？、：；,.!?:;…「」“”"'（）()\-—～~·]/g;
+  const strip = t => S.voiceKey(t).replace(PUNCT, '');
+  let vidx = null;
+  function voiceIndex() {
+    const V = window.SHIH_VOICE; if (!V) return null;
+    const n = Object.keys(V).length;
+    if (vidx && vidx.src === V && vidx.n === n) return vidx;
+    const m = {}; let max = 0;
+    Object.keys(V).forEach(k => { const t = strip(k); if (t && !m[t]) { m[t] = V[k]; max = Math.max(max, Array.from(t).length); } });
+    return (vidx = { src: V, n, m, max });
+  }
+  // 回传 { ok, parts: [{ f: 档名 } 或 { pause: true }], missing: [还没录的字] }
+  S.voicePlan = function (text) {
+    const ix = voiceIndex(), parts = [], missing = [];
+    const clauses = S.voiceKey(text).split(PUNCT).map(c => c.trim()).filter(Boolean);
+    if (!ix) return { ok: false, parts, missing: clauses };
+    clauses.forEach((c, ci) => {
+      const ch = Array.from(c); let i = 0, miss = '';
+      while (i < ch.length) {
+        let f = null, L = 0;
+        for (let l = Math.min(ix.max, ch.length - i); l > 0; l--) { const w = ch.slice(i, i + l).join(''); if (ix.m[w]) { f = ix.m[w]; L = l; break; } }
+        if (f) { if (miss) { missing.push(miss); miss = ''; } parts.push({ f }); i += L; } else { miss += ch[i]; i++; }
+      }
+      if (miss) missing.push(miss);
+      if (ci < clauses.length - 1) parts.push({ pause: true });
+    });
+    return { ok: !missing.length && parts.some(p => p.f), parts, missing };
+  };
+  let playing = null, seq = 0;
+  function stopVoice() { seq++; if (playing) { playing.pause(); playing = null; } }
+  function playParts(parts, text) {
+    const my = ++seq;
+    const auds = parts.map(p => { if (!p.f) return null; const a = new Audio(VOICE_BASE + p.f); a.preload = 'auto'; return a; });
+    let i = 0, fell = false;
+    const fail = () => { if (fell || my !== seq) return; fell = true; seq++; S.ttsSpeak(text); };   // 有一段放不出来：整句改用电脑的声音
+    const next = () => {
+      if (my !== seq || i >= parts.length) return;
+      const a = auds[i++];
+      if (!a) { setTimeout(next, 200); return; }                      // 标点：停一下
+      playing = a; a.onended = () => setTimeout(next, 30); a.onerror = fail;
+      const p = a.play(); if (p && p.catch) p.catch(fail);
+    };
+    next();
+  }
   S.speak = function (text) {
     if (!S.soundOn) return;
     const k = S.voiceKey(text); heard(k);
     if ('speechSynthesis' in window) speechSynthesis.cancel();
-    if (playing) { playing.pause(); playing = null; }
-    const f = window.SHIH_VOICE && window.SHIH_VOICE[k];
-    if (!f) { S.ttsSpeak(text); return; }
-    const a = new Audio(VOICE_BASE + f); playing = a;
-    let fell = false;
-    const tts = () => { if (fell || playing !== a) return; fell = true; S.ttsSpeak(text); };   // 录音放不出来：改用电脑的声音
-    a.onerror = tts;
-    const p = a.play(); if (p && p.catch) p.catch(tts);
+    stopVoice();
+    const V = window.SHIH_VOICE || {};
+    if (V[k]) { playParts([{ f: V[k] }], text); return; }              // 整句有录音
+    const plan = S.voicePlan(text);
+    if (plan.ok) { playParts(plan.parts, text); return; }               // 用录过的字词接起来
+    S.ttsSpeak(text);
   };
 
   // ---- on / off 按钮（声音、计时器） ----
