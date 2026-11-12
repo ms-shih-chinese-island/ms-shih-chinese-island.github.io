@@ -128,7 +128,7 @@
   S.voiceBase = VOICE_BASE;
   S.voiceKey = t => String(t).replace(/（[^）]*）/g, '').replace(/\s+/g, '').trim();
   if (VOICE_BASE) { const vs = document.createElement('script'); vs.src = VOICE_BASE + 'list.js'; vs.onerror = () => {}; document.head.appendChild(vs); }
-  // 试玩版（claude.ai）一个作品最多 512 个档案：录音打包成几个 packs/p*.js（packs/index.js 写着哪个档在哪一包）。正式网站没有 packs，直接用档案
+  // 录音打包成 packs/p0～p15.js（mp3, base64；packs/index.js 写着哪个档在哪一包）。正式网站和试玩版一样（GitHub 网页一次只能传 100 个档）。没有 packs 就直接用档案
   if (VOICE_BASE) { const pi = document.createElement('script'); pi.src = VOICE_BASE + 'packs/index.js'; pi.onerror = () => {}; document.head.appendChild(pi); }
   const packLoads = {};
   function voiceSrc(f) {
@@ -137,6 +137,7 @@
     if (!packLoads[id]) packLoads[id] = new Promise(res => { const x = document.createElement('script'); x.src = VOICE_BASE + 'packs/' + id + '.js'; x.onload = x.onerror = () => res(); document.head.appendChild(x); });
     return packLoads[id].then(() => (window.SHIH_VOICE_DATA || {})[f] || VOICE_BASE + f);
   }
+  S.voiceSrc = f => (window.SHIH_VOICE_PACKS ? voiceSrc(f) : new Promise(r => setTimeout(r, 300)).then(() => voiceSrc(f)));   // 录音室用
   // 这台电脑最近念过的句子（只记在这台电脑，给老师在录音室挑句子录；有英文字母的不记）
   function heard(k) {
     if (!k || /[A-Za-z]/.test(k)) return;
@@ -179,17 +180,30 @@
     const my = ++seq;
     Promise.all(parts.map(p => p.f ? voiceSrc(p.f) : null)).then(srcs => { if (my === seq) run(srcs); });
     function run(srcs) {
-    const auds = srcs.map(u => { if (!u) return null; const a = new Audio(u); a.preload = 'auto'; return a; });
-    let i = 0, fell = false;
-    const fail = () => { if (fell || my !== seq) return; fell = true; seq++; S.ttsSpeak(text); };   // 有一段放不出来：整句改用电脑的声音
+    const auds = srcs.map(u => { if (!u) return null; const a = new Audio(u); a.preload = 'auto'; a.load(); return a; });
+    // 先等每一段都准备好；有一段找不到（例如档案没传上去）→ 一开始就整句用电脑的声音，不会念到一半才重来
+    const ready = a => new Promise(res => {
+      if (!a || a.readyState >= 2) return res(true);
+      const done = ok => { a.removeEventListener('canplay', y); a.removeEventListener('error', n); res(ok); };
+      const y = () => done(true), n = () => done(false);
+      a.addEventListener('canplay', y); a.addEventListener('error', n);
+      setTimeout(() => done(true), 2500);                               // 网路很慢：不等了，先念
+    });
+    let started = false;
+    const fail = () => { if (my !== seq) return; if (!started) { seq++; S.ttsSpeak(text); } else setTimeout(next, 30); };   // 还没开始 → 整句电脑念；念到一半 → 跳过那一段
+    let i = 0;
     const next = () => {
       if (my !== seq || i >= parts.length) return;
       const a = auds[i++];
       if (!a) { setTimeout(next, 200); return; }                      // 标点：停一下
       playing = a; a.onended = () => setTimeout(next, 30); a.onerror = fail;
-      const p = a.play(); if (p && p.catch) p.catch(fail);
+      const p = a.play(); if (p && p.then) p.then(() => { started = true; }, fail); else started = true;
     };
-    next();
+    Promise.all(auds.map(ready)).then(oks => {
+      if (my !== seq) return;
+      if (oks.some(ok => !ok)) { seq++; S.ttsSpeak(text); return; }
+      next();
+    });
     }
   }
   S.speak = function (text) {
