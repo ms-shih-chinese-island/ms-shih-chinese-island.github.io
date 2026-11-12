@@ -36,6 +36,9 @@ body.game { background: #F4EEF8; }
 .tag.none { background: #EEE; color: #666; } .tag.new { background: #FFF1C4; color: #8A5A00; } .tag.site { background: var(--me-done); color: var(--me-ink); }
 .row .btn { padding: 4px 10px; font-size: 15px; }
 .empty { color: #777; font-size: 16px; }
+.row .t .py { display: block; font: 400 14px var(--f-latin); color: #1F5E73; }
+.row .cov { display: block; font: 700 14px var(--f-latin); }
+.row .cov.ok { color: var(--me-ink); } .row .cov.no { color: #B4471C; }
 .dl { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .note { color: #555; font-size: 15px; }
 </style>
@@ -48,10 +51,10 @@ body.game { background: #F4EEF8; }
     <div class="card">
       <h2>怎么用 How to use</h2>
       <ol class="steps">
-        <li>先在这台电脑上玩游戏。网站念过的句子，会出现在下面「最近听过的句子」。也可以自己打一句。</li>
-        <li>按 ⏺ 开始录音，说完再按一次停止。按 ▶ 听听看，不满意就再录一次。</li>
-        <li>录好的会先存在这台电脑里，关掉网页也还在。全部录完，按「下载录音包」。</li>
-        <li>把 voice.zip 传给 Claude（或解压，放进网站的 <code>shared/voice/</code> 资料夹）。上传以后，网站就会用你的声音。</li>
+        <li>上面选要录的东西：<b>单元的生词</b>（跟图书馆一样的章）、<b>常用句型片段</b>（我喜欢、这是、穿、的……），或是<b>最近听过的句子</b>（这台电脑玩游戏时念过的）。</li>
+        <li>按 ⏺ 开始录音，说完再按 ⏹ 停止。录完会马上放一次给你听，不满意就再录。前后的空白会自动剪掉，音量也会调成差不多大。</li>
+        <li>关卡的句子是随机组合的：网站会把你录过的字词接起来念。「最近听过的句子」会显示 ✓ 可以接起来念，或是「还缺：穿、黄色」。</li>
+        <li>录好的会先存在这台电脑里，关掉网页也还在。录完按「下载录音包」，把 voice.zip 传给 Claude。</li>
       </ol>
       <p class="note">录音只存在你自己的电脑，不会自动传到任何地方。第一次录音时，浏览器会问可不可以用麦克风，请按「允许」。</p>
     </div>
@@ -63,7 +66,8 @@ body.game { background: #F4EEF8; }
     </div>
 
     <div class="card">
-      <h2><span>句子 Sentences</span>
+      <h2><span>要录什么</span><select id="src" class="btn" style="font:700 16px var(--f-zh)"></select></h2>
+      <h2 style="margin-top:6px"><span>列表</span>
         <span class="filter" id="filter">
           <button class="btn" type="button" data-f="all" aria-pressed="true">全部 All</button>
           <button class="btn" type="button" data-f="none" aria-pressed="false">还没录 Not yet</button>
@@ -103,36 +107,98 @@ Shih.islandBar();
 
   // ---- 档名：句子算一个代号（同一句永远同一个档名） ----
   const code = s => { let h = 0x811c9dc5; for (const ch of s) { h ^= ch.codePointAt(0); h = Math.imul(h, 0x01000193) >>> 0; } return h.toString(16).padStart(8, '0'); };
-  const extOf = type => /mp4|aac|m4a/.test(type) ? 'm4a' : /ogg/.test(type) ? 'ogg' : 'webm';
+  const extOf = type => /wav/.test(type) ? 'wav' : /mp4|aac|m4a/.test(type) ? 'm4a' : /ogg/.test(type) ? 'ogg' : 'webm';
+  // ---- 剪掉前后的空白、音量调成差不多大，存成 WAV（22050 Hz、单声道）：字词接起来念才顺 ----
+  async function toWav(blob) {
+    const AC = window.AudioContext || window.webkitAudioContext, ac = new AC();
+    try {
+      const buf = await ac.decodeAudioData(await blob.arrayBuffer()), ch = buf.getChannelData(0), sr = buf.sampleRate;
+      let peak = 0; for (let i = 0; i < ch.length; i++) { const v = Math.abs(ch[i]); if (v > peak) peak = v; }
+      if (peak < 0.01) return null;                                   // 几乎没有声音
+      const th = Math.max(0.015, peak * 0.07);
+      let a = 0, b = ch.length - 1; while (a < b && Math.abs(ch[a]) < th) a++; while (b > a && Math.abs(ch[b]) < th) b--;
+      a = Math.max(0, a - Math.round(sr * 0.04)); b = Math.min(ch.length - 1, b + Math.round(sr * 0.08));
+      const OUT = 22050, r = sr / OUT, n = Math.max(1, Math.floor((b - a) / r)), g = Math.min(6, 0.85 / peak), pcm = new Int16Array(n);
+      for (let i = 0; i < n; i++) {                                    // 平均一下再降取样（比较不会有杂音）
+        const s0 = a + Math.floor(i * r), s1 = Math.min(b, a + Math.floor((i + 1) * r)); let sum = 0, c = 0;
+        for (let j = s0; j <= s1; j++) { sum += ch[j]; c++; }
+        pcm[i] = Math.max(-1, Math.min(1, (sum / c) * g)) * 32767;
+      }
+      const h = new DataView(new ArrayBuffer(44)), w4 = (o, t) => { for (let i = 0; i < 4; i++) h.setUint8(o + i, t.charCodeAt(i)); };
+      w4(0, 'RIFF'); h.setUint32(4, 36 + n * 2, true); w4(8, 'WAVE'); w4(12, 'fmt '); h.setUint32(16, 16, true); h.setUint16(20, 1, true); h.setUint16(22, 1, true);
+      h.setUint32(24, OUT, true); h.setUint32(28, OUT * 2, true); h.setUint16(32, 2, true); h.setUint16(34, 16, true); w4(36, 'data'); h.setUint32(40, n * 2, true);
+      return new Blob([h.buffer, pcm.buffer], { type: 'audio/wav' });
+    } finally { ac.close && ac.close(); }
+  }
   const fileOf = (k, type) => 'v' + code(k) + '.' + extOf(type);
 
-  // ---- 列表：自己加的 ＋ 最近听过的 ＋ 网站上已有的 ＋ 新录的 ----
-  let recs = {}, filter = 'all', recorder = null, recKey = '', chunks = [];
+  // ---- 要录什么：最近听过的句子／常用句型片段／单元的生词（图书馆的章） ----
+  let recs = {}, filter = 'all', recorder = null, recKey = '', chunks = [], src = Shih.get('studioSrc', 'heard');
   const site = () => window.SHIH_VOICE || {};
   const typed = () => Shih.get('studioTyped', []);
-  function sentences() {
+  const PIECES = [
+    ['我', 'wǒ'], ['你', 'nǐ'], ['他', 'tā'], ['她', 'tā'], ['我们', 'wǒ men'], ['是', 'shì'], ['不是', 'bú shì'], ['这是', 'zhè shì'], ['那是', 'nà shì'],
+    ['的', 'de'], ['和', 'hé'], ['很', 'hěn'], ['也', 'yě'], ['都', 'dōu'], ['吗', 'ma'], ['呢', 'ne'], ['了', 'le'],
+    ['一个', 'yí gè'], ['两个', 'liǎng gè'], ['三个', 'sān gè'], ['四个', 'sì gè'], ['五个', 'wǔ gè'], ['一只', 'yì zhī'], ['两只', 'liǎng zhī'], ['三只', 'sān zhī'],
+    ['个', 'gè'], ['只', 'zhī'], ['人', 'rén'], ['穿', 'chuān'], ['戴', 'dài'], ['衣服', 'yī fú'], ['帽子', 'mào zi'],
+    ['我喜欢', 'wǒ xǐ huān'], ['我不喜欢', 'wǒ bù xǐ huān'], ['我爱吃', 'wǒ ài chī'], ['我不爱吃', 'wǒ bú ài chī'], ['我爱喝', 'wǒ ài hē'], ['我不爱喝', 'wǒ bú ài hē'],
+    ['我看到', 'wǒ kàn dào'], ['我有', 'wǒ yǒu'], ['我没有', 'wǒ méi yǒu'], ['我想去', 'wǒ xiǎng qù'], ['我想买', 'wǒ xiǎng mǎi'], ['我想送你', 'wǒ xiǎng sòng nǐ'],
+    ['这是我送你的', 'zhè shì wǒ sòng nǐ de'], ['我怕', 'wǒ pà'], ['我不怕', 'wǒ bú pà'], ['因为', 'yīn wèi'], ['请给我', 'qǐng gěi wǒ'],
+    ['一共', 'yí gòng'], ['多少钱', 'duō shǎo qián'], ['块', 'kuài'], ['点', 'diǎn'], ['我包了', 'wǒ bāo le'], ['需要', 'xū yào'],
+    ['对', 'duì'], ['太棒了', 'tài bàng le'], ['时间到了', 'shí jiān dào le'], ['谢谢你', 'xiè xie nǐ'], ['不客气', 'bú kè qì'], ['你好', 'nǐ hǎo'], ['再见', 'zài jiàn']
+  ].map(([zh, py]) => ({ zh, py }));
+  // 图书馆的章（跟 games/library.html 一样读）
+  let CHAPTERS = [];
+  const loadScript = u => new Promise(r => { const x = document.createElement('script'); x.src = u; x.onload = x.onerror = () => r(); document.head.appendChild(x); });
+  async function loadChapters() {
+    await loadScript('../units/library/words.js');
+    const L = (window.LIBRARY && LIBRARY.chapters) || [];
+    for (const c of L) {
+      let list = c.words || [];
+      if (c.from) { window.UNIT = {}; await loadScript(`../units/${c.from}/words.js?studio`); list = ((window.UNIT && UNIT.words) || []).filter(w => w.zh && w.match !== false); if (c.kind) list = list.filter(w => w.kind === c.kind || (!w.kind && w.zh === c.zh)); }
+      CHAPTERS.push({ id: c.id, zh: c.zh, en: c.en, list: list.map(w => ({ zh: w.zh, py: w.py || '' })) });
+    }
+  }
+  function items() {
+    if (src === 'pieces') return PIECES;
+    if (src.startsWith('ch:')) { const c = CHAPTERS.find(x => 'ch:' + x.id === src); return c ? c.list : []; }
+    // 最近听过的句子 ＋ 自己打的（新的在上面）
     const seen = new Set(), out = [];
-    [typed().slice().reverse(), Shih.get('heard', []).slice().reverse(), Object.keys(recs), Object.keys(site())].forEach(L => L.forEach(k => { if (k && !seen.has(k)) { seen.add(k); out.push(k); } }));
+    typed().slice().reverse().concat(Shih.get('heard', []).slice().reverse()).forEach(k => { if (k && !seen.has(k)) { seen.add(k); out.push({ zh: k, sentence: true }); } });
     return out;
   }
+  // 录音的状态（新录的也算进去，才看得出「接起来」够不够）
   const status = k => recs[k] ? 'new' : site()[k] ? 'site' : 'none';
   const TAG = { none: '还没录', new: '新录的', site: '网站上已有' };
+  function withNew(fn) {   // 暂时把新录的当作已经在网站上，算「接起来念」够不够
+    const old = window.SHIH_VOICE; window.SHIH_VOICE = Object.assign({}, old || {}); Object.keys(recs).forEach(k => { window.SHIH_VOICE[k] = 'new'; });
+    try { return fn(); } finally { window.SHIH_VOICE = old; }
+  }
+  function paintSrc() {
+    $('src').innerHTML = `<option value="heard">最近听过的句子 Heard</option><option value="pieces">常用句型片段 Sentence pieces</option>` +
+      CHAPTERS.map(c => `<option value="ch:${c.id}">单元：${esc(c.zh)} ${esc(c.en)}</option>`).join('');
+    $('src').value = src; if ($('src').value !== src) { src = 'heard'; $('src').value = src; }
+  }
+  $('src').addEventListener('change', () => { src = $('src').value; Shih.set('studioSrc', src); paint(); });
   function paint() {
-    const L = sentences().filter(k => filter === 'all' || status(k) === filter);
-    $('list').innerHTML = L.length ? L.map((k, i) => {
-      const st = status(k);
-      return `<div class="row" data-i="${i}"><span class="t">${esc(k)}</span><span class="tag ${st}">${TAG[st]}</span>` +
+    const keyOf = w => K(w.zh);
+    const L = items().filter(w => filter === 'all' || status(keyOf(w)) === filter);
+    $('list').innerHTML = L.length ? L.map((w, i) => {
+      const k = keyOf(w), st = status(k);
+      let cov = '';
+      if (w.sentence && st === 'none') { const pl = withNew(() => Shih.voicePlan(k)); cov = pl.ok ? `<span class="cov ok">✓ 可以用录过的字词接起来念</span>` : `<span class="cov no">还缺：${esc(pl.missing.join('、'))}</span>`; }
+      return `<div class="row" data-i="${i}"><span class="t">${w.py ? `<span class="py">${esc(w.py)}</span>` : ''}${esc(k)}${cov}</span><span class="tag ${st}">${TAG[st]}</span>` +
         `<button class="btn" type="button" data-a="tts">🔊 电脑念</button>` +
         `<button class="btn rec${recKey === k ? ' on' : ''}" type="button" data-a="rec">${recKey === k ? '⏹ 停止' : '⏺ 录音'}</button>` +
         `<button class="btn" type="button" data-a="play"${st === 'none' ? ' disabled' : ''}>▶ 听我的</button>` +
         `<button class="btn" type="button" data-a="del"${st === 'new' ? '' : ' disabled'} title="Delete the new recording">🗑</button></div>`;
-    }).join('') : `<p class="empty">还没有句子。先去玩游戏，或在上面自己打一句。</p>`;
+    }).join('') : `<p class="empty">${src === 'heard' ? '还没有句子。先在这台电脑上玩游戏，或在上面自己打一句。' : '这里都录好了（或是选「全部」看看）。'}</p>`;
     $('list').querySelectorAll('.row').forEach(row => {
-      const k = L[+row.dataset.i];
+      const k = keyOf(L[+row.dataset.i]);
       row.querySelectorAll('button').forEach(b => b.addEventListener('click', () => act(b.dataset.a, k)));
     });
     const n = Object.keys(recs).length;
-    $('dlNote').textContent = n ? `新录了 ${n} 句（还没下载的也在这里）。` : '还没有新的录音。';
+    $('dlNote').textContent = n ? `新录了 ${n} 个（还没下载的也在这里）。` : '还没有新的录音。';
     $('dlBtn').disabled = !n;
   }
   let audio = null;
@@ -161,7 +227,10 @@ Shih.islandBar();
       const blob = new Blob(chunks, { type }), key = recKey;
       recorder = null; recKey = ''; clearTimeout(autoStop);
       if (blob.size < 800) { paint(); return; }   // 太短（没录到）：不存
-      putRec({ k: key, blob, type }).then(load).then(() => { audio = new Audio(URL.createObjectURL(blob)); audio.play().catch(() => {}); });   // 录完马上放一次
+      toWav(blob).then(w => {
+        if (!w) { alert('没有录到声音，请再录一次。\nNo sound was recorded.'); paint(); return; }
+        return putRec({ k: key, blob: w, type: 'audio/wav' }).then(load).then(() => { audio = new Audio(URL.createObjectURL(w)); audio.play().catch(() => {}); });   // 录完马上放一次
+      }).catch(() => putRec({ k: key, blob, type }).then(load));   // 剪不了就存原来的
     };
     recorder.start();
     autoStop = setTimeout(stop, 15000);
@@ -210,7 +279,7 @@ Shih.islandBar();
   function addTyped() {
     const k = K($('newText').value); if (!k) return;
     const L = typed().filter(x => x !== k); L.push(k); Shih.set('studioTyped', L.slice(-200));
-    $('newText').value = ''; filter = 'all'; paintFilter(); paint();
+    $('newText').value = ''; filter = 'all'; src = 'heard'; Shih.set('studioSrc', src); if ($('src')) $('src').value = src; paintFilter(); paint();
   }
   $('addBtn').addEventListener('click', addTyped);
   $('newText').addEventListener('keydown', e => { if (e.key === 'Enter') addTyped(); });
@@ -220,9 +289,9 @@ Shih.islandBar();
 
   if (!window.MediaRecorder || !navigator.mediaDevices) $('list').insertAdjacentHTML('beforebegin', '<p class="note" style="color:#C2372F">这个浏览器不能录音，请用电脑上的 Chrome。</p>');
   // 等 list.js 读进来（网站上已有的录音）再画
-  const ready = () => load().catch(() => paint());
+  const ready = () => loadChapters().catch(() => {}).then(() => { paintSrc(); return load(); }).catch(() => paint());
   let tries = 0; (function wait() { if (window.SHIH_VOICE || tries++ > 20) ready(); else setTimeout(wait, 100); })();
-  window.__studio = { sentences, recs: () => recs, putRec, fileOf, zip };
+  window.__studio = { items, recs: () => recs, putRec, fileOf, zip, toWav };
 })();
 </script>
 </body>
