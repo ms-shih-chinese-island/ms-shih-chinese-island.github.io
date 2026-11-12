@@ -166,7 +166,8 @@ window.ISLANDS = {
         ] },
       { id: 'duanwu', zh: '端午节', py: 'duān wǔ jié', en: 'Dragon Boat Festival', x: 1060, y: 52, color: 'sea', games: [
           { zh: '划龙舟', py: 'huá lóng zhōu', en: 'Dragon Boat Race', note: 'Answer the numbers to row your dragon boat. Win the race! 我爱吃粽子！', href: 'games/dragonboat.html?unit=duanwu' },
-          { zh: '找龙舟', py: 'zhǎo lóng zhōu', en: 'Dragon Boat Crew', note: 'Read the colors. Put the right crew on the dragon boat and send it off!', href: 'games/findboat.html?unit=duanwu' }
+          { zh: '找龙舟', py: 'zhǎo lóng zhōu', en: 'Dragon Boat Crew', note: 'Read the colors. Put the right crew on the dragon boat and send it off!', href: 'games/findboat.html?unit=duanwu' },
+          { zh: '包粽子', py: 'bāo zòng zi', en: 'Wrap the Zongzi', note: 'Match each rope to the right zongzi tag. Tie it up and count your zongzi!', href: 'games/zongzi.html?unit=duanwu' }
         ] },
       { id: 'market', zh: '感恩节', py: 'gǎn ēn jié', en: 'Thanksgiving', x: 950, y: 170, color: 'dad',
         games: [

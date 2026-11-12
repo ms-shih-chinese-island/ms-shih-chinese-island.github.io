@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>包粽子</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 包粽子（端午节）：桌上一排粽子，每个挂一个牌子；下面一排绳子。点绳子、再点粽子（或反过来）。
+   牌子跟绳子对了，粽子就绑好、放进蒸笼；错了摇一摇（不扣分）。包够了就显示「我包了＿个粽子！」，给金币。
+   Level 1 中文数字 ↔ 阿拉伯数字；Level 2 颜色（牌子的字有时用别的颜色印）；Level 3 几条＋颜色。
+   设定在 units/duanwu/words.js 的 UNIT.zongzi */
+body.game { background: #EEF6E8; }
+.box { max-width: 1060px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+.table { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; padding: 14px 10px 18px; border: 4px solid #2B2B2B; border-radius: 22px;
+  background: linear-gradient(#F6E7C8 0 62%, #C98E55 62% 64%, #D9A066 64%); }
+.zz { width: 140px; display: flex; flex-direction: column; align-items: center; gap: 2px; background: none; border: 0; padding: 4px; border-radius: 16px; cursor: pointer; touch-action: manipulation; }
+.zz svg { width: 110px; height: 100px; display: block; }
+.zz .tag { min-width: 96px; min-height: 66px; background: #FFF8E6; border: 3px solid #2B2B2B; border-radius: 10px; padding: 3px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+.zz .tag::before { content: ''; position: absolute; top: -12px; left: 50%; width: 3px; height: 10px; background: #2B2B2B; }
+.zz .tag .ruby .py { font-size: 14px; color: #2B2B2B; } .zz .tag .ruby .zh { font-size: 30px; }
+.zz.l3 .tag .ruby .zh { font-size: 24px; } .zz.l3 .tag .ruby .py { font-size: 12px; }
+.zz.sel, .rope.sel { outline: 5px solid var(--pick); outline-offset: 2px; background: rgba(255, 255, 255, .55); }
+.zz.done { animation: toSteamer .55s ease-in forwards; pointer-events: none; }
+@keyframes toSteamer { 30% { transform: scale(1.12); } 100% { transform: translate(var(--dx, 300px), 260px) scale(.2); opacity: 0; } }
+.zz.new, .rope.new { animation: pop .3s ease-out; }
+@keyframes pop { from { transform: scale(.4); opacity: 0; } }
+.counter { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 12px; border: 4px solid #2B2B2B; border-radius: 22px; background: #B8682E; flex-wrap: wrap; }
+.ropes { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.rope { width: 130px; height: 100px; background: #E9B97E; border: 3px solid #2B2B2B; border-radius: 16px; cursor: pointer; position: relative; padding: 0; touch-action: manipulation; }
+.rope svg { width: 100%; height: 100%; display: block; }
+.rope .num { position: absolute; right: 8px; top: 6px; min-width: 40px; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 8px; font: 800 30px var(--f-latin); line-height: 1.1; }
+.steamer { width: 150px; display: flex; flex-direction: column; align-items: center; }
+.steamer svg { width: 150px; height: 110px; display: block; }
+.steamer .cnt { font: 800 22px var(--f-latin); color: #FFFFFF; }
+.oops { animation: shake .35s; }
+.zz.oops .tag, .rope.oops { border-color: var(--bad); }
+.timer.low { background: #FCE3E0; border-color: var(--bad); }
+.timeUp { text-align: center; background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 10px; margin: 0 auto 10px; max-width: 640px; font: 700 18px var(--f-latin); display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.timeUp .ruby .py { font-size: 12px; } .timeUp .ruby .zh { font-size: 26px; }
+@media (max-width: 700px) {
+  .zz { width: 104px; } .zz svg { width: 84px; height: 76px; }
+  .rope { width: 100px; height: 80px; } .steamer svg { width: 110px; height: 80px; }
+}
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en" id="titleEn"></span></div>
+    <div class="controls">
+      <span class="pill" id="score">0 / 0</span>
+      <span class="pill timer" id="timer">0:00</span>
+      <button class="ctl" id="soundBtn" type="button"></button>
+      <button class="ctl" id="resetBtn" type="button">Start over</button>
+    </div>
+  </div>
+  <div class="levels" id="levels" aria-label="Level"></div>
+  <p class="help" id="help"></p>
+  <div class="win" id="winMsg" hidden><span><span class="ruby" id="winRuby"></span> <span id="winTime"></span></span><button class="ctl" id="againBtn" type="button">Play again</button></div>
+  <div class="timeUp" id="timeUp" hidden><span class="ruby" id="timeUpRuby"></span><span id="timeUpTxt"></span><button class="ctl" id="again2" type="button">Play again</button></div>
+
+  <div class="playArea waiting" id="playArea">
+    <div class="playInner">
+      <div class="box" id="game">
+        <div class="table" id="table"></div>
+        <div class="counter"><div class="ropes" id="ropes"></div><div class="steamer" id="steamer"></div></div>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/coins.js"></script>
+<script src="../shared/common.js"></script>
+<script src="../shared/numbers.js"></script>
+<script>
+Shih.islandBar();
+Shih.loadUnit().then(UNIT => {
+  const C = UNIT.zongzi, COLORS = UNIT.COLORS, NUM = window.ShihNum;
+  const $ = id => document.getElementById(id);
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const COL = zh => COLORS.find(c => c.zh === zh);
+  document.title = `${C.title.zh} ${C.title.en}`;
+  $('titleRuby').innerHTML = Shih.ruby(C.title.zh, C.title.py);
+  $('titleEn').textContent = C.title.en;
+  $('timeUpRuby').innerHTML = Shih.ruby('时间到了', 'shí jiān dào le');
+  Shih.soundButton($('soundBtn'));
+
+  // ---- 图：粽子（没绑／绑好）、绳子、蒸笼 ----
+  const INK = '#2B2B2B', sw = w => `stroke="${INK}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"`;
+  const STRAW = '#B98544';           // Level 1 的绳子：草绳的颜色
+  // 一条绳子（先画黑边、再画颜色）
+  const strand = (d, c, w = 5) => `<path d="${d}" fill="none" stroke="${INK}" stroke-width="${w + 4}" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round"/>`;
+  const ZONG = (tie) => `<svg viewBox="0 0 120 110" aria-hidden="true">` +
+    `<path d="M60 8 Q66 8 70 16 L112 92 Q114 101 104 101 L16 101 Q6 101 8 92 L50 16 Q54 8 60 8 Z" fill="#6DAA4F" ${sw(4)}/>` +
+    `<path d="M60 14 L38 98 M60 14 L82 98" stroke="#4E8A36" stroke-width="3" fill="none"/><path d="M50 30 Q60 26 70 30" stroke="#8CC46E" stroke-width="4" fill="none" stroke-linecap="round"/>` +
+    (tie ? Array.from({ length: tie.n }, (_, i) => { const y = 64 + (i - (tie.n - 1) / 2) * 9; return strand(`M${22 + (y - 64) * -.5} ${y} Q60 ${y + 8} ${98 + (y - 64) * .5} ${y}`, tie.c, 4); }).join('') : '') +
+    `</svg>`;
+  const ROPE = (n, c) => `<svg viewBox="0 0 130 100" aria-hidden="true">` +
+    Array.from({ length: n }, (_, i) => { const y = 50 + (i - (n - 1) / 2) * 13; return strand(`M14 ${y + 8} Q36 ${y - 20} 62 ${y} Q88 ${y + 20} 116 ${y - 8}`, c); }).join('') + `</svg>`;
+  const STEAMER = n => `<svg viewBox="0 0 150 110" aria-hidden="true">` +
+    `<ellipse cx="75" cy="34" rx="64" ry="16" fill="#E9C98E" ${sw(4)}/>` +
+    Array.from({ length: Math.min(n, 12) }, (_, i) => { const x = 30 + (i % 6) * 18, y = 30 - Math.floor(i / 6) * 10; return `<path d="M${x} ${y - 10} L${x + 9} ${y + 6} L${x - 9} ${y + 6} Z" fill="#6DAA4F" ${sw(2)}/>`; }).join('') +
+    `<path d="M11 34 L11 86 Q75 110 139 86 L139 34 Q75 58 11 34 Z" fill="#D9A55E" ${sw(4)}/>` +
+    `<path d="M11 60 Q75 84 139 60" fill="none" ${sw(3)}/><path d="M40 52 L40 96 M75 58 L75 100 M110 52 L110 96" stroke="#B98544" stroke-width="3"/></svg>`;
+
+  // ---- 牌子、绳子的「值」：Level 1 数字；Level 2 颜色；Level 3 几条＋颜色 ----
+  const randVal = () => {
+    if (level === 1) return { n: rnd(...C.numbers) };
+    if (level === 2) return { c: pick(C.colors[1]) };
+    return { n: rnd(1, C.strands), c: pick(C.colors[2]) };
+  };
+  // 跟某个值只差一点（Level 3：一样的颜色、不一样的条数，或反过来）：用来骗人
+  const nearVal = v => {
+    if (level === 1) return { n: pick(LOOK[v.n] || [rnd(...C.numbers)]) };
+    if (level === 2) return randVal();
+    return Math.random() < .5 ? { n: v.n, c: pick(C.colors[2]) } : { n: rnd(1, C.strands), c: v.c };
+  };
+  const same = (a, b) => a.n === b.n && a.c === b.c;
+  // Level 1：容易看错、念错的数字（一／十／七、二／三、四／十、六／九……）
+  const LOOK = { 1: [7, 10, 2], 2: [3, 1], 3: [2, 8], 4: [10, 6], 5: [4, 6], 6: [9, 4, 8], 7: [1, 10], 8: [6, 3], 9: [6, 10], 10: [4, 1, 7] };
+  // 一个跟这些都不一样的值（绳子不要重复）
+  const freshVal = (list, make) => { for (let k = 0; k < 30; k++) { const v = make(); if (!list.some(x => x && same(x, v))) return v; } return make(); };
+  const LIANG = { 1: ['一条', 'yì tiáo'], 2: ['两条', 'liǎng tiáo'], 3: ['三条', 'sān tiáo'], 4: ['四条', 'sì tiáo'] };
+  function tagHTML(z) {
+    if (level === 1) return `<span class="ruby">${Shih.ruby(NUM.zh(z.n), NUM.py(z.n))}</span>`;
+    const c = COL(z.c);
+    if (level === 2) return `<span class="ruby" style="--ink:${z.ink}">${Shih.ruby(c.zh, c.py).replace(/class="zh"/g, `class="zh" style="color:${z.ink}"`)}</span>`;
+    const [nz, np] = LIANG[z.n];
+    return `<span class="ruby">${Shih.ruby(nz, np)}</span><span class="ruby">${Shih.ruby(c.zh + '的', c.py + ' de')}</span>`;
+  }
+  const say = z => level === 1 ? NUM.zh(z.n) : level === 2 ? z.c : LIANG[z.n][0] + z.c + '的';
+  // Level 2：牌子的字用什么颜色印（有时跟字一样，有时不一样；白色、黄色的字看不清楚，不用）
+  const INKS = ['#E5483B', '#3B78D8', '#45A852', '#2B2B2B', '#F28C28', '#8E5CC2'];
+  const inkFor = c => { const hex = COL(c).hex; return Math.random() < C.same && INKS.includes(hex) ? hex : pick(INKS.filter(h => h !== hex)); };
+
+  // ---- 桌上的粽子、绳子 ----
+  let zongs = [], ropes = [], sel = null, busy = false, done = 0;
+  function makeZong(v) { const z = Object.assign({}, v); if (level === 2) z.ink = inkFor(z.c); return z; }
+  function deal() {
+    ropes = []; for (let k = 0; k < C.ropes; k++) ropes.push(freshVal(ropes, randVal));
+    zongs = ropes.map(makeZong);                                    // 每条绳子都至少有一个粽子可以绑
+    while (zongs.length < C.zongzi) zongs.push(makeZong(Math.random() < .7 ? nearVal(pick(ropes)) : randVal()));
+    zongs = shuffle(zongs);
+    paintAll();
+  }
+  function zongEl(z, i) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'zz' + (level === 3 ? ' l3' : ''); b.dataset.i = i;
+    b.innerHTML = ZONG(null) + `<div class="tag">${tagHTML(z)}</div>`;
+    b.addEventListener('click', () => tap('z', i));
+    return b;
+  }
+  function ropeEl(r, i) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'rope'; b.dataset.i = i;
+    b.innerHTML = level === 1 ? ROPE(1, STRAW) + `<span class="num">${r.n}</span>` : ROPE(level === 3 ? r.n : 1, COL(r.c).hex);
+    b.setAttribute('aria-label', level === 1 ? `rope ${r.n}` : `${level === 3 ? r.n + ' ' : ''}${COL(r.c).en} rope`);
+    b.addEventListener('click', () => tap('r', i));
+    return b;
+  }
+  function paintAll() {
+    $('table').innerHTML = ''; zongs.forEach((z, i) => $('table').appendChild(zongEl(z, i)));
+    $('ropes').innerHTML = ''; ropes.forEach((r, i) => $('ropes').appendChild(ropeEl(r, i)));
+    paintSteamer();
+    expose();
+  }
+  const paintSteamer = () => { $('steamer').innerHTML = STEAMER(done) + `<span class="cnt">${done} / ${GOAL()}</span>`; };
+  const el = (k, i) => document.querySelector(k === 'z' ? `#table .zz[data-i="${i}"]` : `#ropes .rope[data-i="${i}"]`);
+  const oops = e => { if (!e) return; e.classList.remove('oops'); void e.offsetWidth; e.classList.add('oops'); setTimeout(() => e.classList.remove('oops'), 400); };
+  function tap(kind, i) {
+    if (!running || busy) return;
+    if (!sel || sel.kind === kind) {                                 // 先选一个（再点同一个 = 取消）
+      if (sel) el(sel.kind, sel.i).classList.remove('sel');
+      sel = sel && sel.kind === kind && sel.i === i ? null : { kind, i };
+      if (sel) el(kind, i).classList.add('sel');
+      return;
+    }
+    const zi = kind === 'z' ? i : sel.i, ri = kind === 'r' ? i : sel.i;
+    el(sel.kind, sel.i).classList.remove('sel'); sel = null;
+    if (!same(zongs[zi], ropes[ri])) { oops(el('z', zi)); oops(el('r', ri)); return; }   // 不对：摇一摇（不扣分）
+    tie(zi, ri);
+  }
+  function tie(zi, ri) {
+    busy = true; done++; update();
+    const z = zongs[zi], r = ropes[ri], ze = el('z', zi), re = el('r', ri);
+    ze.querySelector('svg').outerHTML = ZONG({ n: level === 3 ? r.n : 1, c: level === 1 ? STRAW : COL(r.c).hex });
+    Shih.speak(say(z));
+    // 绑好的粽子飞进蒸笼
+    const a = ze.getBoundingClientRect(), s = $('steamer').getBoundingClientRect();
+    ze.style.setProperty('--dx', (s.left + s.width / 2 - a.left - a.width / 2) + 'px');
+    setTimeout(() => { ze.classList.add('done'); re.style.visibility = 'hidden'; }, 150);
+    if (done >= GOAL()) { running = false; cancelAnimationFrame(tick); setTimeout(win, 800); return; }   // 包够了：马上结束
+    setTimeout(() => { refill(zi, ri); busy = false; }, 700);
+  }
+  // 补一个新的粽子和一条新的绳子，而且每条绳子都还是有粽子可以绑
+  function refill(zi, ri) {
+    zongs[zi] = null; ropes[ri] = null;
+    const tableVals = () => zongs.filter(Boolean);
+    const lacking = ropes.filter(r => r && !tableVals().some(z => same(z, r)));
+    if (lacking.length) {
+      zongs[zi] = makeZong(lacking[0]);
+      ropes[ri] = freshVal(ropes, () => Object.assign({}, pick(tableVals())));
+    } else {
+      zongs[zi] = makeZong(Math.random() < .35 ? nearVal(pick(ropes.filter(Boolean))) : randVal());   // 有时故意只差一点，大多数随机（不然会越来越像）
+      ropes[ri] = freshVal(ropes, () => Object.assign({}, pick(tableVals())));
+    }
+    delete ropes[ri].ink;
+    const nz = zongEl(zongs[zi], zi), nr = ropeEl(ropes[ri], ri);
+    nz.classList.add('new'); nr.classList.add('new');
+    el('z', zi).replaceWith(nz); el('r', ri).replaceWith(nr);
+    paintSteamer(); expose();
+  }
+  function expose() {
+    window.__zz = { level, done, pair: () => { for (let r = 0; r < ropes.length; r++) for (let z = 0; z < zongs.length; z++) if (ropes[r] && zongs[z] && same(ropes[r], zongs[z])) return [z, r]; return null; },
+      wrong: () => { for (let r = 0; r < ropes.length; r++) for (let z = 0; z < zongs.length; z++) if (!same(ropes[r], zongs[z])) return [z, r]; return null; } };
+  }
+
+  // ---- 包够了：马上结束，显示「我包了＿个粽子！」，给金币 ----
+  function win() {
+    paintSteamer();
+    const zh = `我包了${NUM.zh(done)}个粽子！`, py = `wǒ bāo le ${NUM.py(done)} gè zòng zi!`;
+    $('winRuby').innerHTML = Shih.rubyText(zh, py);
+    $('winTime').textContent = 'Time left: ' + fmt(Math.max(0, left));
+    $('winMsg').hidden = false; Shih.speak(zh);
+  }
+
+  const timerEl = $('timer');
+  const LIMIT = lv => C.time[lv - 1] * 1000, GOAL = () => C.target[level - 1];
+  let left = 0, lastT = 0, tick = 0, running = false;
+  const fmt = ms => { const t = Math.ceil(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  function loop() {
+    if (!running) return;
+    const now = performance.now(); left -= now - lastT; lastT = now;
+    timerEl.textContent = '⏱ ' + fmt(Math.max(0, left)); timerEl.classList.toggle('low', left < 15000);
+    if (left <= 0) { running = false; $('timeUpTxt').textContent = `You wrapped ${done} of ${GOAL()}. Try again!`; $('timeUp').hidden = false; Shih.speak('时间到了'); return; }   // 时间先到：没有金币
+    tick = requestAnimationFrame(loop);
+  }
+
+  const LEVELS = [{ note: '七 ↔ 7' }, { note: 'Colors: 红色' }, { note: '三条红色的' }];
+  let level = Shih.startLevel('zongziLevel', 3);
+  const paintLevels = Shih.levelButtons($('levels'), LEVELS, level, null, lv => { level = lv; Shih.set('zongziLevel', lv); setup(); });
+  const HELP = ['Tap a rope, then the zongzi with the same number (or the other way). Tie it up!',
+                'Tap a rope, then the zongzi with that color word. Read the word, not the ink color!',
+                'Read the tag: how many ropes and what color? Tap the right rope bundle, then the zongzi.'];
+  function setup() {
+    paintLevels(level);
+    $('help').textContent = HELP[level - 1] + ` Wrap ${GOAL()} zongzi in ${fmt(LIMIT(level))} to get coins!`;
+    done = 0; sel = null; busy = false; running = false; cancelAnimationFrame(tick); left = LIMIT(level);
+    timerEl.textContent = '⏱ ' + fmt(left); timerEl.classList.remove('low');
+    $('winMsg').hidden = true; $('timeUp').hidden = true;
+    update(); deal(); wait();
+  }
+  function update() { $('score').textContent = `${done} / ${GOAL()}`; }
+  const wait = Shih.startCover($('playArea'), () => { running = true; lastT = performance.now(); tick = requestAnimationFrame(loop); });
+  $('resetBtn').addEventListener('click', setup);
+  $('againBtn').addEventListener('click', setup);
+  $('again2').addEventListener('click', setup);
+  setup();
+});
+</script>
+</body>
+</html>
