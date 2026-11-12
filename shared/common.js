@@ -128,6 +128,15 @@
   S.voiceBase = VOICE_BASE;
   S.voiceKey = t => String(t).replace(/（[^）]*）/g, '').replace(/\s+/g, '').trim();
   if (VOICE_BASE) { const vs = document.createElement('script'); vs.src = VOICE_BASE + 'list.js'; vs.onerror = () => {}; document.head.appendChild(vs); }
+  // 试玩版（claude.ai）一个作品最多 512 个档案：录音打包成几个 packs/p*.js（packs/index.js 写着哪个档在哪一包）。正式网站没有 packs，直接用档案
+  if (VOICE_BASE) { const pi = document.createElement('script'); pi.src = VOICE_BASE + 'packs/index.js'; pi.onerror = () => {}; document.head.appendChild(pi); }
+  const packLoads = {};
+  function voiceSrc(f) {
+    const P = window.SHIH_VOICE_PACKS, id = P && P[f];
+    if (!id) return Promise.resolve(VOICE_BASE + f);
+    if (!packLoads[id]) packLoads[id] = new Promise(res => { const x = document.createElement('script'); x.src = VOICE_BASE + 'packs/' + id + '.js'; x.onload = x.onerror = () => res(); document.head.appendChild(x); });
+    return packLoads[id].then(() => (window.SHIH_VOICE_DATA || {})[f] || VOICE_BASE + f);
+  }
   // 这台电脑最近念过的句子（只记在这台电脑，给老师在录音室挑句子录；有英文字母的不记）
   function heard(k) {
     if (!k || /[A-Za-z]/.test(k)) return;
@@ -168,7 +177,9 @@
   function stopVoice() { seq++; if (playing) { playing.pause(); playing = null; } }
   function playParts(parts, text) {
     const my = ++seq;
-    const auds = parts.map(p => { if (!p.f) return null; const a = new Audio(VOICE_BASE + p.f); a.preload = 'auto'; return a; });
+    Promise.all(parts.map(p => p.f ? voiceSrc(p.f) : null)).then(srcs => { if (my === seq) run(srcs); });
+    function run(srcs) {
+    const auds = srcs.map(u => { if (!u) return null; const a = new Audio(u); a.preload = 'auto'; return a; });
     let i = 0, fell = false;
     const fail = () => { if (fell || my !== seq) return; fell = true; seq++; S.ttsSpeak(text); };   // 有一段放不出来：整句改用电脑的声音
     const next = () => {
@@ -179,6 +190,7 @@
       const p = a.play(); if (p && p.catch) p.catch(fail);
     };
     next();
+    }
   }
   S.speak = function (text) {
     if (!S.soundOn) return;
