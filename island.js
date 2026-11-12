@@ -71,7 +71,7 @@ window.ISLANDS = {
           { zh: '去灭火', py: 'qù miè huǒ', en: 'Put Out the Fire', note: 'Which floor is on fire? How many buckets? Left or right? (Extra practice: more coins!)', href: 'games/douse.html?unit=fire' }
         ] },
       { id: 'zoo', zh: '动物园', py: 'dòng wù yuán', en: 'Zoo & Farm', x: 1454, y: 46, color: 'me', games: [
-          { zh: '动物园点名', py: 'dòng wù yuán diǎn míng', en: 'Zoo Roll Call', note: 'Read the sentence. Find the right zoo animals — how many?', href: 'games/animals.html?unit=zoo' },
+          { zh: '动物园点名', py: 'dòng wù yuán diǎn míng', en: 'Zoo Roll Call', note: 'Zoo animals or farm animals (pick a zone). Read the sentence and find the right animals!', href: 'games/animals.html?unit=zoo' },
           { zh: '我喜欢动物', py: 'wǒ xǐ huān dòng wù', en: 'My Favorite Animal', note: 'Which animal do you like? Why? 我喜欢＿＿，因为＿＿很＿＿。', href: 'games/zoolike.html?unit=zoo' },
           { zh: '排大小', py: 'pái dà xiǎo', en: 'Small to Big', note: 'Put the animals in order from small to big. Which is the biggest?', href: 'games/zoosize.html?unit=zoo' }
         ] },

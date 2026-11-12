@@ -120,6 +120,7 @@ async function unitWords(id) {
 let HART = {}, MART = {}, TART = {}, FART = {}, FIRE = {};
 async function loadAll() {
   for (const c of LIBRARY.chapters) if (c.from) { c.list = await unitWords(c.from); if (c.kind) c.list = c.list.filter(w => w.kind === c.kind || (!w.kind && w.zh === c.zh)); } else c.list = c.words;   // kind：同一个单元分成两格（水果、蔬菜）
+  LIBRARY.chapters.forEach(c => { c.list = (c.list || []).map(w => Object.assign({ chap: c.id }, w)); });   // 记住是哪一章的字（同一个字在不同章可以用不同的图）
   // 形容词（聪明、勇敢……）是「家」那一课教的，书里放在「家」那一章
   const ch = id => LIBRARY.chapters.find(c => c.id === id);
   if (ch('school') && ch('family')) {
@@ -140,9 +141,10 @@ async function loadAll() {
 // ---- 每个字的小图（岛上本来就有的图才放） ----
 const PERSON = () => KIDS.people.find(p => p.first === 'Emily') || KIDS.people[0];
 // 要给颜色的动物（宠物、虫）用这个颜色
-const ANIMAL_COLOR = { 猫: '#F28C28', 狗: '#C98E55', 兔子: '#FFFFFF', 小鸟: '#5BA7D6', 蝴蝶: '#F5C531', 瓢虫: '#E5483B', 蜻蜓: '#45A852', 蚂蚁: '#2B2B2B' };
+const ANIMAL_COLOR = { 猫: '#F28C28', 狗: '#C98E55', 兔子: '#FFFFFF', 小鸟: '#5BA7D6', 仓鼠: '#9C6234', 鱼: '#F28C28', 龟: '#45A852', 蛇: '#45A852', 蜥蜴: '#45A852', 蝴蝶: '#F5C531', 瓢虫: '#E5483B', 蜻蜓: '#45A852', 蚂蚁: '#2B2B2B' };
 function picOf(w) {
   try {
+    if (w.chap === 'zoo' && w.zh === '火鸡' && window.ANIMAL_ART) return ANIMAL_ART.svg('火鸡');   // 动物园（农场）那一章的火鸡是活的火鸡，不是感恩节的烤火鸡
     if (window.ADJ_ICON && ADJ_ICON.list.includes(w.zh)) return ADJ_ICON(w.zh);
     if (window.VOCAB && VOCAB[w.zh]) return VOCAB_BOX(w.zh, '#FFF6D6');
     if (HART.items && HART.items[w.zh]) return HART.items[w.zh];
@@ -155,6 +157,7 @@ function picOf(w) {
     if (w.pic && MART.icon) return MART.icon(w.pic);
     if (w.who && MART.who) return MART.who(w.who);
     // 2026-11 补的章节：动物、球、生肖和春节的东西、海滩、消防、失物招领、天气、国旗
+    if (w.chap === 'cny' && window.ZART && ZART.g(w.zh)) return ZART.svg(w.zh);   // 春节那一章的鱼、蛇、狗……用生肖、年夜饭的图
     if (window.ANIMAL_ART && ANIMAL_ART.has(w.zh)) return ANIMAL_ART.svg(w.zh, ANIMAL_COLOR[w.zh]);
     if (window.SPORTS_ART && SPORTS_ART.names.includes(w.zh)) return SPORTS_ART.svg(w.zh);
     if (window.ZART && ZART.g(w.zh)) return ZART.svg(w.zh);

@@ -111,11 +111,15 @@ Shih.loadUnit().then(UNIT => {
   const W = { 我: { zh: '我', py: 'wǒ' }, 喜欢: { zh: '喜欢', py: 'xǐ huān' }, 因为: { zh: '因为', py: 'yīn wèi' }, 很: { zh: '很', py: 'hěn' },
               '，': { zh: '，', py: '' }, '。': { zh: '。', py: '' } };
   const GOOD = C.good.map(x => x.zh);
+  // 这只动物配得上的形容词（words.js 的 fit；没写就全部都可以）
+  const fits = a => (C.fit && C.fit[a.zh]) ? C.good.filter(g => C.fit[a.zh].includes(g.zh)) : C.good;
+  const okAdj = (a, z) => fits(a).some(g => g.zh === z);
 
   let done = 0, q = null, busy = false, last = '';
   function show() {
     busy = false;
-    let a; do { a = pick(ANI); } while (a.zh === last); last = a.zh;
+    const pool = level === 1 ? ANI : ANI.filter(x => fits(x).length);   // Level 2、3 只出有形容词配得上的动物
+    let a; do { a = pick(pool); } while (a.zh === last); last = a.zh;
     q = { a };
     $('pic').classList.remove('great');
     $('pic').innerHTML = AA.svg(a.zh);
@@ -127,12 +131,12 @@ Shih.loadUnit().then(UNIT => {
       bank = [a].concat(others.slice(0, 3));
     } else if (level === 2) {
       parts = [W.我, W.喜欢, a, W['，'], W.因为, { want: a.zh }, W.很, { want: 'ADJ' }, W['。']];
-      bank = [a].concat(others.slice(0, 2), shuffle(C.good).slice(0, 2), shuffle(C.bad).slice(0, 3));
+      bank = [a].concat(others.slice(0, 2), shuffle(fits(a)).slice(0, 2), shuffle(C.bad).slice(0, 3));
     } else {
       // 我 喜欢 熊猫 ， 因为 熊猫 很 可爱 。（逗号、句号先放好）
       q.need = ['我', '喜欢', a.zh, '因为', a.zh, '很', 'ADJ'];
       parts = q.need.slice(0, 3).map(k => ({ any: k })).concat([W['，']], q.need.slice(3).map(k => ({ any: k })), [W['。']]);
-      bank = [W.我, W.喜欢, a, a, W.因为, W.很].concat(shuffle(C.good).slice(0, 2), shuffle(C.bad).slice(0, 1), others.slice(0, 1));
+      bank = [W.我, W.喜欢, a, a, W.因为, W.很].concat(shuffle(fits(a)).slice(0, 2), shuffle(C.bad).slice(0, 1), others.slice(0, 1));
     }
     $('sent').innerHTML = parts.map((x, i) => x.want || x.any ? `<span class="dropSlot" data-i="${i}" data-want="${x.want || ''}"></span>` : `<span class="ruby">${Shih.rubyText(x.zh, x.py)}</span>`).join('');
     $('bank').innerHTML = '';
@@ -150,7 +154,7 @@ Shih.loadUnit().then(UNIT => {
         if (!running || busy) return true;
         if (level === 3) { put(cd, slot); return true; }                        // Level 3：先放，按 Submit 才检查
         const w = slot.dataset.want, z = cd.dataset.zh;
-        if (w === 'ADJ' ? !GOOD.includes(z) : z !== w) { oops(cd); return true; }   // 放错：摇一摇（不算错）
+        if (w === 'ADJ' ? !okAdj(q.a, z) : z !== w) { oops(cd); return true; }   // 放错：摇一摇（不算错）
         put(cd, slot);
         if (!empty().length) good();
         return true;
@@ -176,7 +180,7 @@ Shih.loadUnit().then(UNIT => {
     let ok = true;
     slots.forEach((s, i) => {
       const need = q.need[i], z = s.dataset.zh;
-      const right = z && (need === 'ADJ' ? GOOD.includes(z) : z === need);
+      const right = z && (need === 'ADJ' ? okAdj(q.a, z) : z === need);
       if (!right) {
         ok = false;
         if (z) { const cd = $('bank').querySelector(`.wcard[data-id="${s.dataset.from}"]`); if (cd) cd.classList.remove('used'); s.classList.remove('filled'); s.innerHTML = ''; delete s.dataset.zh; }

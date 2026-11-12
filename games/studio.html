@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../shared/gate.js"></script>
+<title>录音室 Recording Studio</title>
+<link rel="stylesheet" href="../shared/fonts.css">
+<link rel="stylesheet" href="../shared/common.css">
+<style>
+/* 录音室（只有老师用，岛上没有入口）：把网站上念得不自然的句子，换成老师自己的录音。
+   1 先去玩游戏，念过的句子会出现在「最近听过的句子」（只记在这台电脑）；也可以自己打一句。
+   2 按 ⏺ 录音，再按一次停。按 ▶ 听听看，不满意就再录。录好的先存在这台电脑里（关掉网页也还在）。
+   3 按「下载录音包」→ voice.zip（里面有录音和新的 list.js）→ 传给 Claude，或解压放进网站的 shared/voice/。
+   隐私：录音只存在老师自己的电脑，不会自动传到任何地方。 */
+body.game { background: #F4EEF8; }
+.wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.card { background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 18px; padding: 12px 16px; }
+.card h2 { margin: 0 0 8px; font: 800 20px var(--f-latin); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.card h2 .zh { font-family: var(--f-zh); }
+.steps { margin: 0; padding-left: 22px; font-size: 17px; line-height: 1.6; }
+.add { display: flex; gap: 8px; }
+.add input { flex: 1; font: 700 22px var(--f-zh); padding: 6px 10px; border: 3px solid #2B2B2B; border-radius: 12px; }
+.btn { font: 800 16px var(--f-latin); background: #FFFFFF; border: 3px solid #2B2B2B; border-radius: 12px; padding: 6px 12px; cursor: pointer; box-shadow: 0 3px 0 #2B2B2B; }
+.btn.main { background: var(--me); color: #FFFFFF; }
+.btn.rec { background: #FCE3E0; }
+.btn.rec.on { background: #E5483B; color: #FFFFFF; animation: blink 1s infinite; }
+@keyframes blink { 50% { opacity: .55; } }
+.btn:disabled { opacity: .35; cursor: default; }
+.filter { display: flex; gap: 6px; flex-wrap: wrap; }
+.filter button[aria-pressed="true"] { background: var(--pick-soft); border-color: var(--pick); }
+.list { display: flex; flex-direction: column; gap: 6px; max-height: 60vh; overflow: auto; }
+.row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 2px solid #E3DCEB; border-radius: 12px; }
+.row .t { flex: 1; font: 700 24px var(--f-zh); word-break: break-all; }
+.row .tag { font: 800 13px var(--f-latin); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.tag.none { background: #EEE; color: #666; } .tag.new { background: #FFF1C4; color: #8A5A00; } .tag.site { background: var(--me-done); color: var(--me-ink); }
+.row .btn { padding: 4px 10px; font-size: 15px; }
+.empty { color: #777; font-size: 16px; }
+.dl { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.note { color: #555; font-size: 15px; }
+</style>
+</head>
+<body class="game">
+  <div class="gameHead">
+    <div class="gameTitle"><span class="ruby" id="titleRuby"></span><span class="en">Recording Studio (for Ms. Shih)</span></div>
+  </div>
+  <div class="wrap">
+    <div class="card">
+      <h2>怎么用 How to use</h2>
+      <ol class="steps">
+        <li>先在这台电脑上玩游戏。网站念过的句子，会出现在下面「最近听过的句子」。也可以自己打一句。</li>
+        <li>按 ⏺ 开始录音，说完再按一次停止。按 ▶ 听听看，不满意就再录一次。</li>
+        <li>录好的会先存在这台电脑里，关掉网页也还在。全部录完，按「下载录音包」。</li>
+        <li>把 voice.zip 传给 Claude（或解压，放进网站的 <code>shared/voice/</code> 资料夹）。上传以后，网站就会用你的声音。</li>
+      </ol>
+      <p class="note">录音只存在你自己的电脑，不会自动传到任何地方。第一次录音时，浏览器会问可不可以用麦克风，请按「允许」。</p>
+    </div>
+
+    <div class="card">
+      <h2>自己打一句 Add a sentence</h2>
+      <div class="add"><input id="newText" placeholder="例如：我爱吃粽子。" autocomplete="off"><button class="btn main" id="addBtn" type="button">＋ 加入</button></div>
+      <p class="note">要跟网站上的字一模一样（标点也算）。最简单的方法：先去游戏里听一次，再从下面的列表挑。</p>
+    </div>
+
+    <div class="card">
+      <h2><span>句子 Sentences</span>
+        <span class="filter" id="filter">
+          <button class="btn" type="button" data-f="all" aria-pressed="true">全部 All</button>
+          <button class="btn" type="button" data-f="none" aria-pressed="false">还没录 Not yet</button>
+          <button class="btn" type="button" data-f="new" aria-pressed="false">新录的 New</button>
+          <button class="btn" type="button" data-f="site" aria-pressed="false">网站上已有 On site</button>
+        </span>
+      </h2>
+      <div class="list" id="list"></div>
+    </div>
+
+    <div class="card dl">
+      <button class="btn main" id="dlBtn" type="button">⬇ 下载录音包 voice.zip</button>
+      <span class="note" id="dlNote"></span>
+      <button class="btn" id="clearHeard" type="button">清除「最近听过」</button>
+    </div>
+  </div>
+
+<script src="../shared/common.js"></script>
+<script>
+Shih.islandBar();
+(function () {
+  const $ = id => document.getElementById(id);
+  $('titleRuby').innerHTML = Shih.ruby('录音室', 'lù yīn shì');
+  const K = Shih.voiceKey;
+  const esc = Shih.esc;
+
+  // ---- 录好的先存在这台电脑（IndexedDB）：{ k: 句子, blob, type } ----
+  const DB = new Promise((res, rej) => {
+    const r = indexedDB.open('shih-studio', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('rec', { keyPath: 'k' });
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+  const tx = (mode, fn) => DB.then(db => new Promise((res, rej) => { const t = db.transaction('rec', mode), st = t.objectStore('rec'); const out = fn(st); t.oncomplete = () => res(out && out.result); t.onerror = () => rej(t.error); }));
+  const allRecs = () => tx('readonly', st => st.getAll());
+  const putRec = r => tx('readwrite', st => st.put(r));
+  const delRec = k => tx('readwrite', st => st.delete(k));
+
+  // ---- 档名：句子算一个代号（同一句永远同一个档名） ----
+  const code = s => { let h = 0x811c9dc5; for (const ch of s) { h ^= ch.codePointAt(0); h = Math.imul(h, 0x01000193) >>> 0; } return h.toString(16).padStart(8, '0'); };
+  const extOf = type => /mp4|aac|m4a/.test(type) ? 'm4a' : /ogg/.test(type) ? 'ogg' : 'webm';
+  const fileOf = (k, type) => 'v' + code(k) + '.' + extOf(type);
+
+  // ---- 列表：自己加的 ＋ 最近听过的 ＋ 网站上已有的 ＋ 新录的 ----
+  let recs = {}, filter = 'all', recorder = null, recKey = '', chunks = [];
+  const site = () => window.SHIH_VOICE || {};
+  const typed = () => Shih.get('studioTyped', []);
+  function sentences() {
+    const seen = new Set(), out = [];
+    [typed().slice().reverse(), Shih.get('heard', []).slice().reverse(), Object.keys(recs), Object.keys(site())].forEach(L => L.forEach(k => { if (k && !seen.has(k)) { seen.add(k); out.push(k); } }));
+    return out;
+  }
+  const status = k => recs[k] ? 'new' : site()[k] ? 'site' : 'none';
+  const TAG = { none: '还没录', new: '新录的', site: '网站上已有' };
+  function paint() {
+    const L = sentences().filter(k => filter === 'all' || status(k) === filter);
+    $('list').innerHTML = L.length ? L.map((k, i) => {
+      const st = status(k);
+      return `<div class="row" data-i="${i}"><span class="t">${esc(k)}</span><span class="tag ${st}">${TAG[st]}</span>` +
+        `<button class="btn" type="button" data-a="tts">🔊 电脑念</button>` +
+        `<button class="btn rec${recKey === k ? ' on' : ''}" type="button" data-a="rec">${recKey === k ? '⏹ 停止' : '⏺ 录音'}</button>` +
+        `<button class="btn" type="button" data-a="play"${st === 'none' ? ' disabled' : ''}>▶ 听我的</button>` +
+        `<button class="btn" type="button" data-a="del"${st === 'new' ? '' : ' disabled'} title="Delete the new recording">🗑</button></div>`;
+    }).join('') : `<p class="empty">还没有句子。先去玩游戏，或在上面自己打一句。</p>`;
+    $('list').querySelectorAll('.row').forEach(row => {
+      const k = L[+row.dataset.i];
+      row.querySelectorAll('button').forEach(b => b.addEventListener('click', () => act(b.dataset.a, k)));
+    });
+    const n = Object.keys(recs).length;
+    $('dlNote').textContent = n ? `新录了 ${n} 句（还没下载的也在这里）。` : '还没有新的录音。';
+    $('dlBtn').disabled = !n;
+  }
+  let audio = null;
+  function act(a, k) {
+    if (a === 'tts') { Shih.ttsSpeak(k); return; }
+    if (a === 'play') {
+      if (audio) audio.pause();
+      audio = recs[k] ? new Audio(URL.createObjectURL(recs[k].blob)) : new Audio(Shih.voiceBase + site()[k]);
+      audio.play().catch(() => alert('Cannot play this recording.'));
+      return;
+    }
+    if (a === 'del') { delRec(k).then(load); return; }
+    if (a === 'rec') { if (recKey === k) stop(); else start(k); }
+  }
+  // ---- 录音（最长 15 秒） ----
+  let stream = null, autoStop = 0;
+  async function start(k) {
+    if (recorder) stop();
+    try { stream = stream || await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
+    catch (e) { alert('浏览器不让用麦克风。请在网址列旁边的设定里「允许麦克风」，再试一次。\nThe browser blocked the microphone.'); return; }
+    chunks = []; recKey = k;
+    recorder = new MediaRecorder(stream);
+    recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    recorder.onstop = () => {
+      const type = recorder.mimeType || (chunks[0] && chunks[0].type) || 'audio/webm';
+      const blob = new Blob(chunks, { type }), key = recKey;
+      recorder = null; recKey = ''; clearTimeout(autoStop);
+      if (blob.size < 800) { paint(); return; }   // 太短（没录到）：不存
+      putRec({ k: key, blob, type }).then(load).then(() => { audio = new Audio(URL.createObjectURL(blob)); audio.play().catch(() => {}); });   // 录完马上放一次
+    };
+    recorder.start();
+    autoStop = setTimeout(stop, 15000);
+    paint();
+  }
+  function stop() { if (recorder && recorder.state !== 'inactive') recorder.stop(); }
+  function load() { return allRecs().then(list => { recs = {}; (list || []).forEach(r => { recs[r.k] = r; }); paint(); }); }
+
+  // ---- 下载录音包：新的录音 ＋ 新的 list.js（网站上原本的也留着）----
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  const crc32 = u8 => { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  function zip(files) {                 // 不压缩的 zip（录音本来就压缩过了）
+    const enc = new TextEncoder(), parts = [], central = []; let off = 0;
+    files.forEach(f => {
+      const name = enc.encode(f.name), data = f.data, crc = crc32(data);
+      const h = new DataView(new ArrayBuffer(30));
+      h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true);
+      h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, name.length, true);
+      parts.push(new Uint8Array(h.buffer), name, data);
+      const c = new DataView(new ArrayBuffer(46));
+      c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true);
+      c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true); c.setUint16(28, name.length, true); c.setUint32(42, off, true);
+      central.push(new Uint8Array(c.buffer), name);
+      off += 30 + name.length + data.length;
+    });
+    const csize = central.reduce((s, a) => s + a.length, 0), e = new DataView(new ArrayBuffer(22));
+    e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, csize, true); e.setUint32(16, off, true);
+    return new Blob(parts.concat(central, [new Uint8Array(e.buffer)]), { type: 'application/zip' });
+  }
+  $('dlBtn').addEventListener('click', async () => {
+    const map = Object.assign({}, site()), files = [], enc = new TextEncoder();
+    for (const k of Object.keys(recs)) {
+      const r = recs[k], name = fileOf(k, r.type);
+      map[k] = name;
+      files.push({ name: 'voice/' + name, data: new Uint8Array(await r.blob.arrayBuffer()) });
+    }
+    const keys = Object.keys(map).sort();
+    const js = '/* 老师的录音：句子 → 档名（档案放在这个资料夹）。录音室（games/studio.html）的「下载录音包」会做好新的这一份。\n' +
+      '   网站念句子的时候，有录音就放录音，没有就用电脑的声音。 */\nwindow.SHIH_VOICE = {\n' + keys.map(k => '  ' + JSON.stringify(k) + ': ' + JSON.stringify(map[k])).join(',\n') + '\n};\n';
+    files.push({ name: 'voice/list.js', data: enc.encode(js) });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(zip(files)); a.download = 'voice.zip'; document.body.appendChild(a); a.click(); a.remove();
+  });
+
+  // ---- 自己打一句、清除最近听过的、筛选 ----
+  function addTyped() {
+    const k = K($('newText').value); if (!k) return;
+    const L = typed().filter(x => x !== k); L.push(k); Shih.set('studioTyped', L.slice(-200));
+    $('newText').value = ''; filter = 'all'; paintFilter(); paint();
+  }
+  $('addBtn').addEventListener('click', addTyped);
+  $('newText').addEventListener('keydown', e => { if (e.key === 'Enter') addTyped(); });
+  $('clearHeard').addEventListener('click', () => { if (confirm('清除「最近听过的句子」？（录音不会删掉）')) { Shih.set('heard', []); paint(); } });
+  const paintFilter = () => $('filter').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.f === filter)));
+  $('filter').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { filter = b.dataset.f; paintFilter(); paint(); }));
+
+  if (!window.MediaRecorder || !navigator.mediaDevices) $('list').insertAdjacentHTML('beforebegin', '<p class="note" style="color:#C2372F">这个浏览器不能录音，请用电脑上的 Chrome。</p>');
+  // 等 list.js 读进来（网站上已有的录音）再画
+  const ready = () => load().catch(() => paint());
+  let tries = 0; (function wait() { if (window.SHIH_VOICE || tries++ > 20) ready(); else setTimeout(wait, 100); })();
+  window.__studio = { sentences, recs: () => recs, putRec, fileOf, zip };
+})();
+</script>
+</body>
+</html>
