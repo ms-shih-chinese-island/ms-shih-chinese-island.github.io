@@ -117,7 +117,7 @@ async function unitWords(id) {
   await loadScript(`../units/${id}/words.js?lib`);
   return ((window.UNIT && window.UNIT.words) || []).filter(w => w.match !== false && w.zh);
 }
-let HART = {}, MART = {}, TART = {}, FART = {};
+let HART = {}, MART = {}, TART = {}, FART = {}, FIRE = {};
 async function loadAll() {
   for (const c of LIBRARY.chapters) if (c.from) { c.list = await unitWords(c.from); if (c.kind) c.list = c.list.filter(w => w.kind === c.kind || (!w.kind && w.zh === c.zh)); } else c.list = c.words;   // kind：同一个单元分成两格（水果、蔬菜）
   // 形容词（聪明、勇敢……）是「家」那一课教的，书里放在「家」那一章
@@ -132,10 +132,15 @@ async function loadAll() {
   window.ART = undefined; await loadScript('../units/thanksgiving/art.js'); TART = window.ART || {};
   window.ART = undefined; await loadScript('../units/fruits/art.js'); FART = window.ART || {};
   await loadScript('../units/restaurant/art.js');   // 餐厅的图放在 window.RART
+  // 2026-11 补的章节用的图（每个档案有自己的名字，不会互相盖掉）
+  for (const f of ['shared/animals.js', 'shared/sports-art.js', 'units/cny/art.js', 'units/beach/art.js', 'units/fire/art.js', 'units/police/art.js', 'units/airport/art.js', 'units/airport/flags.js', 'shared/clothes-art.js']) await loadScript('../' + f);
+  FIRE = window.FART || {};   // 消防局的图也叫 FART（跟水果的 FART 不一样），另外存起来
   window.ART = KIDS;
 }
 // ---- 每个字的小图（岛上本来就有的图才放） ----
 const PERSON = () => KIDS.people.find(p => p.first === 'Emily') || KIDS.people[0];
+// 要给颜色的动物（宠物、虫）用这个颜色
+const ANIMAL_COLOR = { 猫: '#F28C28', 狗: '#C98E55', 兔子: '#FFFFFF', 小鸟: '#5BA7D6', 蝴蝶: '#F5C531', 瓢虫: '#E5483B', 蜻蜓: '#45A852', 蚂蚁: '#2B2B2B' };
 function picOf(w) {
   try {
     if (window.ADJ_ICON && ADJ_ICON.list.includes(w.zh)) return ADJ_ICON(w.zh);
@@ -149,6 +154,17 @@ function picOf(w) {
     if (w.zh === '下午好' && KIDS.time) return KIDS.time('afternoon');
     if (w.pic && MART.icon) return MART.icon(w.pic);
     if (w.who && MART.who) return MART.who(w.who);
+    // 2026-11 补的章节：动物、球、生肖和春节的东西、海滩、消防、失物招领、天气、国旗
+    if (window.ANIMAL_ART && ANIMAL_ART.has(w.zh)) return ANIMAL_ART.svg(w.zh, ANIMAL_COLOR[w.zh]);
+    if (window.SPORTS_ART && SPORTS_ART.names.includes(w.zh)) return SPORTS_ART.svg(w.zh);
+    if (window.ZART && ZART.g(w.zh)) return ZART.svg(w.zh);
+    if (window.BART && BART.findList.includes(w.zh)) return BART.find(w.zh);
+    if (window.BART && BART.items.includes(w.zh)) return BART.icon(w.zh, '#F28C28');
+    if (FIRE.order && FIRE.order.includes(w.zh)) return FIRE.icon(w.zh);
+    if (window.LART && LART.list.includes(w.zh)) return LART.svg(w.zh, '#3B78D8');
+    if (window.WART && WART.list.includes(w.zh)) return WART.icon(w.zh);
+    if (window.FLAGS && FLAGS.list.includes(w.zh)) return FLAGS.svg(w.zh);
+    if (window.CLOTHES_ART && CLOTHES_ART.names.includes(w.zh)) return CLOTHES_ART.svg(w.zh);
   } catch (e) {}
   return '';
 }
